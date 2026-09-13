@@ -224,6 +224,33 @@ export interface ResumenImportacion {
   versionDelDiagrama: number
 }
 
+// ---------- Dictado por voz -------------------------------------------------
+
+export interface Paso {
+  tipo: TipoOperacion
+  comando: Record<string, unknown>
+}
+
+export interface Interpretacion {
+  frase: string
+  entendida: boolean
+  pasos: Paso[]
+  explicacion: string
+  sugerencias: string[]
+}
+
+export interface ResultadoDictado {
+  entendida: boolean
+  explicacion: string
+  sugerencias: string[]
+  comandosLeidos: number
+  aplicadas: number
+  problemas: string[]
+  /** Nombre de quien tenia tomado el elemento, si el dictado choco con un bloqueo. */
+  retenidoPor: string | null
+  versionDelDiagrama: number
+}
+
 /** Cuerpo de error de la RFC 7807, que es como responde el backend. */
 export interface Problema {
   title?: string

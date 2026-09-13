@@ -10,6 +10,7 @@ import type {
   ResultadoBloqueo,
   ResultadoOperacion,
   ResumenGeneracion,
+  ResultadoDictado,
   ResumenImportacion,
   TipoDiagrama,
   TipoElemento,
@@ -210,6 +211,14 @@ export const api = {
     if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo exportar el XMI')
     return respuesta.text()
   },
+
+  // ---------- Dictado ------------------------------------------------------
+
+  dictar: (diagramaId: string, frase: string, sesionId: string) =>
+    pedir<ResultadoDictado>(`/api/diagramas/${diagramaId}/voz`, {
+      method: 'POST',
+      body: JSON.stringify({ frase, sesionId }),
+    }),
 
   importarXmi: (diagramaId: string, documento: string, sesionId: string) =>
     pedir<ResumenImportacion>(

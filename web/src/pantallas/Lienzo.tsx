@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BASE, ErrorApi, api } from '../api'
 import { abrirCanal, type Canal } from '../canal'
+import Dictado from './Dictado'
 import CajaClase from '../lienzo/CajaClase'
 import LineaRelacion from '../lienzo/LineaRelacion'
 import { ANCHO_CLASE, aplicar, bloqueoDe, conBloqueoLiberado, conBloqueoTomado } from '../modelo'
@@ -56,6 +57,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
   const [relacionando, setRelacionando] = useState<TipoRelacion | null>(null)
   const [primerExtremo, setPrimerExtremo] = useState<string | null>(null)
   const [mostrandoGeneracion, setMostrandoGeneracion] = useState(false)
+  const [dictando, setDictando] = useState(false)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const canalRef = useRef<Canal | null>(null)
@@ -482,6 +484,11 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
         </button>
 
         <div className="separador" />
+        <button className={dictando ? 'activo' : ''} onClick={() => setDictando(!dictando)}>
+          Dictar
+        </button>
+
+        <div className="separador" />
         <button onClick={() => setMostrandoGeneracion(true)}>Generar backend</button>
         <button onClick={exportarXmi}>Exportar XMI</button>
         <label
@@ -579,14 +586,22 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
             </g>
           </svg>
 
-          {relacionando && (
+          {dictando && (
+            <Dictado
+              diagramaId={diagrama.id}
+              alAplicar={recargar}
+              alCerrar={() => setDictando(false)}
+            />
+          )}
+
+          {relacionando && !dictando && (
             <div className="pista">
               {primerExtremo
                 ? 'Ahora hace clic en la segunda clase'
                 : `Hace clic en la primera clase de la ${relacionando.toLowerCase()}`}
             </div>
           )}
-          {modelo && modelo.clases.length === 0 && !relacionando && (
+          {modelo && modelo.clases.length === 0 && !relacionando && !dictando && (
             <div className="pista">Empeza creando una clase con el boton de arriba</div>
           )}
         </div>
