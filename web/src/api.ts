@@ -26,12 +26,16 @@ export const BASE = import.meta.env.VITE_API ?? 'http://localhost:8080'
  * diferencia entre que el usuario sepa que corregir y que no.
  */
 export class ErrorApi extends Error {
-  constructor(
-    readonly estado: number,
-    mensaje: string,
-    readonly problema?: Problema,
-  ) {
+  // Los campos se declaran aparte y no en la firma del constructor: la
+  // configuracion del proyecto exige que el TypeScript se pueda borrar sin
+  // transformar el codigo, y las propiedades de parametro no cumplen eso.
+  readonly estado: number
+  readonly problema?: Problema
+
+  constructor(estado: number, mensaje: string, problema?: Problema) {
     super(mensaje)
+    this.estado = estado
+    this.problema = problema
   }
 }
 

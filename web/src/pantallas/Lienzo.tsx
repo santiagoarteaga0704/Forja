@@ -158,12 +158,18 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
         }
         return true
       } catch (e) {
-        fallar(e)
+        // Se antepone que se estaba intentando: "no se pudo agregar atributo"
+        // dice mucho mas que el mensaje del servidor a secas.
+        avisar(
+          'error',
+          `No se pudo ${descripcion}: ` +
+            (e instanceof ErrorApi ? e.message : 'no responde el servidor'),
+        )
         if (e instanceof ErrorApi && e.estado === 422) recargar()
         return false
       }
     },
-    [diagrama.id, avisar, fallar, recargar],
+    [diagrama.id, avisar, recargar],
   )
 
   // ---------- Coordenadas ---------------------------------------------------

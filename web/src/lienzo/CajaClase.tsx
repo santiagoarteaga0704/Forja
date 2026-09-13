@@ -51,7 +51,14 @@ export default function CajaClase({
       ? 'var(--ambar)'
       : 'var(--borde)'
 
-  let y = cabecera + 10
+  // Las posiciones se calculan por indice en lugar de ir acumulando una
+  // variable mientras se dibuja: el orden en que React evalua el JSX no es algo
+  // sobre lo que convenga apoyarse, y asi cada fila sabe donde va sin depender
+  // de las anteriores.
+  const inicioAtributos = cabecera + 10
+  const yAtributo = (indice: number) => inicioAtributos + (indice + 1) * ALTO_FILA - 5
+  const ySeparador = inicioAtributos + clase.atributos.length * ALTO_FILA + 6
+  const yMetodo = (indice: number) => ySeparador + (indice + 1) * ALTO_FILA - 5
 
   return (
     <g
@@ -101,11 +108,11 @@ export default function CajaClase({
         {clase.nombre}
       </text>
 
-      {clase.atributos.map((atributo) => (
+      {clase.atributos.map((atributo, indice) => (
         <text
           key={atributo.id}
           x={9}
-          y={(y += ALTO_FILA) - 5}
+          y={yAtributo(indice)}
           fontSize={11.5}
           fill="var(--texto-medio)"
           fontFamily="var(--mono)"
@@ -115,20 +122,14 @@ export default function CajaClase({
       ))}
 
       {clase.metodos.length > 0 && (
-        <line
-          x1={0}
-          y1={(y += 6)}
-          x2={ANCHO_CLASE}
-          y2={y}
-          stroke="var(--borde-suave)"
-        />
+        <line x1={0} y1={ySeparador} x2={ANCHO_CLASE} y2={ySeparador} stroke="var(--borde-suave)" />
       )}
 
-      {clase.metodos.map((metodo) => (
+      {clase.metodos.map((metodo, indice) => (
         <text
           key={metodo.id}
           x={9}
-          y={(y += ALTO_FILA) - 5}
+          y={yMetodo(indice)}
           fontSize={11.5}
           fill="var(--texto-medio)"
           fontFamily="var(--mono)"
@@ -138,8 +139,6 @@ export default function CajaClase({
         </text>
       ))}
 
-      {/* Quien la esta editando. Va pegada arriba de la caja para que no tape
-          el contenido y se lea aunque haya muchas clases juntas. */}
       {ajeno && (
         <>
           <rect

@@ -27,10 +27,9 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
   }, [])
 
   useEffect(() => {
-    if (!elegido) {
-      setDiagramas([])
-      return
-    }
+    if (!elegido) return
+    // La lista no se vacia aqui: al no haber proyecto elegido no se dibuja la
+    // seccion, asi que limpiarla solo provocaria un render mas.
     api.diagramas(elegido.id).then(setDiagramas).catch(fallar)
   }, [elegido])
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type {
   BloqueoVista,
   ClaseVista,
@@ -110,10 +110,22 @@ function ContenidoDeClase({
   const [nombre, setNombre] = useState(clase.nombre)
   const [estereotipo, setEstereotipo] = useState(clase.estereotipo ?? '')
 
-  // El nombre puede cambiarlo otro usuario mientras esta seleccionada: hay que
-  // seguir al modelo salvo que se lo este editando aqui.
-  useEffect(() => setNombre(clase.nombre), [clase.nombre])
-  useEffect(() => setEstereotipo(clase.estereotipo ?? ''), [clase.estereotipo])
+  // Otro usuario puede renombrar la clase mientras esta seleccionada aqui. El
+  // ajuste se hace durante el render comparando contra el valor anterior, que es
+  // la forma que React recomienda para esto: con un efecto habria un render
+  // intermedio mostrando el texto viejo.
+  const [ultimoDelModelo, setUltimoDelModelo] = useState({
+    nombre: clase.nombre,
+    estereotipo: clase.estereotipo ?? '',
+  })
+  if (
+    ultimoDelModelo.nombre !== clase.nombre ||
+    ultimoDelModelo.estereotipo !== (clase.estereotipo ?? '')
+  ) {
+    setUltimoDelModelo({ nombre: clase.nombre, estereotipo: clase.estereotipo ?? '' })
+    setNombre(clase.nombre)
+    setEstereotipo(clase.estereotipo ?? '')
+  }
 
   const [atributo, setAtributo] = useState({
     nombre: '',
