@@ -65,6 +65,7 @@ public class ExportadorXmi {
      * lo unico que cambia es la declaracion de espacios de nombres, que es lo
      * que EA mira para decidir si entiende el archivo.
      */
+    private static final String VERSION_FORJA = "1.0";
     private static final String VERSION_XMI = "2.1";
     private static final String NS_XMI = "http://schema.omg.org/spec/XMI/2.1";
     private static final String NS_UML = "http://schema.omg.org/spec/UML/2.0";
@@ -84,8 +85,27 @@ public class ExportadorXmi {
         xml.append("<xmi:XMI xmi:version=\"" + VERSION_XMI + "\"\n");
         xml.append("         xmlns:xmi=\"" + NS_XMI + "\"\n");
         xml.append("         xmlns:uml=\"" + NS_UML + "\">\n");
-        xml.append("  <xmi:Documentation exporter=\"FORJA\" exporterVersion=\"1.0\"/>\n");
+        // Enterprise Architect solo lee su seccion de diagramas si el documento
+        // declara haber salido de Enterprise Architect: con cualquier otro
+        // nombre importa el modelo pero descarta la vista en silencio, y las
+        // clases aparecen en el arbol del proyecto con el lienzo vacio. Se
+        // comprobo importando el mismo documento con un nombre y con el otro,
+        // sin cambiar nada mas. Es una cadena de compatibilidad, del mismo tipo
+        // que las que un navegador declara para que un servidor no le niegue
+        // contenido; quien genero el archivo queda escrito debajo y en la
+        // extension propia que lleva cada clase.
+        xml.append("  <xmi:Documentation exporter=\"Enterprise Architect\""
+                + " exporterVersion=\"6.5\"/>\n");
+        xml.append("  <!-- Generado por FORJA " + VERSION_FORJA + ". El exportador se declara"
+                + " como Enterprise Architect por compatibilidad: ver ExportadorXmi. -->\n");
         xml.append("  <uml:Model xmi:type=\"uml:Model\" xmi:id=\"").append(id(diagrama.getId()))
+                .append("\" name=\"").append(escapar(diagrama.getNombre())).append("\">\n");
+
+        // Todo cuelga de un paquete porque la vista tiene que pertenecer a uno:
+        // un diagrama suelto, sin paquete que lo contenga, no tiene donde
+        // aparecer en el arbol del proyecto de la herramienta que lo abra.
+        String paquete = idDelPaquete(diagrama.getId());
+        xml.append("    <packagedElement xmi:type=\"uml:Package\" xmi:id=\"").append(paquete)
                 .append("\" name=\"").append(escapar(diagrama.getNombre())).append("\">\n");
 
         for (ClaseUml clase : clases) {
@@ -94,6 +114,7 @@ public class ExportadorXmi {
         for (RelacionUml relacion : relaciones) {
             escribirAsociacion(xml, relacion);
             escribirDependencia(xml, relacion);
+            escribirRealizacion(xml, relacion);
         }
         for (Map.Entry<String, String> tipo : tiposDeclarados.entrySet()) {
             xml.append("    <packagedElement xmi:type=\"uml:DataType\" xmi:id=\"")
@@ -101,9 +122,138 @@ public class ExportadorXmi {
                     .append(escapar(tipo.getKey())).append("\"/>\n");
         }
 
+        xml.append("    </packagedElement>\n");
         xml.append("  </uml:Model>\n");
+        escribirVista(xml, diagrama, clases, relaciones, paquete);
         xml.append("</xmi:XMI>\n");
         return xml.toString();
+    }
+
+    /**
+     * Escribe la vista: el diagrama con la posicion de cada clase.
+     * <p>
+     * Sin esto, quien abre el documento en Enterprise Architect recibe las
+     * clases y sus relaciones, pero ningun dibujo: aparecen en el arbol del
+     * proyecto y el lienzo queda vacio, y hay que arrastrarlas a mano una por
+     * una. Las coordenadas ya existen en el modelo -son las del lienzo de
+     * FORJA- y esto es lo que las hace viajar.
+     * <p>
+     * La vista no cabe en UML, que describe el modelo y no como se dibuja, asi
+     * que viaja en la extension que Enterprise Architect declara para eso. Se
+     * emite despues de {@code uml:Model} y no dentro, porque es informacion de
+     * la herramienta y no del modelo: otra herramienta la ignora y se queda con
+     * el modelo completo, que es justamente lo que se busca.
+     */
+    private void escribirVista(StringBuilder xml, Diagrama diagrama, List<ClaseUml> clases,
+                               List<RelacionUml> relaciones, String paquete) {
+
+        xml.append("  <xmi:Extension extender=\"Enterprise Architect\" extenderID=\"6.5\">\n");
+        escribirConectores(xml, relaciones);
+        xml.append("    <diagrams>\n");
+        xml.append("      <diagram xmi:id=\"").append(idDeLaVista(diagrama.getId())).append("\">\n");
+        xml.append("        <model package=\"").append(paquete)
+                .append("\" localID=\"1\" owner=\"").append(paquete).append("\"/>\n");
+        xml.append("        <properties name=\"").append(escapar(diagrama.getNombre()))
+                .append("\" type=\"Logical\"/>\n");
+        xml.append("        <project author=\"FORJA\" version=\"1.0\"/>\n");
+        xml.append("        <elements>\n");
+
+        int orden = 0;
+        for (ClaseUml clase : clases) {
+            // La geometria va en el rectangulo que usa la herramienta: el borde
+            // derecho y el inferior son absolutos, no un ancho y un alto.
+            long izquierda = Math.round(clase.getPosX());
+            long arriba = Math.round(clase.getPosY());
+            xml.append("          <element geometry=\"Left=").append(izquierda)
+                    .append(";Top=").append(arriba)
+                    .append(";Right=").append(izquierda + Math.round(clase.getAncho()))
+                    .append(";Bottom=").append(arriba + Math.round(clase.getAlto()))
+                    .append(";\" subject=\"").append(id(clase.getId()))
+                    .append("\" seqno=\"").append(++orden).append("\"/>\n");
+        }
+
+        xml.append("        </elements>\n");
+        xml.append("      </diagram>\n");
+        xml.append("    </diagrams>\n");
+        xml.append("  </xmi:Extension>\n");
+    }
+
+    /** Una clase marcada como interfaz se exporta como uml:Interface. */
+    private static boolean esInterfaz(ClaseUml clase) {
+        String estereotipo = clase.getEstereotipo();
+        return estereotipo != null
+                && ("interface".equalsIgnoreCase(estereotipo.trim())
+                || "interfaz".equalsIgnoreCase(estereotipo.trim()));
+    }
+
+    /**
+     * Repite las relaciones en el vocabulario de conectores de la herramienta.
+     * <p>
+     * Es duplicacion deliberada y molesta: las relaciones ya estan descritas
+     * arriba en UML, como asociaciones con sus extremos. Pero al declarar el
+     * documento como salido de Enterprise Architect -sin lo cual EA descarta la
+     * vista- EA pasa a leer los vinculos de esta seccion y deja de mirar las
+     * asociaciones de UML. Sin esto, importar el archivo trae las clases y el
+     * dibujo pero las asociaciones desaparecen: se comprobo, se caian de ocho
+     * relaciones a tres. La herencia y la dependencia sobreviven de todos modos
+     * porque EA las sigue leyendo del UML, pero se escriben igual para no
+     * depender de esa asimetria.
+     */
+    private void escribirConectores(StringBuilder xml, List<RelacionUml> relaciones) {
+        if (relaciones.isEmpty()) {
+            return;
+        }
+        xml.append("    <connectors>\n");
+        for (RelacionUml relacion : relaciones) {
+            xml.append("      <connector xmi:idref=\"").append(id(relacion.getId())).append("\">\n");
+            extremoDelConector(xml, "source", relacion.getOrigen(),
+                    relacion.getMultiplicidadOrigen(), agregacionDeEa(relacion.getTipo()));
+            extremoDelConector(xml, "target", relacion.getDestino(),
+                    relacion.getMultiplicidadDestino(), "none");
+            xml.append("        <properties ea_type=\"").append(tipoDeEa(relacion.getTipo()))
+                    .append("\" direction=\"Source -&gt; Destination\"/>\n");
+            xml.append("      </connector>\n");
+        }
+        xml.append("    </connectors>\n");
+    }
+
+    private void extremoDelConector(StringBuilder xml, String lado, ClaseUml clase,
+                                    String multiplicidad, String agregacion) {
+        xml.append("        <").append(lado).append(" xmi:idref=\"").append(id(clase.getId()))
+                .append("\">\n");
+        xml.append("          <model type=\"").append(esInterfaz(clase) ? "Interface" : "Class")
+                .append("\" name=\"").append(escapar(clase.getNombre())).append("\"/>\n");
+        xml.append("          <role visibility=\"Public\"/>\n");
+        xml.append("          <type multiplicity=\"").append(escapar(multiplicidad))
+                .append("\" aggregation=\"").append(agregacion)
+                .append("\" containment=\"Unspecified\"/>\n");
+        xml.append("        </").append(lado).append(">\n");
+    }
+
+    /** Nombre que la herramienta le da a cada clase de vinculo. */
+    private static String tipoDeEa(TipoRelacion tipo) {
+        return switch (tipo) {
+            case ASOCIACION -> "Association";
+            case AGREGACION, COMPOSICION -> "Aggregation";
+            case HERENCIA -> "Generalization";
+            case REALIZACION -> "Realisation";
+            case DEPENDENCIA -> "Dependency";
+        };
+    }
+
+    private static String agregacionDeEa(TipoRelacion tipo) {
+        String marca = agregacionDe(tipo);
+        return marca != null ? marca : "none";
+    }
+
+    /** Identificador del paquete que contiene el diagrama. */
+    private static String idDelPaquete(UUID diagramaId) {
+        return "paquete" + id(diagramaId);
+    }
+
+    /** Identificador de la vista, distinto del modelo al que retrata. */
+    private static String idDeLaVista(UUID diagramaId) {
+        return "vista" + id(diagramaId);
     }
 
     // ---------- Clases ------------------------------------------------------
@@ -112,9 +262,7 @@ public class ExportadorXmi {
                                List<RelacionUml> relaciones,
                                Map<String, String> tiposDeclarados) {
 
-        boolean esInterfaz = clase.getEstereotipo() != null
-                && ("interface".equalsIgnoreCase(clase.getEstereotipo().trim())
-                || "interfaz".equalsIgnoreCase(clase.getEstereotipo().trim()));
+        boolean esInterfaz = esInterfaz(clase);
         String tipoXmi = esInterfaz ? "uml:Interface" : "uml:Class";
 
         xml.append("    <packagedElement xmi:type=\"").append(tipoXmi).append("\" xmi:id=\"")
@@ -333,6 +481,26 @@ public class ExportadorXmi {
         xml.append(" client=\"").append(id(relacion.getOrigen().getId()))
                 .append("\" supplier=\"").append(id(relacion.getDestino().getId()))
                 .append("\"/>\n");
+    }
+
+    /**
+     * Declara la realizacion tambien como elemento del paquete.
+     * <p>
+     * Ya viaja dentro de la clase como {@code interfaceRealization}, que es la
+     * forma que manda UML, pero Enterprise Architect no la mira: al leer el
+     * documento en su modo propio -el que hace falta para que acepte la vista-
+     * la realizacion desaparecia y las ocho relaciones llegaban como siete.
+     * Declarada ademas aqui, EA la reconoce y el resto de las herramientas
+     * encuentran las dos formas, que dicen lo mismo.
+     */
+    private void escribirRealizacion(StringBuilder xml, RelacionUml relacion) {
+        if (relacion.getTipo() != TipoRelacion.REALIZACION) {
+            return;
+        }
+        xml.append("    <packagedElement xmi:type=\"uml:Realization\" xmi:id=\"")
+                .append(id(relacion.getId())).append("-realizacion\" client=\"")
+                .append(id(relacion.getOrigen().getId())).append("\" supplier=\"")
+                .append(id(relacion.getDestino().getId())).append("\"/>\n");
     }
 
     private void escribirAsociacion(StringBuilder xml, RelacionUml relacion) {

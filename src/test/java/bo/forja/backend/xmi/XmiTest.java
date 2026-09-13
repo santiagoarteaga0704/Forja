@@ -179,6 +179,37 @@ class XmiTest {
     }
 
     @Test
+    @DisplayName("el documento lleva la vista, con la posicion de cada clase")
+    void elDocumentoLlevaLaVista() {
+        String documento = xmi.exportar(original.getId(), autor.getId());
+
+        // Sin la vista, quien abre el documento en Enterprise Architect recibe
+        // las clases pero ningun dibujo, y tiene que acomodarlas a mano.
+        assertThat(documento)
+                .contains("<xmi:Extension extender=\"Enterprise Architect\"")
+                .contains("<diagrams>")
+                .contains("type=\"Logical\"")
+                .contains("geometry=\"Left=")
+                .contains(";Top=")
+                .contains(";Bottom=");
+
+        // Enterprise Architect solo lee esa seccion si el documento dice venir
+        // de Enterprise Architect; con otro nombre descarta la vista en
+        // silencio. Queda fijado aqui para que nadie lo "corrija" sin saberlo.
+        assertThat(documento).contains("<xmi:Documentation exporter=\"Enterprise Architect\"");
+        assertThat(documento)
+                .as("el documento debe seguir diciendo quien lo genero")
+                .contains("Generado por FORJA");
+
+        // En ese modo Enterprise Architect lee los vinculos de <connectors> y
+        // deja de mirar las asociaciones de UML: sin esta seccion se pierden.
+        assertThat(documento)
+                .contains("<connectors>")
+                .contains("ea_type=\"Aggregation\"")
+                .contains("<packagedElement xmi:type=\"uml:Realization\"");
+    }
+
+    @Test
     @DisplayName("lo importado queda en la bitacora con origen IMPORTACION")
     void laImportacionQuedaTrazada() {
         String documento = xmi.exportar(original.getId(), autor.getId());
