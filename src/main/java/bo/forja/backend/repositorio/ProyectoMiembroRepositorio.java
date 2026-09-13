@@ -14,4 +14,6 @@ public interface ProyectoMiembroRepositorio
     Optional<ProyectoMiembro> findByProyectoIdAndUsuarioId(UUID proyectoId, UUID usuarioId);
 
     List<ProyectoMiembro> findByProyectoId(UUID proyectoId);
+
+    long countByProyectoId(UUID proyectoId);
 }

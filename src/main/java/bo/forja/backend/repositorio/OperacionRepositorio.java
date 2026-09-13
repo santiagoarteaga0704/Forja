@@ -23,4 +23,13 @@ public interface OperacionRepositorio extends JpaRepository<Operacion, UUID> {
 
     @Query("SELECT COALESCE(MAX(o.secuencia), 0) FROM Operacion o WHERE o.diagrama.id = :diagramaId")
     long ultimaSecuencia(@Param("diagramaId") UUID diagramaId);
+
+    /** Recuento de operaciones por canal de entrada, para el agente guia. */
+    @Query("""
+            SELECT new bo.forja.backend.repositorio.ConteoPorOrigen(o.origen, COUNT(o))
+            FROM Operacion o
+            WHERE o.diagrama.id = :diagramaId
+            GROUP BY o.origen
+            """)
+    List<ConteoPorOrigen> contarPorOrigen(@Param("diagramaId") UUID diagramaId);
 }

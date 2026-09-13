@@ -224,6 +224,21 @@ export interface ResumenImportacion {
   versionDelDiagrama: number
 }
 
+// ---------- Agente guia -----------------------------------------------------
+
+export type CategoriaConsejo = 'DESCUBRIMIENTO' | 'MODELO' | 'DISENO'
+
+export interface Consejo {
+  id: string
+  categoria: CategoriaConsejo
+  prioridad: number
+  queNote: string
+  porQueImporta: string
+  comoSeHace: string
+  /** Clase o relacion de la que habla, para poder senalarla en el lienzo. */
+  elementoId: string | null
+}
+
 // ---------- Dictado por voz -------------------------------------------------
 
 export interface Paso {

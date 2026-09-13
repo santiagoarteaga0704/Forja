@@ -1,5 +1,6 @@
 import type {
   Comando,
+  Consejo,
   Credencial,
   DiagramaCompleto,
   DiagramaResumen,
@@ -210,6 +211,17 @@ export const api = {
     })
     if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo exportar el XMI')
     return respuesta.text()
+  },
+
+  // ---------- Agente guia --------------------------------------------------
+
+  consejos: (diagramaId: string, descartados: string[]) => {
+    const consulta = new URLSearchParams()
+    // Los descartados los recuerda el cliente: cerrar un aviso es una
+    // preferencia de quien lo mira, no un hecho del modelo.
+    descartados.forEach((id) => consulta.append('descartados', id))
+    const cola = consulta.toString()
+    return pedir<Consejo[]>(`/api/diagramas/${diagramaId}/agente${cola ? `?${cola}` : ''}`)
   },
 
   // ---------- Dictado ------------------------------------------------------

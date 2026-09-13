@@ -670,3 +670,93 @@ ul.sugerencias button {
 ul.sugerencias button:hover {
   background: var(--superficie-alta);
 }
+
+/* ---------- Agente guia ---------- */
+
+.barra .contador {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--ambar);
+  color: #1a1206;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 16px;
+}
+
+.consejo {
+  border: 1px solid var(--borde);
+  border-left-width: 3px;
+  border-radius: var(--radio-chico);
+  background: var(--fondo);
+  padding: 10px 11px;
+  margin-bottom: 10px;
+}
+
+/* El color del borde dice de que clase de consejo se trata sin leerlo. */
+.consejo.modelo { border-left-color: var(--peligro); }
+.consejo.diseno { border-left-color: var(--ajeno); }
+.consejo.descubrimiento { border-left-color: var(--ambar); }
+
+.consejo header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.consejo .etiqueta {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-debil);
+}
+
+.consejo .quitar {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--texto-debil);
+  padding: 0 3px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.consejo .quitar:hover {
+  color: var(--texto);
+  background: none;
+}
+
+.consejo p {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+}
+
+.consejo .que {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.consejo .porque {
+  color: var(--texto-medio);
+  font-size: 12px;
+}
+
+.consejo .como {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ambar-claro);
+  background: var(--superficie-alta);
+  border-radius: 3px;
+  padding: 5px 7px;
+  /* Es una instruccion dictable: conviene poder copiarla tal cual. */
+  user-select: all;
+}
+
+.consejo .senalar {
+  font-size: 11px;
+  padding: 3px 8px;
+}
