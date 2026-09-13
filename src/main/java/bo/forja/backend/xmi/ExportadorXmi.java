@@ -1,0 +1,399 @@
+package bo.forja.backend.xmi;
+
+import bo.forja.backend.dominio.AtributoUml;
+import bo.forja.backend.dominio.ClaseUml;
+import bo.forja.backend.dominio.Diagrama;
+import bo.forja.backend.dominio.MetodoUml;
+import bo.forja.backend.dominio.ParametroUml;
+import bo.forja.backend.dominio.RelacionUml;
+import bo.forja.backend.dominio.TipoRelacion;
+import bo.forja.backend.dominio.Visibilidad;
+import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Exporta el diagrama a XMI 2.5.1, el formato con el que Enterprise
+ * Architect intercambia modelos.
+ * <p>
+ * Se escribe el XML a mano en lugar de armar un arbol DOM porque el
+ * documento es de estructura fija y conocida: componerlo directamente deja
+ * a la vista la forma exacta del resultado, que es lo que hay que poder
+ * comparar contra la especificacion cuando una herramienta se niega a
+ * importarlo.
+ * <p>
+ * <b>Sobre lo que UML no puede expresar.</b> El modelo guarda por atributo
+ * una longitud, si es identificador y si es unico. Nada de eso tiene lugar
+ * en un {@code uml:Property}: son propiedades del almacenamiento, no del
+ * modelo conceptual. En vez de forzarlas dentro del estandar o de
+ * perderlas, viajan en un bloque {@code xmi:Extension} con extensor
+ * {@code FORJA}, el mismo mecanismo que usa Enterprise Architect para sus
+ * propios datos. Una herramienta ajena ignora la extension y lee un modelo
+ * valido; FORJA la lee y recupera el modelo completo.
+ */
+@Component
+public class ExportadorXmi {
+
+    static final String EXTENSOR = "FORJA";
+
+    /** Tipos con equivalente en la biblioteca de tipos primitivos de UML. */
+    private static final Map<String, String> PRIMITIVOS_UML = Map.of(
+            "String", "String",
+            "Integer", "Integer",
+            "int", "Integer",
+            "Boolean", "Boolean",
+            "boolean", "Boolean",
+            "Real", "Real",
+            "double", "Real",
+            "UnlimitedNatural", "UnlimitedNatural");
+
+    private static final String HREF_PRIMITIVOS =
+            "http://www.omg.org/spec/UML/20161101/PrimitiveTypes.xmi#";
+
+    public String exportar(Diagrama diagrama, List<ClaseUml> clases, List<RelacionUml> relaciones) {
+        StringBuilder xml = new StringBuilder();
+
+        // Los tipos que no son primitivos de UML se declaran como uml:DataType
+        // dentro del modelo, para que la referencia del atributo apunte a algo
+        // que exista en el documento.
+        Map<String, String> tiposDeclarados = declararTipos(clases);
+
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<xmi:XMI xmi:version=\"20131001\"\n");
+        xml.append("         xmlns:xmi=\"http://www.omg.org/spec/XMI/20131001\"\n");
+        xml.append("         xmlns:uml=\"http://www.omg.org/spec/UML/20161101\">\n");
+        xml.append("  <xmi:Documentation exporter=\"FORJA\" exporterVersion=\"1.0\"/>\n");
+        xml.append("  <uml:Model xmi:type=\"uml:Model\" xmi:id=\"").append(id(diagrama.getId()))
+                .append("\" name=\"").append(escapar(diagrama.getNombre())).append("\">\n");
+
+        for (ClaseUml clase : clases) {
+            escribirClase(xml, clase, relaciones, tiposDeclarados);
+        }
+        for (RelacionUml relacion : relaciones) {
+            escribirAsociacion(xml, relacion);
+        }
+        for (Map.Entry<String, String> tipo : tiposDeclarados.entrySet()) {
+            xml.append("    <packagedElement xmi:type=\"uml:DataType\" xmi:id=\"")
+                    .append(tipo.getValue()).append("\" name=\"")
+                    .append(escapar(tipo.getKey())).append("\"/>\n");
+        }
+
+        xml.append("  </uml:Model>\n");
+        xml.append("</xmi:XMI>\n");
+        return xml.toString();
+    }
+
+    // ---------- Clases ------------------------------------------------------
+
+    private void escribirClase(StringBuilder xml, ClaseUml clase,
+                               List<RelacionUml> relaciones,
+                               Map<String, String> tiposDeclarados) {
+
+        boolean esInterfaz = clase.getEstereotipo() != null
+                && ("interface".equalsIgnoreCase(clase.getEstereotipo().trim())
+                || "interfaz".equalsIgnoreCase(clase.getEstereotipo().trim()));
+        String tipoXmi = esInterfaz ? "uml:Interface" : "uml:Class";
+
+        xml.append("    <packagedElement xmi:type=\"").append(tipoXmi).append("\" xmi:id=\"")
+                .append(id(clase.getId())).append("\" name=\"")
+                .append(escapar(clase.getNombre())).append("\"");
+        if (clase.isEsAbstracta()) {
+            xml.append(" isAbstract=\"true\"");
+        }
+        xml.append(">\n");
+
+        // La generalizacion se declara dentro de la subclase, como manda UML:
+        // es la subclase la que conoce de quien deriva.
+        relaciones.stream()
+                .filter(r -> r.getTipo() == TipoRelacion.HERENCIA)
+                .filter(r -> r.getOrigen().getId().equals(clase.getId()))
+                .forEach(r -> xml.append("      <generalization xmi:type=\"uml:Generalization\"")
+                        .append(" xmi:id=\"").append(id(r.getId()))
+                        .append("\" general=\"").append(id(r.getDestino().getId()))
+                        .append("\"/>\n"));
+
+        relaciones.stream()
+                .filter(r -> r.getTipo() == TipoRelacion.REALIZACION)
+                .filter(r -> r.getOrigen().getId().equals(clase.getId()))
+                .forEach(r -> xml.append("      <interfaceRealization")
+                        .append(" xmi:type=\"uml:InterfaceRealization\" xmi:id=\"")
+                        .append(id(r.getId())).append("\" client=\"").append(id(clase.getId()))
+                        .append("\" supplier=\"").append(id(r.getDestino().getId()))
+                        .append("\" contract=\"").append(id(r.getDestino().getId()))
+                        .append("\"/>\n"));
+
+        clase.getAtributos().forEach(a -> escribirAtributo(xml, a, tiposDeclarados));
+        clase.getMetodos().forEach(m -> escribirOperacion(xml, m, tiposDeclarados));
+
+        // Los extremos navegables de las asociaciones se declaran como
+        // propiedades de la clase, que es la forma en que Enterprise Architect
+        // espera encontrarlos.
+        relaciones.stream()
+                .filter(r -> esEstructural(r.getTipo()))
+                .forEach(r -> escribirExtremos(xml, clase, r));
+
+        xml.append("      <xmi:Extension extender=\"").append(EXTENSOR).append("\">\n");
+        xml.append("        <geometria x=\"").append(clase.getPosX()).append("\" y=\"")
+                .append(clase.getPosY()).append("\" ancho=\"").append(clase.getAncho())
+                .append("\" alto=\"").append(clase.getAlto()).append("\"/>\n");
+        if (clase.getEstereotipo() != null && !esInterfaz) {
+            xml.append("        <estereotipo nombre=\"")
+                    .append(escapar(clase.getEstereotipo())).append("\"/>\n");
+        }
+        xml.append("      </xmi:Extension>\n");
+
+        xml.append("    </packagedElement>\n");
+    }
+
+    private void escribirAtributo(StringBuilder xml, AtributoUml atributo,
+                                  Map<String, String> tiposDeclarados) {
+        xml.append("      <ownedAttribute xmi:type=\"uml:Property\" xmi:id=\"")
+                .append(id(atributo.getId())).append("\" name=\"")
+                .append(escapar(atributo.getNombre())).append("\" visibility=\"")
+                .append(visibilidad(atributo.getVisibilidad())).append("\">\n");
+
+        escribirTipo(xml, atributo.getTipo(), tiposDeclarados, "        ");
+
+        // La obligatoriedad si tiene lugar en UML: es el limite inferior de la
+        // multiplicidad del atributo.
+        xml.append("        <lowerValue xmi:type=\"uml:LiteralInteger\" value=\"")
+                .append(atributo.isEsRequerido() ? 1 : 0).append("\"/>\n");
+        xml.append("        <upperValue xmi:type=\"uml:LiteralUnlimitedNatural\" value=\"1\"/>\n");
+
+        xml.append("        <xmi:Extension extender=\"").append(EXTENSOR).append("\">\n");
+        xml.append("          <almacenamiento esIdentificador=\"")
+                .append(atributo.isEsIdentificador()).append("\" esUnico=\"")
+                .append(atributo.isEsUnico()).append("\"");
+        if (atributo.getLongitud() != null) {
+            xml.append(" longitud=\"").append(atributo.getLongitud()).append("\"");
+        }
+        if (atributo.getValorDefecto() != null) {
+            xml.append(" valorDefecto=\"").append(escapar(atributo.getValorDefecto())).append("\"");
+        }
+        xml.append("/>\n");
+        xml.append("        </xmi:Extension>\n");
+
+        xml.append("      </ownedAttribute>\n");
+    }
+
+    private void escribirOperacion(StringBuilder xml, MetodoUml metodo,
+                                   Map<String, String> tiposDeclarados) {
+        xml.append("      <ownedOperation xmi:type=\"uml:Operation\" xmi:id=\"")
+                .append(id(metodo.getId())).append("\" name=\"")
+                .append(escapar(metodo.getNombre())).append("\" visibility=\"")
+                .append(visibilidad(metodo.getVisibilidad())).append("\"");
+        if (metodo.isEsAbstracto()) {
+            xml.append(" isAbstract=\"true\"");
+        }
+        if (metodo.isEsEstatico()) {
+            xml.append(" isStatic=\"true\"");
+        }
+        xml.append(">\n");
+
+        for (ParametroUml parametro : metodo.getParametros()) {
+            xml.append("        <ownedParameter xmi:type=\"uml:Parameter\" xmi:id=\"")
+                    .append(id(parametro.getId())).append("\" name=\"")
+                    .append(escapar(parametro.getNombre())).append("\" direction=\"in\">\n");
+            escribirTipo(xml, parametro.getTipo(), tiposDeclarados, "          ");
+            xml.append("        </ownedParameter>\n");
+        }
+
+        // El tipo de retorno es un parametro con direccion "return": en UML una
+        // operacion no tiene un campo de retorno aparte.
+        if (metodo.getTipoRetorno() != null && !metodo.getTipoRetorno().isBlank()
+                && !"void".equalsIgnoreCase(metodo.getTipoRetorno())) {
+            xml.append("        <ownedParameter xmi:type=\"uml:Parameter\" xmi:id=\"ret-")
+                    .append(id(metodo.getId())).append("\" name=\"return\" direction=\"return\">\n");
+            escribirTipo(xml, metodo.getTipoRetorno(), tiposDeclarados, "          ");
+            xml.append("        </ownedParameter>\n");
+        }
+
+        xml.append("      </ownedOperation>\n");
+    }
+
+    // ---------- Asociaciones ------------------------------------------------
+
+    /**
+     * Extremos navegables que la clase posee. Se emite el extremo <i>opuesto</i>
+     * a la clase: una propiedad de Paciente cuyo tipo es Consulta representa
+     * "el Paciente conoce sus Consultas".
+     */
+    private void escribirExtremos(StringBuilder xml, ClaseUml clase, RelacionUml relacion) {
+        boolean esOrigen = relacion.getOrigen().getId().equals(clase.getId());
+        boolean esDestino = relacion.getDestino().getId().equals(clase.getId());
+        if (!esOrigen && !esDestino) {
+            return;
+        }
+
+        if (esOrigen) {
+            propiedadDeAsociacion(xml, relacion, extremoOrigen(relacion),
+                    relacion.getDestino().getId(), relacion.getRolDestino(),
+                    relacion.getDestino().getNombre(), relacion.getMultiplicidadDestino());
+        }
+        if (esDestino) {
+            propiedadDeAsociacion(xml, relacion, extremoDestino(relacion),
+                    relacion.getOrigen().getId(), relacion.getRolOrigen(),
+                    relacion.getOrigen().getNombre(), relacion.getMultiplicidadOrigen());
+        }
+    }
+
+    private void propiedadDeAsociacion(StringBuilder xml, RelacionUml relacion, String idExtremo,
+                                       UUID tipoApuntado, String rol, String nombreDeLaClase,
+                                       String multiplicidad) {
+        String nombre = rol != null && !rol.isBlank() ? rol : nombreDeLaClase;
+        Limites limites = Limites.de(multiplicidad);
+
+        xml.append("      <ownedAttribute xmi:type=\"uml:Property\" xmi:id=\"").append(idExtremo)
+                .append("\" name=\"").append(escapar(nombre))
+                .append("\" type=\"").append(id(tipoApuntado))
+                .append("\" association=\"").append(id(relacion.getId())).append("\">\n");
+        xml.append("        <lowerValue xmi:type=\"uml:LiteralInteger\" value=\"")
+                .append(limites.inferior()).append("\"/>\n");
+        xml.append("        <upperValue xmi:type=\"uml:LiteralUnlimitedNatural\" value=\"")
+                .append(limites.superior()).append("\"/>\n");
+        xml.append("      </ownedAttribute>\n");
+    }
+
+    private void escribirAsociacion(StringBuilder xml, RelacionUml relacion) {
+        if (!esEstructural(relacion.getTipo())) {
+            return;
+        }
+        xml.append("    <packagedElement xmi:type=\"uml:Association\" xmi:id=\"")
+                .append(id(relacion.getId())).append("\"");
+        if (relacion.getEtiqueta() != null && !relacion.getEtiqueta().isBlank()) {
+            xml.append(" name=\"").append(escapar(relacion.getEtiqueta())).append("\"");
+        }
+        xml.append(">\n");
+        xml.append("      <memberEnd xmi:idref=\"").append(extremoOrigen(relacion)).append("\"/>\n");
+        xml.append("      <memberEnd xmi:idref=\"").append(extremoDestino(relacion)).append("\"/>\n");
+
+        // La agregacion y la composicion son asociaciones con un extremo
+        // marcado; el tipo exacto no cabe en uml:Association y se conserva en
+        // la extension para no perderlo al volver.
+        xml.append("      <xmi:Extension extender=\"").append(EXTENSOR).append("\">\n");
+        xml.append("        <clasificacion tipo=\"").append(relacion.getTipo().name())
+                .append("\" multiplicidadOrigen=\"")
+                .append(escapar(relacion.getMultiplicidadOrigen()))
+                .append("\" multiplicidadDestino=\"")
+                .append(escapar(relacion.getMultiplicidadDestino()))
+                .append("\" origen=\"").append(id(relacion.getOrigen().getId()))
+                .append("\" destino=\"").append(id(relacion.getDestino().getId()))
+                .append("\"/>\n");
+        xml.append("      </xmi:Extension>\n");
+        xml.append("    </packagedElement>\n");
+    }
+
+    // ---------- Tipos -------------------------------------------------------
+
+    private Map<String, String> declararTipos(List<ClaseUml> clases) {
+        Set<String> usados = new LinkedHashSet<>();
+        for (ClaseUml clase : clases) {
+            clase.getAtributos().forEach(a -> usados.add(a.getTipo()));
+            clase.getMetodos().forEach(m -> {
+                if (m.getTipoRetorno() != null && !"void".equalsIgnoreCase(m.getTipoRetorno())) {
+                    usados.add(m.getTipoRetorno());
+                }
+                m.getParametros().forEach(p -> usados.add(p.getTipo()));
+            });
+        }
+
+        Map<String, String> declarados = new LinkedHashMap<>();
+        int contador = 0;
+        for (String tipo : usados) {
+            if (tipo == null || tipo.isBlank() || PRIMITIVOS_UML.containsKey(tipo)) {
+                continue;
+            }
+            declarados.put(tipo, "tipo-" + (++contador));
+        }
+        return declarados;
+    }
+
+    private void escribirTipo(StringBuilder xml, String tipo,
+                              Map<String, String> tiposDeclarados, String sangria) {
+        if (tipo == null || tipo.isBlank()) {
+            return;
+        }
+        String primitivo = PRIMITIVOS_UML.get(tipo);
+        if (primitivo != null) {
+            xml.append(sangria).append("<type xmi:type=\"uml:PrimitiveType\" href=\"")
+                    .append(HREF_PRIMITIVOS).append(primitivo).append("\"/>\n");
+            return;
+        }
+        String declarado = tiposDeclarados.get(tipo);
+        if (declarado != null) {
+            xml.append(sangria).append("<type xmi:idref=\"").append(declarado).append("\"/>\n");
+        }
+    }
+
+    // ---------- Auxiliares --------------------------------------------------
+
+    private static boolean esEstructural(TipoRelacion tipo) {
+        return tipo == TipoRelacion.ASOCIACION || tipo == TipoRelacion.AGREGACION
+                || tipo == TipoRelacion.COMPOSICION || tipo == TipoRelacion.DEPENDENCIA;
+    }
+
+    private static String extremoOrigen(RelacionUml relacion) {
+        return "ext-o-" + id(relacion.getId());
+    }
+
+    private static String extremoDestino(RelacionUml relacion) {
+        return "ext-d-" + id(relacion.getId());
+    }
+
+    /**
+     * Los identificadores de XMI son NCName y no pueden empezar con un digito,
+     * que es algo que un UUID hace la mitad de las veces. El guion bajo delante
+     * lo resuelve sin perder el valor original.
+     */
+    static String id(UUID identificador) {
+        return "_" + identificador;
+    }
+
+    private static String visibilidad(Visibilidad visibilidad) {
+        if (visibilidad == null) {
+            return "private";
+        }
+        return switch (visibilidad) {
+            case PUBLICO -> "public";
+            case PRIVADO -> "private";
+            case PROTEGIDO -> "protected";
+            case PAQUETE -> "package";
+        };
+    }
+
+    static String escapar(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    /** Limites de una multiplicidad, en la forma en que los escribe XMI. */
+    private record Limites(int inferior, String superior) {
+
+        static Limites de(String texto) {
+            String limpio = texto == null || texto.isBlank() ? "1" : texto.trim();
+            int separador = limpio.indexOf("..");
+            String inferior = separador >= 0 ? limpio.substring(0, separador).trim() : limpio;
+            String superior = separador >= 0 ? limpio.substring(separador + 2).trim() : limpio;
+
+            int minimo;
+            try {
+                minimo = Integer.parseInt(inferior);
+            } catch (NumberFormatException e) {
+                minimo = inferior.equals("*") ? 0 : 1;
+            }
+            // En XMI el infinito de UML se escribe con asterisco.
+            return new Limites(minimo, superior.equals("n") ? "*" : superior);
+        }
+    }
+}

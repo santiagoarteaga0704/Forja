@@ -5,6 +5,7 @@ import bo.forja.backend.seguridad.CredencialesInvalidas;
 import bo.forja.backend.seguridad.EmailYaRegistrado;
 import bo.forja.backend.servicio.AccesoDenegado;
 import bo.forja.backend.servicio.RecursoNoEncontrado;
+import bo.forja.backend.xmi.XmiInvalido;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -60,6 +61,15 @@ public class ManejadorDeErrores {
     @ExceptionHandler(ComandoInvalido.class)
     ProblemDetail comandoInvalido(ComandoInvalido e) {
         return problema(HttpStatus.UNPROCESSABLE_ENTITY, "Comando invalido", e.getMessage());
+    }
+
+    /**
+     * El documento XMI no se puede interpretar. Es 400 y no 422: el problema
+     * esta en el archivo recibido, no en el modelo que describe.
+     */
+    @ExceptionHandler(XmiInvalido.class)
+    ProblemDetail xmiInvalido(XmiInvalido e) {
+        return problema(HttpStatus.BAD_REQUEST, "XMI invalido", e.getMessage());
     }
 
     /** Falla la forma de la peticion: se detalla campo por campo. */
