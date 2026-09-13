@@ -16,6 +16,19 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+forja:
+  jwt:
+    # En el despliegue se sobrescribe con la variable de entorno
+    # FORJA_JWT_SECRETO. HS256 exige 32 caracteres como minimo.
+    secreto: ${FORJA_JWT_SECRETO:clave-de-desarrollo-de-forja-no-usar-en-produccion}
+    vigencia-horas: 12
+  web:
+    # Origenes del cliente React. Vite sirve en 5173 durante el desarrollo.
+    origenes: http://localhost:5173,http://localhost:4173
+  bloqueo:
+    vigencia-segundos: 60
+    barrido-ms: 30000
+
 server:
   port: 8080
 
