@@ -224,6 +224,42 @@ export interface ResumenImportacion {
   versionDelDiagrama: number
 }
 
+// ---------- Foto de pizarra -------------------------------------------------
+
+export interface ClaseLeida {
+  nombre: string
+  estereotipo: string | null
+  esAbstracta: boolean
+  atributos: number
+  operaciones: number
+  /** La clase ya estaba en el diagrama: no se recrea ni se le tocan los miembros. */
+  yaExistia: boolean
+}
+
+export interface RelacionLeida {
+  origen: string
+  tipo: string
+  destino: string
+  multiplicidades: string
+}
+
+export interface Lectura {
+  lineasLeidas: number
+  clases: ClaseLeida[]
+  relaciones: RelacionLeida[]
+  /** Lineas que no se entendieron, con su numero para encontrarlas. */
+  ignoradas: string[]
+}
+
+export interface ResultadoFoto {
+  lectura: Lectura
+  aplicadas: number
+  /** Comandos que el servidor reconocio como reenvio de algo ya hecho. */
+  yaEstaban: number
+  problemas: string[]
+  retenidoPor: string | null
+}
+
 // ---------- Agente guia -----------------------------------------------------
 
 export type CategoriaConsejo = 'DESCUBRIMIENTO' | 'MODELO' | 'DISENO'

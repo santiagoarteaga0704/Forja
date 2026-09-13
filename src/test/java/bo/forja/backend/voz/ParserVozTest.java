@@ -2,6 +2,7 @@ package bo.forja.backend.voz;
 
 import bo.forja.backend.dominio.TipoRelacion;
 import bo.forja.backend.operacion.ComandoOperacion;
+import bo.forja.backend.operacion.ContextoDelDiagrama;
 import bo.forja.backend.operacion.TipoOperacion;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,12 +39,12 @@ class ParserVozTest {
     private static final UUID ID_AUDITABLE = UUID.randomUUID();
 
     /** Diagrama de referencia: es el contexto contra el que se interpreta. */
-    private final ContextoVoz contexto = ContextoVoz.de(List.of(
-            new ContextoVoz.ClaseConocida(ID_PACIENTE, "Paciente"),
-            new ContextoVoz.ClaseConocida(ID_CONSULTA, "Consulta"),
-            new ContextoVoz.ClaseConocida(ID_PERSONA, "Persona"),
-            new ContextoVoz.ClaseConocida(ID_MEDICO, "Medico"),
-            new ContextoVoz.ClaseConocida(ID_AUDITABLE, "Auditable")));
+    private final ContextoDelDiagrama contexto = ContextoDelDiagrama.de(List.of(
+            new ContextoDelDiagrama.ClaseConocida(ID_PACIENTE, "Paciente"),
+            new ContextoDelDiagrama.ClaseConocida(ID_CONSULTA, "Consulta"),
+            new ContextoDelDiagrama.ClaseConocida(ID_PERSONA, "Persona"),
+            new ContextoDelDiagrama.ClaseConocida(ID_MEDICO, "Medico"),
+            new ContextoDelDiagrama.ClaseConocida(ID_AUDITABLE, "Auditable")));
 
     // ---------- Clases ------------------------------------------------------
 
@@ -429,7 +430,7 @@ class ParserVozTest {
         @Test
         @DisplayName("sobre un diagrama vacio se puede crear pero no referenciar")
         void diagramaVacio() {
-            ContextoVoz vacio = ContextoVoz.vacio();
+            ContextoDelDiagrama vacio = ContextoDelDiagrama.vacio();
 
             assertThat(parser.interpretar("crea la clase Paciente", vacio).entendida()).isTrue();
             assertThat(parser.interpretar("a Paciente agregale el atributo nombre de tipo texto",

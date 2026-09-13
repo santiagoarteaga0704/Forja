@@ -3,6 +3,8 @@ package bo.forja.backend.voz;
 import bo.forja.backend.dominio.TipoRelacion;
 import bo.forja.backend.dominio.Visibilidad;
 import bo.forja.backend.operacion.ComandoOperacion;
+import bo.forja.backend.operacion.ContextoDelDiagrama;
+import bo.forja.backend.operacion.TiposDeclarados;
 import bo.forja.backend.operacion.TipoOperacion;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +12,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -147,31 +148,9 @@ public class ParserVoz {
     private static final Pattern LONGITUD = Pattern.compile("longitud\\s+(\\d+)",
             Pattern.CASE_INSENSITIVE);
 
-    /**
-     * Tipos escritos como los dice una persona. El generador ya entiende estas
-     * palabras, pero se normalizan igual para que el modelo guarde siempre el
-     * mismo nombre y el XMI exportado no mezcle "texto" con "String".
-     */
-    private static final Map<String, String> TIPOS = Map.ofEntries(
-            Map.entry("texto", "String"), Map.entry("cadena", "String"),
-            Map.entry("string", "String"), Map.entry("caracteres", "String"),
-            Map.entry("entero", "Integer"), Map.entry("numero", "Integer"),
-            Map.entry("int", "Integer"), Map.entry("integer", "Integer"),
-            Map.entry("largo", "Long"), Map.entry("long", "Long"),
-            Map.entry("decimal", "Decimal"), Map.entry("importe", "Decimal"),
-            Map.entry("precio", "Decimal"), Map.entry("monto", "Decimal"),
-            Map.entry("real", "Decimal"), Map.entry("double", "Decimal"),
-            Map.entry("booleano", "Boolean"), Map.entry("logico", "Boolean"),
-            Map.entry("bool", "Boolean"), Map.entry("boolean", "Boolean"),
-            Map.entry("fecha", "Date"), Map.entry("date", "Date"),
-            Map.entry("fechayhora", "DateTime"), Map.entry("fechahora", "DateTime"),
-            Map.entry("datetime", "DateTime"), Map.entry("marcadetiempo", "DateTime"),
-            Map.entry("hora", "Time"), Map.entry("time", "Time"),
-            Map.entry("uuid", "UUID"), Map.entry("identificador", "UUID"));
-
     // ---------- Interpretacion ----------------------------------------------
 
-    public Interpretacion interpretar(String fraseOriginal, ContextoVoz contexto) {
+    public Interpretacion interpretar(String fraseOriginal, ContextoDelDiagrama contexto) {
         if (fraseOriginal == null || fraseOriginal.isBlank()) {
             return Interpretacion.noEntendida("", sugerencias(contexto));
         }
@@ -182,7 +161,7 @@ public class ParserVoz {
         return resultado.orElseGet(() -> Interpretacion.noEntendida(fraseOriginal, sugerencias(contexto)));
     }
 
-    private Optional<Interpretacion> primeraQueEncaje(String frase, ContextoVoz contexto) {
+    private Optional<Interpretacion> primeraQueEncaje(String frase, ContextoDelDiagrama contexto) {
         Matcher m;
 
         if ((m = CREAR_INTERFAZ.matcher(frase)).matches()) {
@@ -203,7 +182,7 @@ public class ParserVoz {
         }
 
         if ((m = RENOMBRAR.matcher(frase)).matches()) {
-            Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(m.group(1));
+            Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(m.group(1));
             if (clase.isEmpty()) {
                 return noConozco(frase, m.group(1), contexto);
             }
@@ -214,7 +193,7 @@ public class ParserVoz {
         }
 
         if ((m = ELIMINAR.matcher(frase)).matches()) {
-            Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(m.group(1));
+            Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(m.group(1));
             if (clase.isEmpty()) {
                 return noConozco(frase, m.group(1), contexto);
             }
@@ -225,7 +204,7 @@ public class ParserVoz {
 
         if ((m = MARCAR_ABSTRACTA_IMPERATIVO.matcher(frase)).matches()
                 || (m = MARCAR_ABSTRACTA_DECLARATIVO.matcher(frase)).matches()) {
-            Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(m.group(1));
+            Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(m.group(1));
             if (clase.isEmpty()) {
                 return noConozco(frase, m.group(1), contexto);
             }
@@ -235,7 +214,7 @@ public class ParserVoz {
         }
 
         if ((m = MARCAR_INTERFAZ.matcher(frase)).matches()) {
-            Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(m.group(1));
+            Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(m.group(1));
             if (clase.isEmpty()) {
                 return noConozco(frase, m.group(1), contexto);
             }
@@ -275,7 +254,7 @@ public class ParserVoz {
 
     // ---------- Relaciones ---------------------------------------------------
 
-    private Optional<Interpretacion> comoRelacion(String frase, ContextoVoz contexto) {
+    private Optional<Interpretacion> comoRelacion(String frase, ContextoDelDiagrama contexto) {
         record Forma(Pattern patron, TipoRelacion tipo, boolean conCantidad) {
         }
         List<Forma> formas = List.of(
@@ -294,8 +273,8 @@ public class ParserVoz {
             String cantidad = forma.conCantidad() ? m.group(2) : null;
             String nombreDestino = forma.conCantidad() ? m.group(3) : m.group(2);
 
-            Optional<ContextoVoz.ClaseConocida> origen = contexto.resolver(m.group(1));
-            Optional<ContextoVoz.ClaseConocida> destino = contexto.resolver(nombreDestino);
+            Optional<ContextoDelDiagrama.ClaseConocida> origen = contexto.resolver(m.group(1));
+            Optional<ContextoDelDiagrama.ClaseConocida> destino = contexto.resolver(nombreDestino);
 
             // Si alguno de los dos extremos no es una clase conocida, esto no era
             // una relacion: se deja seguir a las reglas de atributo.
@@ -356,8 +335,8 @@ public class ParserVoz {
     }
 
     private Optional<Interpretacion> comoAtributo(String frase, String nombreDeLaClase,
-                                                  String detalle, ContextoVoz contexto) {
-        Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(nombreDeLaClase);
+                                                  String detalle, ContextoDelDiagrama contexto) {
+        Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(nombreDeLaClase);
         if (clase.isEmpty()) {
             return noConozco(frase, nombreDeLaClase, contexto);
         }
@@ -387,7 +366,7 @@ public class ParserVoz {
         if (nombre.isBlank()) {
             return Optional.empty();
         }
-        String tipo = conTipo ? tipoNormalizado(m.group(2)) : "String";
+        String tipo = conTipo ? TiposDeclarados.normalizar(m.group(2)) : "String";
         String grupoDeMarcas = m.group(conTipo ? 3 : 2);
         String marcas = grupoDeMarcas == null ? "" : grupoDeMarcas.toLowerCase(Locale.ROOT);
 
@@ -409,8 +388,8 @@ public class ParserVoz {
     }
 
     private Optional<Interpretacion> comoMetodo(String frase, String nombreDeLaClase,
-                                                String detalle, ContextoVoz contexto) {
-        Optional<ContextoVoz.ClaseConocida> clase = contexto.resolver(nombreDeLaClase);
+                                                String detalle, ContextoDelDiagrama contexto) {
+        Optional<ContextoDelDiagrama.ClaseConocida> clase = contexto.resolver(nombreDeLaClase);
         if (clase.isEmpty()) {
             return noConozco(frase, nombreDeLaClase, contexto);
         }
@@ -430,12 +409,12 @@ public class ParserVoz {
                 Matcher mParametro = PARAMETRO.matcher(trozo.trim());
                 if (mParametro.matches()) {
                     parametros.add(new ComandoOperacion.Parametro(UUID.randomUUID(),
-                            limpiarNombre(mParametro.group(1)), tipoNormalizado(mParametro.group(2))));
+                            limpiarNombre(mParametro.group(1)), TiposDeclarados.normalizar(mParametro.group(2))));
                 }
             }
         }
 
-        String retorno = m.group(3) == null ? "void" : tipoNormalizado(m.group(3));
+        String retorno = m.group(3) == null ? "void" : TiposDeclarados.normalizar(m.group(3));
         return uno(frase,
                 "Agregue la operacion " + nombre + "(): " + retorno + " a " + clase.get().nombre(),
                 TipoOperacion.METODO_AGREGAR,
@@ -456,7 +435,7 @@ public class ParserVoz {
      * "no te entendi"- es la diferencia entre que la persona corrija el nombre y
      * que repita la misma frase mas fuerte.
      */
-    private Optional<Interpretacion> noConozco(String frase, String nombre, ContextoVoz contexto) {
+    private Optional<Interpretacion> noConozco(String frase, String nombre, ContextoDelDiagrama contexto) {
         List<String> pistas = new ArrayList<>();
         pistas.add("No hay ninguna clase llamada \"" + nombre.trim() + "\" en el diagrama");
         if (!contexto.nombres().isEmpty()) {
@@ -466,7 +445,7 @@ public class ParserVoz {
         return Optional.of(Interpretacion.noEntendida(frase, pistas));
     }
 
-    private List<String> sugerencias(ContextoVoz contexto) {
+    private List<String> sugerencias(ContextoDelDiagrama contexto) {
         String ejemplo = contexto.nombres().isEmpty() ? "Paciente" : contexto.nombres().get(0);
         String otro = contexto.nombres().size() > 1 ? contexto.nombres().get(1) : "Consulta";
         return List.of(
@@ -515,20 +494,6 @@ public class ParserVoz {
             }
         }
         return salida.toString();
-    }
-
-    private String tipoNormalizado(String bruto) {
-        if (bruto == null || bruto.isBlank()) {
-            return "String";
-        }
-        String clave = bruto.trim().toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
-        String conocido = TIPOS.get(clave);
-        if (conocido != null) {
-            return conocido;
-        }
-        // Un tipo que no esta en la tabla se respeta: puede ser otra clase del
-        // modelo o un enumerado que la persona va a crear despues.
-        return Character.toUpperCase(bruto.trim().charAt(0)) + bruto.trim().substring(1);
     }
 
     /** Separa "a, b y c" en sus partes. */

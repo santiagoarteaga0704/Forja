@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BASE, ErrorApi, api } from '../api'
 import { abrirCanal, type Canal } from '../canal'
 import Dictado from './Dictado'
+import Foto from './Foto'
 import CajaClase from '../lienzo/CajaClase'
 import LineaRelacion from '../lienzo/LineaRelacion'
 import { ANCHO_CLASE, aplicar, bloqueoDe, conBloqueoLiberado, conBloqueoTomado } from '../modelo'
@@ -59,6 +60,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
   const [relacionando, setRelacionando] = useState<TipoRelacion | null>(null)
   const [primerExtremo, setPrimerExtremo] = useState<string | null>(null)
   const [mostrandoGeneracion, setMostrandoGeneracion] = useState(false)
+  const [leyendoPizarra, setLeyendoPizarra] = useState(false)
   const [dictando, setDictando] = useState(false)
   const [consejos, setConsejos] = useState<Consejo[]>([])
   // En lugar de marcar "cargando" antes de la llamada, se marca que ya hubo una
@@ -535,6 +537,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
         <button className={dictando ? 'activo' : ''} onClick={() => setDictando(!dictando)}>
           Dictar
         </button>
+        <button onClick={() => setLeyendoPizarra(true)}>Leer pizarra</button>
         <button
           className={mostrandoGuia ? 'activo' : ''}
           onClick={() => setMostrandoGuia(!mostrandoGuia)}
@@ -684,6 +687,14 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
           )}
         </aside>
       </div>
+
+      {leyendoPizarra && (
+        <Foto
+          diagramaId={diagrama.id}
+          alAplicar={recargar}
+          alCerrar={() => setLeyendoPizarra(false)}
+        />
+      )}
 
       {mostrandoGeneracion && (
         <DialogoGeneracion

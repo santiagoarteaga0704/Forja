@@ -4,6 +4,8 @@ import bo.forja.backend.dominio.ClaseUml;
 import bo.forja.backend.dominio.OrigenOperacion;
 import bo.forja.backend.operacion.ComandoInvalido;
 import bo.forja.backend.operacion.ComandoOperacion;
+import bo.forja.backend.operacion.ContextoDelDiagrama;
+import bo.forja.backend.operacion.Cuadricula;
 import bo.forja.backend.repositorio.ClaseUmlRepositorio;
 import bo.forja.backend.servicio.ResultadoOperacion;
 import bo.forja.backend.servicio.ServicioOperaciones;
@@ -26,19 +28,13 @@ import java.util.UUID;
  * que se puede demostrar con datos cuanta parte del modelo se construyo
  * hablando, y respeta los bloqueos de quien este editando en ese momento.
  * <p>
- * La posicion de una clase nueva se decide aqui y no en el parser. Dictando no
- * se dicen coordenadas, pero la clase tiene que aparecer en algun lugar
- * visible: se la ubica en la siguiente casilla libre de una cuadricula, que es
- * mejor que apilarlas todas en el origen.
+ * La posicion de una clase nueva no la decide el parser: se la asigna
+ * {@link Cuadricula}, que es la misma regla que usa la lectura de una pizarra.
  */
 @Service
 public class ServicioVoz {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioVoz.class);
-
-    private static final double PASO_X = 260;
-    private static final double PASO_Y = 200;
-    private static final int POR_FILA = 4;
 
     private final ServicioProyectos proyectos;
     private final ServicioOperaciones operaciones;
@@ -58,7 +54,7 @@ public class ServicioVoz {
     public ResultadoDictado dictar(UUID diagramaId, UUID usuarioId, String sesionId, String frase) {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
 
-        ContextoVoz contexto = contextoDe(diagramaId);
+        ContextoDelDiagrama contexto = contextoDe(diagramaId);
         Interpretacion interpretacion = parser.interpretar(frase, contexto);
 
         if (!interpretacion.entendida()) {
@@ -74,7 +70,7 @@ public class ServicioVoz {
 
         for (int i = 0; i < interpretacion.pasos().size(); i++) {
             Interpretacion.Paso paso = interpretacion.pasos().get(i);
-            ComandoOperacion comando = ubicar(paso.comando(), siguienteCasilla);
+            ComandoOperacion comando = Cuadricula.ubicar(paso.comando(), siguienteCasilla);
             if (comando instanceof ComandoOperacion.CrearClase) {
                 siguienteCasilla++;
             }
@@ -110,25 +106,11 @@ public class ServicioVoz {
     }
 
     @Transactional(readOnly = true)
-    ContextoVoz contextoDe(UUID diagramaId) {
-        List<ContextoVoz.ClaseConocida> conocidas = clases.findByDiagramaId(diagramaId).stream()
-                .map(clase -> new ContextoVoz.ClaseConocida(clase.getId(), clase.getNombre()))
+    ContextoDelDiagrama contextoDe(UUID diagramaId) {
+        List<ContextoDelDiagrama.ClaseConocida> conocidas = clases.findByDiagramaId(diagramaId).stream()
+                .map(clase -> new ContextoDelDiagrama.ClaseConocida(clase.getId(), clase.getNombre()))
                 .toList();
-        return ContextoVoz.de(conocidas);
-    }
-
-    /**
-     * Asigna coordenadas a una clase recien dictada. El resto de los comandos
-     * pasa sin cambios.
-     */
-    private ComandoOperacion ubicar(ComandoOperacion comando, int casilla) {
-        if (!(comando instanceof ComandoOperacion.CrearClase alta)) {
-            return comando;
-        }
-        return new ComandoOperacion.CrearClase(alta.claseId(), alta.nombre(), alta.estereotipo(),
-                alta.esAbstracta(),
-                (casilla % POR_FILA) * PASO_X,
-                (double) (casilla / POR_FILA) * PASO_Y);
+        return ContextoDelDiagrama.de(conocidas);
     }
 
     private String nombreDelPoseedor(ResultadoOperacion rechazo) {

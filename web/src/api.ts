@@ -1,6 +1,7 @@
 import type {
   Comando,
   Consejo,
+  Lectura,
   Credencial,
   DiagramaCompleto,
   DiagramaResumen,
@@ -12,6 +13,7 @@ import type {
   ResultadoOperacion,
   ResumenGeneracion,
   ResultadoDictado,
+  ResultadoFoto,
   ResumenImportacion,
   TipoDiagrama,
   TipoElemento,
@@ -212,6 +214,21 @@ export const api = {
     if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo exportar el XMI')
     return respuesta.text()
   },
+
+  // ---------- Foto de pizarra ----------------------------------------------
+
+  /** Primer paso: que se entendio del texto, sin tocar el modelo. */
+  leerPizarra: (diagramaId: string, texto: string, sesionId: string) =>
+    pedir<Lectura>(`/api/diagramas/${diagramaId}/foto/lectura`, {
+      method: 'POST',
+      body: JSON.stringify({ texto, sesionId }),
+    }),
+
+  aplicarPizarra: (diagramaId: string, texto: string, sesionId: string) =>
+    pedir<ResultadoFoto>(`/api/diagramas/${diagramaId}/foto`, {
+      method: 'POST',
+      body: JSON.stringify({ texto, sesionId, tokenLectura: crypto.randomUUID() }),
+    }),
 
   // ---------- Agente guia --------------------------------------------------
 

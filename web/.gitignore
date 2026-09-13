@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Motor y datos de idioma del reconocimiento de texto: los deja
+# scripts/preparar-ocr.mjs desde node_modules y de la red, una sola vez.
+public/ocr
