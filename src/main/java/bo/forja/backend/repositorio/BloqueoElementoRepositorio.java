@@ -117,4 +117,15 @@ public interface BloqueoElementoRepositorio extends JpaRepository<BloqueoElement
             TipoElemento elementoTipo, UUID elementoId);
 
     List<BloqueoElemento> findByDiagramaId(UUID diagramaId);
+
+    /**
+     * Bloqueos con el usuario que los retiene ya cargado: el lienzo no solo
+     * necesita saber que un elemento esta ocupado, sino mostrar por quien.
+     */
+    @Query("""
+            SELECT b FROM BloqueoElemento b
+            JOIN FETCH b.usuario
+            WHERE b.diagrama.id = :diagramaId
+            """)
+    List<BloqueoElemento> buscarConPoseedor(@Param("diagramaId") UUID diagramaId);
 }
