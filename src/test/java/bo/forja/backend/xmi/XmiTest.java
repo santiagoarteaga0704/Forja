@@ -122,10 +122,16 @@ class XmiTest {
     void elDocumentoEsXmi251() {
         String documento = xmi.exportar(original.getId(), autor.getId());
 
+        // Los espacios de nombres son los de XMI 2.1, no los de 2.5.1, y es
+        // deliberado: se comprobo contra Enterprise Architect 17 por su
+        // interfaz de automatizacion que con los de 2.5.1 el importador de EA
+        // no da error pero no trae ni un elemento, mientras que con estos trae
+        // el modelo entero. La estructura del documento -que es lo que la
+        // prueba verifica debajo- sigue siendo la de UML 2.5.1.
         assertThat(documento)
-                .contains("xmi:version=\"20131001\"")
-                .contains("xmlns:uml=\"http://www.omg.org/spec/UML/20161101\"")
-                .contains("xmlns:xmi=\"http://www.omg.org/spec/XMI/20131001\"")
+                .contains("xmi:version=\"2.1\"")
+                .contains("xmlns:uml=\"http://schema.omg.org/spec/UML/2.0\"")
+                .contains("xmlns:xmi=\"http://schema.omg.org/spec/XMI/2.1\"")
                 .contains("<uml:Model xmi:type=\"uml:Model\"")
                 .contains("<packagedElement xmi:type=\"uml:Class\"")
                 .contains("<packagedElement xmi:type=\"uml:Interface\"")
@@ -138,7 +144,14 @@ class XmiTest {
 
         // Los tipos estandar apuntan a la biblioteca de tipos primitivos de UML.
         assertThat(documento)
-                .contains("href=\"http://www.omg.org/spec/UML/20161101/PrimitiveTypes.xmi#String\"");
+                .contains("href=\"http://schema.omg.org/spec/UML/2.1/uml.xml#String\"");
+
+        // La composicion y la agregacion se marcan en el extremo que las lleva:
+        // sin esto llegan a Enterprise Architect como asociaciones sin rombo.
+        assertThat(documento).contains("aggregation=\"composite\"");
+
+        // La dependencia viaja como lo que es, no disfrazada de asociacion.
+        assertThat(documento).contains("<packagedElement xmi:type=\"uml:Dependency\"");
 
         // Lo que UML no puede expresar viaja en una extension declarada.
         assertThat(documento)

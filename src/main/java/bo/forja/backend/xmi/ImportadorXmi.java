@@ -68,10 +68,11 @@ public class ImportadorXmi {
         Map<String, UUID> equivalencias = new LinkedHashMap<>();
         List<Element> clasificadores = new ArrayList<>();
         List<Element> asociaciones = new ArrayList<>();
+        List<Element> dependencias = new ArrayList<>();
 
         // Primera pasada: censar que hay y con que identificador, para poder
         // resolver despues las referencias entre elementos.
-        for (Element elemento : elementos(documento, "packagedElement")) {
+        for (Element elemento : elementos(documento, "packagedElement", "ownedMember")) {
             String tipo = tipoXmi(elemento);
             String id = atributoXmi(elemento, "id");
             if (id == null) {
@@ -84,6 +85,7 @@ public class ImportadorXmi {
                     nombresDeTipos.put(id, elemento.getAttribute("name"));
                 }
                 case "uml:Association" -> asociaciones.add(elemento);
+                case "uml:Dependency", "uml:Usage" -> dependencias.add(elemento);
                 case "uml:DataType", "uml:PrimitiveType", "uml:Enumeration" ->
                         nombresDeTipos.put(id, elemento.getAttribute("name"));
                 default -> {
@@ -116,6 +118,17 @@ public class ImportadorXmi {
         for (Element asociacion : asociaciones) {
             interpretarAsociacion(asociacion, equivalencias, extremos)
                     .ifPresent(relaciones::add);
+        }
+
+        // La dependencia no tiene extremos que reconstruir: se lee de sus dos
+        // referencias y basta. Vienen como atributos en el dialecto de UML 2.5.1
+        // y como hijos <client>/<supplier> en el de otras herramientas.
+        for (Element dependencia : dependencias) {
+            UUID cliente = equivalencias.get(referenciaDeExtremo(dependencia, "client"));
+            UUID proveedor = equivalencias.get(referenciaDeExtremo(dependencia, "supplier"));
+            if (cliente != null && proveedor != null && !cliente.equals(proveedor)) {
+                relaciones.add(relacion(cliente, proveedor, TipoRelacion.DEPENDENCIA, "1", "1"));
+            }
         }
 
         log.info("XMI interpretado: {} clases, {} elementos internos, {} relaciones",
@@ -460,13 +473,53 @@ public class ImportadorXmi {
         return null;
     }
 
+    /**
+     * Lee un extremo de dependencia, aceptando las dos formas que XMI permite:
+     * como atributo del propio elemento o como hijo con {@code xmi:idref}.
+     */
+    private String referenciaDeExtremo(Element elemento, String nombre) {
+        String directo = elemento.getAttribute(nombre);
+        if (directo != null && !directo.isBlank()) {
+            return directo.trim();
+        }
+        for (Element hijo : hijosDirectos(elemento, nombre)) {
+            String referencia = atributoXmi(hijo, "idref");
+            if (referencia != null && !referencia.isBlank()) {
+                return referencia.trim();
+            }
+        }
+        return null;
+    }
+
     private String multiplicidad(Element propiedad) {
-        String inferior = valorDeLimite(propiedad, "lowerValue", "1");
-        String superior = valorDeLimite(propiedad, "upperValue", "1");
+        String inferior = normalizarLimite(valorDeLimite(propiedad, "lowerValue", "1"));
+        String superior = normalizarLimite(valorDeLimite(propiedad, "upperValue", "1"));
         if (inferior.equals(superior)) {
             return superior;
         }
         return inferior + ".." + superior;
+    }
+
+    /**
+     * Deja el limite de una multiplicidad en la notacion que FORJA sabe manejar.
+     * <p>
+     * UML admite multiplicidades simbolicas -el modelo de ejemplo que trae
+     * Enterprise Architect usa {@code [BookCount]}-, pero el generador de codigo
+     * solo sabe traducir numeros y {@code *}, y la columna que las guarda es
+     * corta. Sin esta normalizacion el valor viajaba sin mirarse hasta
+     * PostgreSQL y la importacion de un archivo legitimo de EA se caia con un
+     * error 500 por desbordar la columna. Ante algo que no se entiende se
+     * asume {@code 1}, que es el valor por defecto de UML.
+     */
+    private String normalizarLimite(String valor) {
+        if (valor == null) {
+            return "1";
+        }
+        String limpio = valor.trim();
+        if (limpio.equals("*") || limpio.equals("-1")) {
+            return "*";
+        }
+        return limpio.matches("\\d{1,4}") ? limpio : "1";
     }
 
     private String valorDeLimite(Element propiedad, String limite, String pordefecto) {
@@ -534,13 +587,30 @@ public class ImportadorXmi {
     }
 
     /** Todos los elementos con ese nombre local, sin importar el prefijo. */
-    private List<Element> elementos(Document documento, String nombreLocal) {
+    /**
+     * Elementos del documento con alguno de esos nombres locales.
+     * <p>
+     * Se aceptan varios porque XMI permite mas de una forma de decir lo mismo:
+     * un documento de UML 2.5.1 mete los clasificadores en {@code
+     * packagedElement}, mientras que Enterprise Architect, cuando exporta en su
+     * dialecto de XMI 2.1, los mete en {@code ownedMember}. Aceptar solo el
+     * primero hacia que un archivo legitimo de EA se rechazara diciendo que no
+     * contenia ninguna clase.
+     */
+    private List<Element> elementos(Document documento, String... nombresLocales) {
         List<Element> encontrados = new ArrayList<>();
         NodeList todos = documento.getElementsByTagName("*");
         for (int i = 0; i < todos.getLength(); i++) {
             Node nodo = todos.item(i);
-            if (nodo instanceof Element elemento && nombreLocal.equals(local(elemento))) {
-                encontrados.add(elemento);
+            if (!(nodo instanceof Element elemento)) {
+                continue;
+            }
+            String local = local(elemento);
+            for (String nombre : nombresLocales) {
+                if (nombre.equals(local)) {
+                    encontrados.add(elemento);
+                    break;
+                }
             }
         }
         return encontrados;

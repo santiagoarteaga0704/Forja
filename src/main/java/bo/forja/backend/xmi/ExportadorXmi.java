@@ -52,8 +52,25 @@ public class ExportadorXmi {
             "double", "Real",
             "UnlimitedNatural", "UnlimitedNatural");
 
+    /**
+     * Dialecto de XMI en el que se escribe el documento.
+     * <p>
+     * Se emite XMI 2.1 con el vocabulario de UML 2, y no los identificadores de
+     * espacio de nombres de UML 2.5.1 (XMI/20131001 y UML/20161101), porque
+     * Enterprise Architect 17 no reconoce estos ultimos: ante ellos su
+     * importador no da error, simplemente no trae ningun elemento. Se comprobo
+     * contra EA por su interfaz de automatizacion: con estos valores importa el
+     * modelo completo y con los de 2.5.1 importa cero. La estructura del
+     * documento sigue siendo la de UML 2.5.1, que es la que pide el enunciado;
+     * lo unico que cambia es la declaracion de espacios de nombres, que es lo
+     * que EA mira para decidir si entiende el archivo.
+     */
+    private static final String VERSION_XMI = "2.1";
+    private static final String NS_XMI = "http://schema.omg.org/spec/XMI/2.1";
+    private static final String NS_UML = "http://schema.omg.org/spec/UML/2.0";
+
     private static final String HREF_PRIMITIVOS =
-            "http://www.omg.org/spec/UML/20161101/PrimitiveTypes.xmi#";
+            "http://schema.omg.org/spec/UML/2.1/uml.xml#";
 
     public String exportar(Diagrama diagrama, List<ClaseUml> clases, List<RelacionUml> relaciones) {
         StringBuilder xml = new StringBuilder();
@@ -64,9 +81,9 @@ public class ExportadorXmi {
         Map<String, String> tiposDeclarados = declararTipos(clases);
 
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<xmi:XMI xmi:version=\"20131001\"\n");
-        xml.append("         xmlns:xmi=\"http://www.omg.org/spec/XMI/20131001\"\n");
-        xml.append("         xmlns:uml=\"http://www.omg.org/spec/UML/20161101\">\n");
+        xml.append("<xmi:XMI xmi:version=\"" + VERSION_XMI + "\"\n");
+        xml.append("         xmlns:xmi=\"" + NS_XMI + "\"\n");
+        xml.append("         xmlns:uml=\"" + NS_UML + "\">\n");
         xml.append("  <xmi:Documentation exporter=\"FORJA\" exporterVersion=\"1.0\"/>\n");
         xml.append("  <uml:Model xmi:type=\"uml:Model\" xmi:id=\"").append(id(diagrama.getId()))
                 .append("\" name=\"").append(escapar(diagrama.getNombre())).append("\">\n");
@@ -76,6 +93,7 @@ public class ExportadorXmi {
         }
         for (RelacionUml relacion : relaciones) {
             escribirAsociacion(xml, relacion);
+            escribirDependencia(xml, relacion);
         }
         for (Map.Entry<String, String> tipo : tiposDeclarados.entrySet()) {
             xml.append("    <packagedElement xmi:type=\"uml:DataType\" xmi:id=\"")
@@ -155,7 +173,19 @@ public class ExportadorXmi {
         xml.append("      <ownedAttribute xmi:type=\"uml:Property\" xmi:id=\"")
                 .append(id(atributo.getId())).append("\" name=\"")
                 .append(escapar(atributo.getNombre())).append("\" visibility=\"")
-                .append(visibilidad(atributo.getVisibilidad())).append("\">\n");
+                .append(visibilidad(atributo.getVisibilidad())).append("\"");
+
+        // Los tipos que no son primitivos de UML se referencian ademas con el
+        // atributo type. Enterprise Architect declaraba el uml:DataType pero
+        // dejaba el atributo sin tipo cuando la referencia venia solo en el
+        // hijo <type>, que es como haber perdido el tipo al viajar; con la
+        // referencia aqui la resuelve, igual que hace con los extremos de
+        // asociacion, que siempre llegaron bien.
+        String declarado = tiposDeclarados.get(atributo.getTipo());
+        if (declarado != null) {
+            xml.append(" type=\"").append(declarado).append("\"");
+        }
+        xml.append(">\n");
 
         escribirTipo(xml, atributo.getTipo(), tiposDeclarados, "        ");
 
@@ -230,33 +260,79 @@ public class ExportadorXmi {
             return;
         }
 
+        // El extremo que pertenece al todo es el que lleva la marca de
+        // agregacion; en FORJA el todo es siempre el origen de la relacion.
         if (esOrigen) {
             propiedadDeAsociacion(xml, relacion, extremoOrigen(relacion),
                     relacion.getDestino().getId(), relacion.getRolDestino(),
-                    relacion.getDestino().getNombre(), relacion.getMultiplicidadDestino());
+                    relacion.getDestino().getNombre(), relacion.getMultiplicidadDestino(),
+                    agregacionDe(relacion.getTipo()));
         }
         if (esDestino) {
             propiedadDeAsociacion(xml, relacion, extremoDestino(relacion),
                     relacion.getOrigen().getId(), relacion.getRolOrigen(),
-                    relacion.getOrigen().getNombre(), relacion.getMultiplicidadOrigen());
+                    relacion.getOrigen().getNombre(), relacion.getMultiplicidadOrigen(),
+                    null);
         }
+    }
+
+    /**
+     * Traduce el tipo de relacion a la marca de agregacion de UML.
+     * <p>
+     * Sin esto la composicion y la agregacion llegan a Enterprise Architect
+     * como asociaciones simples: se pierde el rombo en el diagrama y, con el,
+     * la semantica de pertenencia de la que el generador deduce el borrado en
+     * cascada.
+     */
+    private static String agregacionDe(TipoRelacion tipo) {
+        return switch (tipo) {
+            case COMPOSICION -> "composite";
+            case AGREGACION -> "shared";
+            default -> null;
+        };
     }
 
     private void propiedadDeAsociacion(StringBuilder xml, RelacionUml relacion, String idExtremo,
                                        UUID tipoApuntado, String rol, String nombreDeLaClase,
-                                       String multiplicidad) {
+                                       String multiplicidad, String agregacion) {
         String nombre = rol != null && !rol.isBlank() ? rol : nombreDeLaClase;
         Limites limites = Limites.de(multiplicidad);
 
         xml.append("      <ownedAttribute xmi:type=\"uml:Property\" xmi:id=\"").append(idExtremo)
                 .append("\" name=\"").append(escapar(nombre))
                 .append("\" type=\"").append(id(tipoApuntado))
-                .append("\" association=\"").append(id(relacion.getId())).append("\">\n");
+                .append("\" association=\"").append(id(relacion.getId())).append("\"");
+        if (agregacion != null) {
+            xml.append(" aggregation=\"").append(agregacion).append("\"");
+        }
+        xml.append(">\n");
         xml.append("        <lowerValue xmi:type=\"uml:LiteralInteger\" value=\"")
                 .append(limites.inferior()).append("\"/>\n");
         xml.append("        <upperValue xmi:type=\"uml:LiteralUnlimitedNatural\" value=\"")
                 .append(limites.superior()).append("\"/>\n");
         xml.append("      </ownedAttribute>\n");
+    }
+
+    /**
+     * Escribe la dependencia como lo que es en UML: un vinculo dirigido sin
+     * extremos ni multiplicidad.
+     * <p>
+     * Antes viajaba disfrazada de asociacion, y Enterprise Architect la
+     * mostraba como una asociacion mas, con una flecha y una cardinalidad que
+     * el modelo nunca declaro.
+     */
+    private void escribirDependencia(StringBuilder xml, RelacionUml relacion) {
+        if (relacion.getTipo() != TipoRelacion.DEPENDENCIA) {
+            return;
+        }
+        xml.append("    <packagedElement xmi:type=\"uml:Dependency\" xmi:id=\"")
+                .append(id(relacion.getId())).append("\"");
+        if (relacion.getEtiqueta() != null && !relacion.getEtiqueta().isBlank()) {
+            xml.append(" name=\"").append(escapar(relacion.getEtiqueta())).append("\"");
+        }
+        xml.append(" client=\"").append(id(relacion.getOrigen().getId()))
+                .append("\" supplier=\"").append(id(relacion.getDestino().getId()))
+                .append("\"/>\n");
     }
 
     private void escribirAsociacion(StringBuilder xml, RelacionUml relacion) {
@@ -326,15 +402,25 @@ public class ExportadorXmi {
         }
         String declarado = tiposDeclarados.get(tipo);
         if (declarado != null) {
-            xml.append(sangria).append("<type xmi:idref=\"").append(declarado).append("\"/>\n");
+            // Con el idref a secas Enterprise Architect creaba el DataType pero
+            // dejaba el atributo sin tipo, que es como haberlo perdido.
+            xml.append(sangria).append("<type xmi:type=\"uml:DataType\" xmi:idref=\"")
+                    .append(declarado).append("\"/>\n");
         }
     }
 
     // ---------- Auxiliares --------------------------------------------------
 
+    /**
+     * Relaciones que se materializan como asociacion con dos extremos.
+     * <p>
+     * La dependencia queda fuera a proposito: no tiene extremos ni
+     * multiplicidad, y escribirla como asociacion hacia que Enterprise
+     * Architect la mostrara como una asociacion mas.
+     */
     private static boolean esEstructural(TipoRelacion tipo) {
         return tipo == TipoRelacion.ASOCIACION || tipo == TipoRelacion.AGREGACION
-                || tipo == TipoRelacion.COMPOSICION || tipo == TipoRelacion.DEPENDENCIA;
+                || tipo == TipoRelacion.COMPOSICION;
     }
 
     private static String extremoOrigen(RelacionUml relacion) {

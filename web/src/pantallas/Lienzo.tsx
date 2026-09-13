@@ -386,6 +386,39 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
 
   // ---------- Acciones del modelo ------------------------------------------
 
+  /**
+   * Busca un hueco cerca del punto pedido para que la clase nueva no quede
+   * tapada por otra.
+   *
+   * Todas las altas parten del centro de lo que se esta mirando, asi que sin
+   * esto cada clase nueva caia exactamente encima de la anterior: el lienzo
+   * mostraba una sola caja y las demas quedaban invisibles debajo, aunque el
+   * modelo las tuviera. Se recorre en cuadricula desde el punto deseado hasta
+   * dar con un sitio despejado.
+   */
+  const sitioLibre = (x: number, y: number) => {
+    const PASO_X = 260
+    const PASO_Y = 200
+    const ocupado = (px: number, py: number) =>
+      (modelo?.clases ?? []).some(
+        (c) => Math.abs(c.posX - px) < PASO_X * 0.9 && Math.abs(c.posY - py) < PASO_Y * 0.6,
+      )
+
+    // Anillos concentricos alrededor del punto pedido: el primer hueco libre
+    // es el mas cercano a donde el usuario esta mirando.
+    for (let anillo = 0; anillo < 12; anillo++) {
+      for (let dy = -anillo; dy <= anillo; dy++) {
+        for (let dx = -anillo; dx <= anillo; dx++) {
+          if (anillo > 0 && Math.abs(dx) !== anillo && Math.abs(dy) !== anillo) continue
+          const px = x + dx * PASO_X
+          const py = y + dy * PASO_Y
+          if (!ocupado(px, py)) return { x: px, y: py }
+        }
+      }
+    }
+    return { x, y }
+  }
+
   const crearClase = async () => {
     const nombre = window.prompt('Nombre de la clase nueva')
     if (!nombre?.trim()) return
@@ -395,6 +428,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
       (caja?.left ?? 0) + (caja?.width ?? 600) / 2,
       (caja?.top ?? 0) + (caja?.height ?? 400) / 3,
     )
+    const sitio = sitioLibre(Math.round(centro.x - ANCHO_CLASE / 2), Math.round(centro.y))
 
     await enviar(
       'CLASE_CREAR',
@@ -402,8 +436,8 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
         claseId: crypto.randomUUID(),
         nombre: nombre.trim(),
         esAbstracta: false,
-        posX: Math.round(centro.x - ANCHO_CLASE / 2),
-        posY: Math.round(centro.y),
+        posX: sitio.x,
+        posY: sitio.y,
       },
       'crear clase',
     )
