@@ -14,6 +14,7 @@ public enum TipoOperacion {
 
     CLASE_CREAR(ComandoOperacion.CrearClase.class),
     CLASE_RENOMBRAR(ComandoOperacion.RenombrarClase.class),
+    CLASE_MARCAR(ComandoOperacion.MarcarClase.class),
     CLASE_MOVER(ComandoOperacion.MoverClase.class),
     CLASE_ELIMINAR(ComandoOperacion.EliminarClase.class),
     ATRIBUTO_AGREGAR(ComandoOperacion.AgregarAtributo.class),
@@ -42,6 +43,7 @@ public enum TipoOperacion {
         return switch (comando) {
             case ComandoOperacion.CrearClase ignorado -> CLASE_CREAR;
             case ComandoOperacion.RenombrarClase ignorado -> CLASE_RENOMBRAR;
+            case ComandoOperacion.MarcarClase ignorado -> CLASE_MARCAR;
             case ComandoOperacion.MoverClase ignorado -> CLASE_MOVER;
             case ComandoOperacion.EliminarClase ignorado -> CLASE_ELIMINAR;
             case ComandoOperacion.AgregarAtributo ignorado -> ATRIBUTO_AGREGAR;

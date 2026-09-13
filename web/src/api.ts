@@ -1,0 +1,216 @@
+import type {
+  Comando,
+  Credencial,
+  DiagramaCompleto,
+  DiagramaResumen,
+  OperacionRegistrada,
+  OrigenOperacion,
+  Problema,
+  ProyectoVista,
+  ResultadoBloqueo,
+  ResultadoOperacion,
+  ResumenGeneracion,
+  ResumenImportacion,
+  TipoDiagrama,
+  TipoElemento,
+  TipoOperacion,
+} from './tipos'
+
+export const BASE = import.meta.env.VITE_API ?? 'http://localhost:8080'
+
+/**
+ * Error de la API con el texto que el servidor quiso mostrar.
+ *
+ * El backend responde con ProblemDetail de la RFC 7807, asi que hay un mensaje
+ * pensado para una persona; usarlo en lugar de un "error 422" generico es la
+ * diferencia entre que el usuario sepa que corregir y que no.
+ */
+export class ErrorApi extends Error {
+  constructor(
+    readonly estado: number,
+    mensaje: string,
+    readonly problema?: Problema,
+  ) {
+    super(mensaje)
+  }
+}
+
+let token: string | null = null
+
+export function fijarToken(nuevo: string | null) {
+  token = nuevo
+}
+
+export function tokenActual() {
+  return token
+}
+
+async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
+  const cabeceras: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((opciones.headers as Record<string, string>) ?? {}),
+  }
+  if (token) cabeceras.Authorization = `Bearer ${token}`
+
+  const respuesta = await fetch(BASE + ruta, { ...opciones, headers: cabeceras })
+
+  if (!respuesta.ok) {
+    let problema: Problema | undefined
+    let mensaje = `${respuesta.status} ${respuesta.statusText}`
+    try {
+      problema = await respuesta.json()
+      mensaje = problema?.detail ?? problema?.title ?? mensaje
+      // La validacion de campos llega aparte; sin mostrarla el usuario solo ve
+      // "peticion invalida" y no sabe cual de los campos lo esta.
+      if (problema?.campos) {
+        mensaje +=
+          ': ' +
+          Object.entries(problema.campos)
+            .map(([campo, detalle]) => `${campo} ${detalle}`)
+            .join(', ')
+      }
+    } catch {
+      // Una respuesta sin cuerpo JSON deja el mensaje del estado HTTP.
+    }
+    throw new ErrorApi(respuesta.status, mensaje, problema)
+  }
+
+  if (respuesta.status === 204) return undefined as T
+  const texto = await respuesta.text()
+  return texto ? (JSON.parse(texto) as T) : (undefined as T)
+}
+
+// ---------- Autenticacion ---------------------------------------------------
+
+export const api = {
+  registro: (email: string, nombre: string, password: string) =>
+    pedir<Credencial>('/api/auth/registro', {
+      method: 'POST',
+      body: JSON.stringify({ email, nombre, password }),
+    }),
+
+  sesion: (email: string, password: string) =>
+    pedir<Credencial>('/api/auth/sesion', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
+  yo: () => pedir<{ usuarioId: string; nombre: string; email: string }>('/api/auth/yo'),
+
+  // ---------- Proyectos ----------------------------------------------------
+
+  proyectos: () => pedir<ProyectoVista[]>('/api/proyectos'),
+
+  crearProyecto: (nombre: string, descripcion?: string) =>
+    pedir<ProyectoVista>('/api/proyectos', {
+      method: 'POST',
+      body: JSON.stringify({ nombre, descripcion }),
+    }),
+
+  invitar: (proyectoId: string, email: string, rol: 'EDITOR' | 'LECTOR') =>
+    pedir<void>(`/api/proyectos/${proyectoId}/miembros`, {
+      method: 'POST',
+      body: JSON.stringify({ email, rol }),
+    }),
+
+  diagramas: (proyectoId: string) =>
+    pedir<DiagramaResumen[]>(`/api/proyectos/${proyectoId}/diagramas`),
+
+  crearDiagrama: (proyectoId: string, nombre: string, tipo: TipoDiagrama = 'CLASES') =>
+    pedir<DiagramaResumen>(`/api/proyectos/${proyectoId}/diagramas`, {
+      method: 'POST',
+      body: JSON.stringify({ nombre, tipo }),
+    }),
+
+  // ---------- Diagrama -----------------------------------------------------
+
+  diagrama: (diagramaId: string) => pedir<DiagramaCompleto>(`/api/diagramas/${diagramaId}`),
+
+  operacion: (
+    diagramaId: string,
+    tipo: TipoOperacion,
+    comando: Comando,
+    sesionId: string,
+    origen: OrigenOperacion = 'LIENZO',
+  ) =>
+    pedir<ResultadoOperacion>(`/api/diagramas/${diagramaId}/operaciones`, {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo,
+        comando,
+        origen,
+        sesionId,
+        // El token lo genera el cliente antes de enviar: es lo que hace que un
+        // reintento tras un corte de red no duplique el cambio.
+        tokenCliente: crypto.randomUUID(),
+      }),
+    }),
+
+  delta: (diagramaId: string, desde: number) =>
+    pedir<OperacionRegistrada[]>(`/api/diagramas/${diagramaId}/operaciones?desde=${desde}`),
+
+  bloquear: (diagramaId: string, elementoTipo: TipoElemento, elementoId: string, sesionId: string) =>
+    pedir<ResultadoBloqueo>(`/api/diagramas/${diagramaId}/bloqueos`, {
+      method: 'POST',
+      body: JSON.stringify({ elementoTipo, elementoId, sesionId }),
+    }),
+
+  liberar: (diagramaId: string, elementoTipo: TipoElemento, elementoId: string, sesionId: string) =>
+    pedir<void>(
+      `/api/diagramas/${diagramaId}/bloqueos?elementoTipo=${elementoTipo}` +
+        `&elementoId=${elementoId}&sesionId=${encodeURIComponent(sesionId)}`,
+      { method: 'DELETE' },
+    ),
+
+  // ---------- Generacion e intercambio -------------------------------------
+
+  generacion: (diagramaId: string, paquete?: string) =>
+    pedir<ResumenGeneracion>(
+      `/api/diagramas/${diagramaId}/generacion${paquete ? `?paquete=${paquete}` : ''}`,
+    ),
+
+  archivoGenerado: async (diagramaId: string, ruta: string, paquete?: string) => {
+    const consulta = new URLSearchParams({ ruta })
+    if (paquete) consulta.set('paquete', paquete)
+    const respuesta = await fetch(
+      `${BASE}/api/diagramas/${diagramaId}/generacion/archivo?${consulta}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    )
+    if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo leer el archivo generado')
+    return respuesta.text()
+  },
+
+  /**
+   * Descarga binaria. No pasa por pedir() porque la respuesta no es JSON y
+   * porque el navegador necesita un blob para ofrecer el archivo.
+   */
+  descargar: async (ruta: string, nombreSugerido: string) => {
+    const respuesta = await fetch(BASE + ruta, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo descargar')
+
+    const blob = await respuesta.blob()
+    const enlace = document.createElement('a')
+    enlace.href = URL.createObjectURL(blob)
+    enlace.download = nombreSugerido
+    enlace.click()
+    URL.revokeObjectURL(enlace.href)
+  },
+
+  /** Devuelve el documento tal cual: es XML, no pasa por JSON.parse. */
+  exportarXmi: async (diagramaId: string) => {
+    const respuesta = await fetch(`${BASE}/api/diagramas/${diagramaId}/xmi`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!respuesta.ok) throw new ErrorApi(respuesta.status, 'No se pudo exportar el XMI')
+    return respuesta.text()
+  },
+
+  importarXmi: (diagramaId: string, documento: string, sesionId: string) =>
+    pedir<ResumenImportacion>(
+      `/api/diagramas/${diagramaId}/xmi?sesionId=${encodeURIComponent(sesionId)}` +
+        `&tokenImportacion=${crypto.randomUUID()}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: documento },
+    ),
+}

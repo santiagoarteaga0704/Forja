@@ -51,6 +51,7 @@ public class AplicadorComando {
         switch (comando) {
             case ComandoOperacion.CrearClase c -> crearClase(diagrama, c);
             case ComandoOperacion.RenombrarClase c -> renombrarClase(diagrama, c);
+            case ComandoOperacion.MarcarClase c -> marcarClase(diagrama, c);
             case ComandoOperacion.MoverClase c -> moverClase(diagrama, c);
             case ComandoOperacion.EliminarClase c -> eliminarClase(diagrama, c);
             case ComandoOperacion.AgregarAtributo c -> agregarAtributo(diagrama, c);
@@ -85,6 +86,12 @@ public class AplicadorComando {
         ClaseUml clase = exigirClase(diagrama, c.claseId());
         exigirNombreLibre(diagrama.getId(), c.nombre(), c.claseId());
         clase.setNombre(c.nombre().trim());
+    }
+
+    private void marcarClase(Diagrama diagrama, ComandoOperacion.MarcarClase c) {
+        ClaseUml clase = exigirClase(diagrama, c.claseId());
+        clase.setEstereotipo(vacioANulo(c.estereotipo()));
+        clase.setEsAbstracta(c.esAbstracta());
     }
 
     private void moverClase(Diagrama diagrama, ComandoOperacion.MoverClase c) {

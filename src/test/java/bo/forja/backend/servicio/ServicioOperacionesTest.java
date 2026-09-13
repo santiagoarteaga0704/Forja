@@ -249,6 +249,29 @@ class ServicioOperacionesTest {
     }
 
     @Test
+    @DisplayName("marcar una clase como abstracta y con estereotipo queda guardado")
+    void laClaseSeMarca() {
+        UUID claseId = UUID.randomUUID();
+        registrar(editor, "sesion-editor",
+                new ComandoOperacion.CrearClase(claseId, "Persona", null, false, 0, 0),
+                OrigenOperacion.LIENZO, "token-1");
+
+        ResultadoOperacion resultado = registrar(editor, "sesion-editor",
+                new ComandoOperacion.MarcarClase(claseId, "interface", true),
+                OrigenOperacion.LIENZO, "token-2");
+
+        assertThat(resultado.estado()).isEqualTo(ResultadoOperacion.Estado.APLICADA);
+        assertThat(resultado.tipo()).isEqualTo(TipoOperacion.CLASE_MARCAR);
+
+        // El generador decide con estos dos datos si emite una interfaz, una
+        // clase abstracta y que estrategia de herencia usa la jerarquia, asi que
+        // tienen que haber quedado escritos y no solo aceptados.
+        ClaseUml guardada = clases.findById(claseId).orElseThrow();
+        assertThat(guardada.getEstereotipo()).isEqualTo("interface");
+        assertThat(guardada.isEsAbstracta()).isTrue();
+    }
+
+    @Test
     @DisplayName("cada comando aceptado avanza la version del diagrama en uno")
     void laVersionAvanzaConCadaComando() {
         UUID claseId = UUID.randomUUID();

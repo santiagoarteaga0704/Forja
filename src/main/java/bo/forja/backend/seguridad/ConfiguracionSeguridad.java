@@ -1,6 +1,8 @@
 package bo.forja.backend.seguridad;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +45,8 @@ import java.util.List;
 @EnableWebSecurity
 public class ConfiguracionSeguridad {
 
+    private static final Logger log = LoggerFactory.getLogger(ConfiguracionSeguridad.class);
+
     @Bean
     SecurityFilterChain cadenaDeFiltros(HttpSecurity http) throws Exception {
         http
@@ -71,10 +75,16 @@ public class ConfiguracionSeguridad {
      * origen abierto no expondria la sesion del usuario, pero si permitiria
      * que cualquier pagina consumiera la API con un token filtrado.
      */
-    @Bean
+    // El nombre del bean no es decorativo: Spring Security busca la fuente de
+    // configuracion de CORS por el nombre "corsConfigurationSource", y con
+    // cualquier otro la registra en el contexto pero no la usa. El sintoma es
+    // silencioso -el vuelo previo responde 200 sin las cabeceras de permiso- y
+    // solo se manifiesta en el navegador, que bloquea la llamada.
+    @Bean("corsConfigurationSource")
     CorsConfigurationSource origenesPermitidos(
             @Value("${forja.web.origenes:http://localhost:5173}") List<String> origenes) {
 
+        log.info("CORS habilitado para los origenes: {}", origenes);
         CorsConfiguration regla = new CorsConfiguration();
         regla.setAllowedOrigins(origenes);
         regla.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

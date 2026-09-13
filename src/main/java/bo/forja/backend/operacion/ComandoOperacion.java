@@ -65,6 +65,27 @@ public sealed interface ComandoOperacion {
         }
     }
 
+    /**
+     * Cambia la clasificacion UML de la clase: si es abstracta y su
+     * estereotipo.
+     * <p>
+     * Va aparte del renombre porque son ediciones distintas: una corrige como
+     * se llama la clase, la otra cambia lo que la clase <i>es</i>. La
+     * diferencia no es academica -marcar una clase como abstracta cambia el
+     * codigo que el generador produce y la estrategia de herencia de su
+     * jerarquia- y conviene que quede registrada como tal en la bitacora.
+     */
+    record MarcarClase(
+            @NotNull UUID claseId,
+            @Size(max = 60) String estereotipo,
+            boolean esAbstracta) implements ComandoOperacion {
+
+        @Override
+        public Optional<Elemento> elementoAfectado() {
+            return Optional.of(Elemento.clase(claseId));
+        }
+    }
+
     record MoverClase(
             @NotNull UUID claseId,
             double posX,
