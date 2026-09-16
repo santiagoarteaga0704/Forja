@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#12161d"/>
+  <!-- A 16px el rombo se cierra: aca va la silueta sola, escalada para llenar el cuadro. -->
+  <g transform="translate(32 32.5) scale(1.05) translate(-32 -32.5)">
+    <path fill="#e8913c" d="M3 20 L18 12 L53 12 L59 18 L59 28 L44 28 L38 34 L38 40 L45 47 L46 47 L46 53 L17 53 L17 47 L18 47 L25 40 L25 34 L19 28 L14 28 Z"/>
+    <path fill="#f6b26b" d="M18 12 L53 12 L57 16 L10.5 16 Z"/>
+  </g>
+</svg>

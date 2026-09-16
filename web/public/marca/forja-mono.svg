@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="FORJA">
+  <title>FORJA</title>
+  <!-- Una sola tinta. Sin color heredado queda negro, que es lo correcto sobre claro. -->
+  <path fill="currentColor" fill-rule="evenodd" d="M3 20 L18 12 L53 12 L59 18 L59 28 L44 28 L38 34 L38 40 L45 47 L46 47 L46 53 L17 53 L17 47 L18 47 L25 40 L25 34 L19 28 L14 28 Z M46 17.5 L50.5 22 L46 26.5 L41.5 22 Z"/>
+</svg>
