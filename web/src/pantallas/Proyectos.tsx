@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ErrorApi, api } from '../api'
-import { IconoCarpeta, IconoClase, IconoPersona, IconoSalir } from '../iconos'
+import { useGuia } from '../guia'
+import { IconoCarpeta, IconoClase, IconoGuia, IconoPersona, IconoSalir } from '../iconos'
 import type { Credencial, DiagramaResumen, ProyectoVista } from '../tipos'
+import Guia from './Guia'
 
 interface Props {
   credencial: Credencial
@@ -26,6 +28,11 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
   const [invitado, setInvitado] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [mostrandoGuia, setMostrandoGuia] = useState(false)
+
+  // El agente tambien vive aca: sin diagrama abierto solo puede hablar de la
+  // herramienta, que es lo que necesita quien todavia no creo ninguno.
+  const { guia, descartar } = useGuia(null, proyectos.length + diagramas.length)
 
   const fallar = (e: unknown) =>
     setError(e instanceof ErrorApi ? e.message : 'No se pudo conectar con el servidor')
@@ -91,6 +98,18 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
           FORJA
         </div>
         <div className="crece" />
+        <button
+          aria-pressed={mostrandoGuia}
+          onClick={() => setMostrandoGuia(!mostrandoGuia)}
+          title="Consejos del agente guía"
+        >
+          <IconoGuia />
+          Guía
+          {(guia?.consejos.length ?? 0) > 0 && (
+            <span className="contador">{guia!.consejos.length}</span>
+          )}
+        </button>
+        <div className="separador" />
         <span className="senal">
           <IconoPersona tamano={14} />
           {credencial.nombre}
@@ -129,10 +148,19 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
             </form>
 
             {proyectos.length === 0 ? (
-              <p className="vacio-bloque">
-                Todavía no tenés proyectos. Un proyecto agrupa los diagramas de un mismo sistema y
-                la gente que puede editarlos.
-              </p>
+              <div className="vacio-bloque">
+                <p style={{ margin: '0 0 12px' }}>
+                  Todavía no tenés proyectos. Un proyecto agrupa los diagramas de un mismo sistema
+                  y la gente que puede editarlos.
+                </p>
+                {/* La forma de descubrir al agente no puede ser descubrir al
+                    agente: desde el unico lugar donde alguien se queda sin saber
+                    que hacer, hay una puerta que lleva hasta el. */}
+                <button onClick={() => setMostrandoGuia(true)}>
+                  <IconoGuia />
+                  ¿Por dónde empiezo?
+                </button>
+              </div>
             ) : (
               <div className="lista">
                 {proyectos.map((proyecto) => (
@@ -224,6 +252,15 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
           )}
         </div>
       </div>
+
+      {mostrandoGuia && (
+        <Guia
+          guia={guia}
+          enUnDiagrama={false}
+          alDescartar={descartar}
+          alCerrar={() => setMostrandoGuia(false)}
+        />
+      )}
     </div>
   )
 }

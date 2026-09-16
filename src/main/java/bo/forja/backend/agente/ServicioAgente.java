@@ -1,13 +1,19 @@
 package bo.forja.backend.agente;
 
 import bo.forja.backend.dominio.Diagrama;
+import bo.forja.backend.dominio.Herramienta;
 import bo.forja.backend.dominio.OrigenOperacion;
+import bo.forja.backend.dominio.Proyecto;
 import bo.forja.backend.repositorio.ConteoPorOrigen;
+import bo.forja.backend.repositorio.DiagramaRepositorio;
 import bo.forja.backend.repositorio.OperacionRepositorio;
 import bo.forja.backend.repositorio.ProyectoMiembroRepositorio;
+import bo.forja.backend.repositorio.ProyectoRepositorio;
 import bo.forja.backend.repositorio.RelacionUmlRepositorio;
 import bo.forja.backend.servicio.ServicioModelo;
 import bo.forja.backend.servicio.ServicioProyectos;
+import bo.forja.backend.servicio.ServicioUso;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * El agente guia.
@@ -66,19 +73,116 @@ public class ServicioAgente {
     private final OperacionRepositorio operaciones;
     private final ProyectoMiembroRepositorio miembros;
     private final BaseDeConocimiento base;
+    private final BaseDeLaHerramienta baseDeLaHerramienta;
+    private final Preguntas preguntas;
+    private final ProyectoRepositorio proyectoRepositorio;
+    private final DiagramaRepositorio diagramas;
+    private final ServicioUso uso;
 
     public ServicioAgente(ServicioProyectos proyectos,
                           ServicioModelo modelo,
                           RelacionUmlRepositorio relaciones,
                           OperacionRepositorio operaciones,
                           ProyectoMiembroRepositorio miembros,
-                          BaseDeConocimiento base) {
+                          BaseDeConocimiento base,
+                          BaseDeLaHerramienta baseDeLaHerramienta,
+                          Preguntas preguntas,
+                          ProyectoRepositorio proyectoRepositorio,
+                          DiagramaRepositorio diagramas,
+                          ServicioUso uso) {
         this.proyectos = proyectos;
         this.modelo = modelo;
         this.relaciones = relaciones;
         this.operaciones = operaciones;
         this.miembros = miembros;
         this.base = base;
+        this.baseDeLaHerramienta = baseDeLaHerramienta;
+        this.preguntas = preguntas;
+        this.proyectoRepositorio = proyectoRepositorio;
+        this.diagramas = diagramas;
+        this.uso = uso;
+    }
+
+    /**
+     * Todo lo que el agente tiene para decir donde sea que este la persona.
+     * <p>
+     * Es la entrada que usa el panel, que ahora vive en toda la aplicacion y no
+     * solo en el lienzo. Si hay un diagrama abierto se evaluan las dos familias
+     * de reglas -la que ensena la herramienta y la que revisa el modelo- y se
+     * ordenan juntas por prioridad, de modo que un problema del modelo que va a
+     * romper el codigo generado aparezca antes que una funcion sin descubrir.
+     * Sin diagrama solo puede hablar de la herramienta, que es exactamente lo
+     * que necesita quien todavia no creo ninguno.
+     *
+     * @param diagramaId el diagrama abierto, o nulo si no hay ninguno
+     */
+    @Transactional(readOnly = true)
+    public Guia guia(UUID usuarioId, UUID diagramaId, Set<String> descartados) {
+        Panorama panorama = mirarLaAplicacion(usuarioId, diagramaId != null);
+
+        Stream<Consejo> deLaHerramienta = baseDeLaHerramienta.reglas().stream()
+                .flatMap(regla -> regla.evaluar(panorama).stream());
+
+        Stream<Consejo> delModelo = diagramaId == null
+                ? Stream.empty()
+                : base.reglas().stream()
+                        .flatMap(regla -> regla.evaluar(observar(diagramaId, usuarioId)).stream()
+                                .limit(POR_REGLA));
+
+        List<Consejo> todos = Stream.concat(deLaHerramienta, delModelo)
+                .filter(consejo -> !descartados.contains(consejo.id()))
+                .sorted(Comparator.comparingInt(Consejo::prioridad).reversed())
+                .limit(CUANTOS_A_LA_VEZ)
+                .toList();
+
+        log.debug("Agente para {} (diagrama {}): {} consejos, {} pasos del recorrido hechos",
+                usuarioId, diagramaId, todos.size(), Recorrido.de(panorama).hechos());
+
+        return new Guia(todos, Recorrido.de(panorama));
+    }
+
+    /**
+     * Responde una pregunta escrita.
+     * <p>
+     * Anota la consulta como uso de la herramienta: es lo que permite a la regla
+     * "nunca-pregunto" dejar de insistir en cuanto alguien descubrio que al
+     * agente se le puede preguntar.
+     */
+    public List<Consejo> responder(UUID usuarioId, String texto) {
+        uso.anotar(usuarioId, Herramienta.AGENTE_CONSULTADO);
+        return preguntas.responder(texto);
+    }
+
+    /** El estado de la aplicacion entera para esta persona, en una sola pasada. */
+    @Transactional(readOnly = true)
+    public Panorama mirarLaAplicacion(UUID usuarioId, boolean enUnDiagrama) {
+        List<Proyecto> suyos = proyectoRepositorio.buscarPorParticipante(usuarioId);
+        List<UUID> ids = suyos.stream().map(Proyecto::getId).toList();
+
+        int propios = (int) suyos.stream()
+                .filter(p -> p.getPropietario().getId().equals(usuarioId))
+                .count();
+
+        // Sin proyectos no hay nada que contar, y un IN con la lista vacia no es
+        // valido en SQL: se corta antes en lugar de armar consultas imposibles.
+        Map<OrigenOperacion, Long> porOrigen = new EnumMap<>(OrigenOperacion.class);
+        long cuantosDiagramas = 0;
+        if (!ids.isEmpty()) {
+            for (ConteoPorOrigen conteo : operaciones.contarPorOrigenEnProyectos(ids)) {
+                porOrigen.put(conteo.origen(), conteo.cantidad());
+            }
+            cuantosDiagramas = diagramas.contarEnProyectos(ids);
+        }
+
+        return new Panorama(
+                usuarioId,
+                propios,
+                suyos.size() - propios,
+                cuantosDiagramas,
+                miembros.contarInvitadosPor(usuarioId),
+                porOrigen,
+                uso.deUsuario(usuarioId),
+                enUnDiagrama);
     }
 
     /**

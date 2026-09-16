@@ -1,6 +1,7 @@
 import type {
   Comando,
   Consejo,
+  Guia,
   Lectura,
   Credencial,
   DiagramaCompleto,
@@ -232,14 +233,28 @@ export const api = {
 
   // ---------- Agente guia --------------------------------------------------
 
-  consejos: (diagramaId: string, descartados: string[]) => {
+  /**
+   * El agente guia, en cualquier pantalla.
+   *
+   * Sin `diagramaId` solo puede hablar de la herramienta, que es exactamente lo
+   * que necesita quien todavia no creo ningun diagrama; con el, ademas revisa el
+   * modelo. Una sola llamada trae los consejos y el recorrido porque el panel
+   * los dibuja juntos.
+   */
+  guia: (diagramaId: string | null, descartados: string[]) => {
     const consulta = new URLSearchParams()
-    // Los descartados los recuerda el cliente: cerrar un aviso es una
-    // preferencia de quien lo mira, no un hecho del modelo.
+    if (diagramaId) consulta.set('diagramaId', diagramaId)
     descartados.forEach((id) => consulta.append('descartados', id))
     const cola = consulta.toString()
-    return pedir<Consejo[]>(`/api/diagramas/${diagramaId}/agente${cola ? `?${cola}` : ''}`)
+    return pedir<Guia>(`/api/guia${cola ? `?${cola}` : ''}`)
   },
+
+  /** Una pregunta escrita al agente. Responde desde su base de conocimiento. */
+  preguntar: (texto: string) =>
+    pedir<Consejo[]>('/api/guia/pregunta', {
+      method: 'POST',
+      body: JSON.stringify({ texto }),
+    }),
 
   // ---------- Dictado ------------------------------------------------------
 

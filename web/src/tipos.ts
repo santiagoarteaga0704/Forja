@@ -275,6 +275,27 @@ export interface Consejo {
   elementoId: string | null
 }
 
+/** Un paso del recorrido guiado por la herramienta. */
+export interface PasoRecorrido {
+  id: string
+  titulo: string
+  comoSeHace: string
+  /** Ya ocurrio de verdad, segun la bitacora y el registro de uso. */
+  hecho: boolean
+  /** Pantalla donde se hace: PROYECTOS o LIENZO. */
+  donde: string
+}
+
+export interface Recorrido {
+  pasos: PasoRecorrido[]
+}
+
+/** Todo lo que el agente guia tiene para decir en este momento. */
+export interface Guia {
+  consejos: Consejo[]
+  recorrido: Recorrido
+}
+
 // ---------- Dictado por voz -------------------------------------------------
 
 export interface Paso {

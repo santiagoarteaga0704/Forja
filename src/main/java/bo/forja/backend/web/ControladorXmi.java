@@ -3,6 +3,8 @@ package bo.forja.backend.web;
 import bo.forja.backend.seguridad.UsuarioActual;
 import bo.forja.backend.xmi.ServicioXmi;
 import bo.forja.backend.xmi.XmiInvalido;
+import bo.forja.backend.dominio.Herramienta;
+import bo.forja.backend.servicio.ServicioUso;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,9 +38,11 @@ import java.util.UUID;
 public class ControladorXmi {
 
     private final ServicioXmi xmi;
+    private final ServicioUso uso;
 
-    public ControladorXmi(ServicioXmi xmi) {
+    public ControladorXmi(ServicioXmi xmi, ServicioUso uso) {
         this.xmi = xmi;
+        this.uso = uso;
     }
 
     /** Exporta el diagrama para abrirlo en Enterprise Architect. */
@@ -47,6 +51,10 @@ public class ControladorXmi {
                                            @PathVariable UUID diagramaId) {
 
         String documento = xmi.exportar(diagramaId, UsuarioActual.id(token));
+        // Exportar no cambia el modelo, asi que la bitacora no lo registra. Sin
+        // esta anotacion el agente guia no podria distinguir a quien nunca
+        // descubrio el intercambio con Enterprise Architect de quien ya lo usa.
+        uso.anotar(UsuarioActual.id(token), Herramienta.XMI_EXPORTADO);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename("modelo-" + diagramaId + ".xmi").build().toString())

@@ -1212,6 +1212,220 @@ ul.sugerencias button:hover {
    Agente guia
    ============================================================ */
 
+/*
+ * El agente es un cajon que se superpone, no una columna del lienzo.
+ *
+ * Asi el panel de la clase seleccionada sigue visible mientras se lee un
+ * consejo sobre ella, y el mismo componente sirve en la pantalla de proyectos,
+ * que no tiene columna lateral donde meterlo. Es lo que permite que el agente
+ * exista en TODA la aplicacion y no solo donde hay un diagrama.
+ */
+.cajon-guia {
+  position: fixed;
+  /* Arranca DEBAJO de la barra: si la tapara, con la guia abierta no se veria
+     el boton que la cierra ni la senal de si el canal esta vivo, que es
+     justamente lo que hay que mirar mientras alguien te explica algo. */
+  top: 52px;
+  right: 0;
+  bottom: 0;
+  width: 374px;
+  max-width: 100vw;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--instrumento);
+  border-left: 1px solid var(--canto);
+  box-shadow: -18px 0 40px -20px rgba(0, 0, 0, 0.7);
+  animation: entrar-cajon 160ms ease-out;
+}
+
+@keyframes entrar-cajon {
+  from {
+    transform: translateX(14px);
+    opacity: 0;
+  }
+}
+
+.cajon-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px 0 16px;
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--canto);
+  color: var(--fuego);
+}
+
+.cajon-cabecera strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tiza);
+  letter-spacing: 0.01em;
+}
+
+.cajon-cabecera .cerrar {
+  margin-left: auto;
+  font-size: 19px;
+  line-height: 1;
+  padding: 2px 8px;
+  color: var(--acero);
+}
+
+.cajon-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.cajon-cuerpo h3 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--acero);
+  margin: 0;
+}
+
+.cajon-cuerpo .vacio {
+  color: var(--acero-debil);
+  font-size: 12.5px;
+}
+
+.cajon-cuerpo section + section {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--canto-suave);
+}
+
+/* ---------- El recorrido ---------- */
+
+.recorrido-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.recorrido-titulo .cuenta,
+.recorrido-titulo button {
+  margin-left: auto;
+  font-size: 11.5px;
+}
+
+.barra-avance {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--canto);
+  overflow: hidden;
+  margin-bottom: 13px;
+}
+
+.barra-avance span {
+  display: block;
+  height: 100%;
+  background: var(--fuego);
+  transition: width 260ms ease-out;
+}
+
+ol.pasos-recorrido {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+
+ol.pasos-recorrido li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--acero-debil);
+}
+
+/* La marca es un cuadrito que se llena: cumplido, no cumplido, y el que sigue. */
+ol.pasos-recorrido .marca {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 1px solid var(--canto);
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+  color: transparent;
+}
+
+ol.pasos-recorrido li.hecho {
+  color: var(--acero);
+}
+
+ol.pasos-recorrido li.hecho .marca {
+  background: var(--exito);
+  border-color: var(--exito);
+  color: #0d1a13;
+}
+
+ol.pasos-recorrido li.siguiente {
+  color: var(--fuego-claro);
+  font-weight: 500;
+}
+
+ol.pasos-recorrido li.siguiente .marca {
+  border-color: var(--fuego);
+  box-shadow: 0 0 0 3px var(--fuego-tenue);
+}
+
+ol.pasos-recorrido .glosa {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--acero-debil);
+  margin-top: 2px;
+}
+
+/* ---------- Preguntarle ---------- */
+
+.cajon-pregunta {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--canto);
+  background: var(--mesa);
+}
+
+.cajon-pregunta button {
+  flex-shrink: 0;
+  padding: 6px 10px;
+}
+
+/* Texto que solo leen los lectores de pantalla. */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Con la barra angosta las filas se apilan y su alto deja de ser 52: el cajon
+   vuelve a ocupar la pantalla entera, que ademas es lo que conviene ahi. */
+@media (max-width: 900px) {
+  .cajon-guia {
+    top: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .cajon-guia {
+    width: 100vw;
+  }
+}
+
 .consejo {
   border: 1px solid var(--canto-suave);
   border-left-width: 3px;

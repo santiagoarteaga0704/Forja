@@ -2,6 +2,8 @@ package bo.forja.backend.web;
 
 import bo.forja.backend.generador.ServicioGeneracion;
 import bo.forja.backend.seguridad.UsuarioActual;
+import bo.forja.backend.dominio.Herramienta;
+import bo.forja.backend.servicio.ServicioUso;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,9 +33,11 @@ import java.util.UUID;
 public class ControladorGeneracion {
 
     private final ServicioGeneracion generacion;
+    private final ServicioUso uso;
 
-    public ControladorGeneracion(ServicioGeneracion generacion) {
+    public ControladorGeneracion(ServicioGeneracion generacion, ServicioUso uso) {
         this.generacion = generacion;
+        this.uso = uso;
     }
 
     /** Rutas de los archivos que produciria la generacion. */
@@ -44,6 +48,9 @@ public class ControladorGeneracion {
 
         Map<String, String> archivos =
                 generacion.archivos(diagramaId, UsuarioActual.id(token), paquete);
+        // Mirar el codigo generado no deja rastro en el modelo; se anota aqui
+        // para que el agente sepa que esta funcion ya se descubrio.
+        uso.anotar(UsuarioActual.id(token), Herramienta.BACKEND_GENERADO);
         return new Resumen(archivos.size(), List.copyOf(archivos.keySet()));
     }
 
@@ -77,6 +84,7 @@ public class ControladorGeneracion {
                 ? nombreDeCarpeta(archivos.get("pom.xml"))
                 : "proyecto-generado";
         byte[] comprimido = generacion.comprimir(archivos, carpeta);
+        uso.anotar(UsuarioActual.id(token), Herramienta.PROYECTO_DESCARGADO);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

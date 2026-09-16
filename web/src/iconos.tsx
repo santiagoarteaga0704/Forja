@@ -129,6 +129,20 @@ export const IconoMas = (p: PropsIcono) => (
   </Marco>
 )
 
+/** Preguntarle al agente: una flecha que sale hacia el. */
+export const IconoPreguntar = (p: PropsIcono) => (
+  <Marco {...p}>
+    <path d="M2.25 8h10.5M8.75 4 12.75 8l-4 4" />
+  </Marco>
+)
+
+/** Paso cumplido. */
+export const IconoTilde = (p: PropsIcono) => (
+  <Marco {...p}>
+    <path d="m3 8.5 3.5 3.5L13 4" />
+  </Marco>
+)
+
 export const IconoPersona = (p: PropsIcono) => (
   <Marco {...p}>
     <circle cx="8" cy="5.25" r="2.75" />

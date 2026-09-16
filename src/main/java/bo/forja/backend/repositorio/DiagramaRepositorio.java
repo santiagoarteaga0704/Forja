@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import java.util.Collection;
+
 public interface DiagramaRepositorio extends JpaRepository<Diagrama, UUID> {
 
     List<Diagrama> findByProyectoIdOrderByNombre(UUID proyectoId);
@@ -44,4 +46,8 @@ public interface DiagramaRepositorio extends JpaRepository<Diagrama, UUID> {
     int fijarVersion(@Param("id") UUID id,
                      @Param("version") long version,
                      @Param("momento") Instant momento);
+
+    /** Cuantos diagramas hay en un conjunto de proyectos. Lo usa el agente guia. */
+    @Query("SELECT COUNT(d) FROM Diagrama d WHERE d.proyecto.id IN :proyectoIds")
+    long contarEnProyectos(@Param("proyectoIds") Collection<UUID> proyectoIds);
 }

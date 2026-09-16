@@ -17,16 +17,16 @@ import {
   IconoSubir,
   IconoVolver,
 } from '../iconos'
+import { useGuia } from '../guia'
 import { RELACIONES } from '../relaciones'
 import CajaClase from '../lienzo/CajaClase'
 import LineaRelacion from '../lienzo/LineaRelacion'
 import { ANCHO_CLASE, aplicar, bloqueoDe, conBloqueoLiberado, conBloqueoTomado } from '../modelo'
 import { SESION_ID } from '../sesion'
 import PanelClase from './PanelClase'
-import PanelGuia from './PanelGuia'
+import Guia from './Guia'
 import type {
   Comando,
-  Consejo,
   Credencial,
   DiagramaCompleto,
   DiagramaResumen,
@@ -71,15 +71,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
   const [mostrandoGeneracion, setMostrandoGeneracion] = useState(false)
   const [leyendoPizarra, setLeyendoPizarra] = useState(false)
   const [dictando, setDictando] = useState(false)
-  const [consejos, setConsejos] = useState<Consejo[]>([])
-  // En lugar de marcar "cargando" antes de la llamada, se marca que ya hubo una
-  // respuesta cuando llega: el aviso de espera solo importa la primera vez, y
-  // asi el efecto no provoca un render extra en cada consulta.
-  const [elAgenteYaRespondio, setElAgenteYaRespondio] = useState(false)
   const [mostrandoGuia, setMostrandoGuia] = useState(false)
-  // Los avisos cerrados se recuerdan por diagrama y en el navegador: es una
-  // preferencia de quien mira, no un dato del modelo.
-  const [descartados, setDescartados] = useState<string[]>(() => leerDescartados(diagrama.id))
 
   /*
    * Lo que antes pedian `window.prompt` y `window.confirm`.
@@ -180,14 +172,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
   // observa el modelo, asi que sus conclusiones cambian con cada operacion
   // aceptada, propia o ajena.
   const version = modelo?.version
-  useEffect(() => {
-    if (version === undefined) return
-    api
-      .consejos(diagrama.id, descartados)
-      .then(setConsejos)
-      .catch(() => setConsejos([]))
-      .finally(() => setElAgenteYaRespondio(true))
-  }, [diagrama.id, version, descartados])
+  const { guia, descartar } = useGuia(diagrama.id, version)
 
   // Un diagrama vacio abre la guia solo: es el momento en que la persona no
   // tiene nada mas que mirar en el panel y si necesita saber como empezar.
@@ -198,12 +183,6 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
       setMostrandoGuia(true)
     }
   }, [modelo])
-
-  const descartar = (id: string) => {
-    const nuevos = [...descartados, id]
-    setDescartados(nuevos)
-    guardarDescartados(diagrama.id, nuevos)
-  }
 
   const senalar = (elementoId: string) => {
     const esClase = modelo?.clases.some((c) => c.id === elementoId)
@@ -683,7 +662,9 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
         >
           <IconoGuia />
           Guía
-          {consejos.length > 0 && <span className="contador">{consejos.length}</span>}
+          {(guia?.consejos.length ?? 0) > 0 && (
+            <span className="contador">{guia!.consejos.length}</span>
+          )}
         </button>
 
         <div className="separador" />
@@ -860,15 +841,10 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
           )}
         </div>
 
+        {/* El panel de la clase no se reemplaza por el agente: el agente se
+            superpone. Asi se puede leer un consejo sobre una clase con esa
+            misma clase abierta al lado. */}
         <aside className="panel">
-          {mostrandoGuia ? (
-            <PanelGuia
-              consejos={consejos}
-              cargando={!elAgenteYaRespondio}
-              alDescartar={descartar}
-              alSenalar={senalar}
-            />
-          ) : (
           <PanelClase
             clase={claseSeleccionada}
             relacion={
@@ -881,7 +857,6 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
             usuarioId={credencial.usuarioId}
             alEnviar={enviar}
           />
-          )}
         </aside>
       </div>
 
@@ -913,6 +888,16 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
           aceptar="Borrar la clase"
           alAceptar={() => eliminarClase(confirmandoBorrado)}
           alCerrar={() => setConfirmandoBorrado(null)}
+        />
+      )}
+
+      {mostrandoGuia && (
+        <Guia
+          guia={guia}
+          enUnDiagrama
+          alDescartar={descartar}
+          alCerrar={() => setMostrandoGuia(false)}
+          alSenalar={senalar}
         />
       )}
 
@@ -1201,28 +1186,6 @@ function DialogoConfirmar({
       </div>
     </Dialogo>
   )
-}
-
-// ---------- Avisos cerrados -------------------------------------------------
-
-const CLAVE_DESCARTADOS = 'forja.guia.descartados.'
-
-function leerDescartados(diagramaId: string): string[] {
-  try {
-    const guardado = localStorage.getItem(CLAVE_DESCARTADOS + diagramaId)
-    return guardado ? (JSON.parse(guardado) as string[]) : []
-  } catch {
-    return []
-  }
-}
-
-function guardarDescartados(diagramaId: string, ids: string[]) {
-  try {
-    localStorage.setItem(CLAVE_DESCARTADOS + diagramaId, JSON.stringify(ids))
-  } catch {
-    // Si el navegador no deja guardar, los avisos vuelven a aparecer al
-    // recargar. Es una molestia menor y no vale interrumpir por eso.
-  }
 }
 
 // ---------- Generacion ------------------------------------------------------
