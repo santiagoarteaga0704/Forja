@@ -2,13 +2,11 @@ package bo.forja.backend.web;
 
 import bo.forja.backend.agente.Consejo;
 import bo.forja.backend.agente.Guia;
+import bo.forja.backend.agente.Preguntas;
 import bo.forja.backend.agente.ServicioAgente;
 import bo.forja.backend.seguridad.UsuarioActual;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,7 +33,6 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/guia")
-@Validated
 public class ControladorGuia {
 
     private final ServicioAgente agente;
@@ -58,13 +55,34 @@ public class ControladorGuia {
                 descartados == null ? Set.of() : Set.copyOf(descartados));
     }
 
-    /** Una pregunta escrita, respondida desde la base de conocimiento. */
+    /**
+     * Una pregunta escrita, respondida desde la base de conocimiento.
+     * <p>
+     * <b>No valida la entrada y es a proposito.</b> Rechazar un texto vacio o
+     * larguisimo devolveria un 400, y un error es justo lo que no puede pasar
+     * mientras alguien prueba la herramienta delante de un aula: el agente
+     * quedaria mudo en el peor momento. Cualquier texto entra, se recorta si
+     * hace falta, y siempre sale una respuesta.
+     */
     @PostMapping("/pregunta")
     public List<Consejo> preguntar(@AuthenticationPrincipal Jwt token,
-                                   @RequestBody Pregunta pregunta) {
-        return agente.responder(UsuarioActual.id(token), pregunta.texto());
+                                   @RequestBody(required = false) Pregunta pregunta) {
+        String texto = pregunta == null ? null : pregunta.texto();
+        String sobre = pregunta == null ? null : pregunta.sobre();
+        return agente.responder(UsuarioActual.id(token), texto, sobre);
     }
 
-    public record Pregunta(@NotBlank @Size(max = 300) String texto) {
+    /** Las preguntas que el agente sabe responder, para ofrecerlas. */
+    @GetMapping("/temas")
+    public List<Preguntas.Tema> temas() {
+        return agente.temas();
+    }
+
+    /**
+     * @param sobre identificador de la ultima respuesta, si la hubo. Deja que
+     *              una repregunta corta -"¿y eso?", "no entendi"- vuelva sobre
+     *              ese tema en lugar de caer en "no la se contestar"
+     */
+    public record Pregunta(String texto, String sobre) {
     }
 }

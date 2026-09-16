@@ -290,6 +290,12 @@ export interface Recorrido {
   pasos: PasoRecorrido[]
 }
 
+/** Una pregunta que el agente sabe responder, para ofrecerla antes de fallar. */
+export interface TemaGuia {
+  id: string
+  pregunta: string
+}
+
 /** Todo lo que el agente guia tiene para decir en este momento. */
 export interface Guia {
   consejos: Consejo[]

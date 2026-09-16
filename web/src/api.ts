@@ -2,6 +2,7 @@ import type {
   Comando,
   Consejo,
   Guia,
+  TemaGuia,
   Lectura,
   Credencial,
   DiagramaCompleto,
@@ -249,12 +250,21 @@ export const api = {
     return pedir<Guia>(`/api/guia${cola ? `?${cola}` : ''}`)
   },
 
-  /** Una pregunta escrita al agente. Responde desde su base de conocimiento. */
-  preguntar: (texto: string) =>
+  /**
+   * Una pregunta escrita al agente. Responde desde su base de conocimiento.
+   *
+   * `sobre` es el tema de la ultima respuesta: deja que una repregunta corta
+   * -"¿y eso?", "no entendi"- vuelva sobre ese tema en lugar de caer en "no la
+   * se contestar", que es la forma mas rapida de que el agente parezca roto.
+   */
+  preguntar: (texto: string, sobre: string | null) =>
     pedir<Consejo[]>('/api/guia/pregunta', {
       method: 'POST',
-      body: JSON.stringify({ texto }),
+      body: JSON.stringify({ texto, sobre }),
     }),
+
+  /** Las preguntas que el agente sabe responder. */
+  temas: () => pedir<TemaGuia[]>('/api/guia/temas'),
 
   // ---------- Dictado ------------------------------------------------------
 

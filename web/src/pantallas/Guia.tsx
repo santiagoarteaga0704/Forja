@@ -1,7 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { IconoGuia, IconoPreguntar, IconoTilde } from '../iconos'
-import type { CategoriaConsejo, Consejo, Guia as GuiaVista } from '../tipos'
+import type { CategoriaConsejo, Consejo, Guia as GuiaVista, TemaGuia } from '../tipos'
+
+/** Un turno de la conversacion: lo que se pregunto y lo que se contesto. */
+interface Turno {
+  pregunta: string
+  respuestas: Consejo[]
+}
+
+/*
+ * Lo que el agente contesta cuando NO SE PUDO PREGUNTAR.
+ *
+ * El caso importa mas de lo que parece: el agente se va a usar delante de gente,
+ * y si la red hipa justo ahi, un panel que no hace nada se lee como "se cayo".
+ * Esta respuesta se arma en el cliente, no viaja, y dice la verdad -no se pudo
+ * consultar- sin dejar a nadie mirando una pantalla quieta.
+ */
+const SIN_RESPUESTA: Consejo = {
+  id: 'respuesta-sin-servidor',
+  categoria: 'DESCUBRIMIENTO',
+  prioridad: 0,
+  queNote: 'No pude consultar al servidor',
+  porQueImporta:
+    'La pregunta no llegó. Puede ser la red, o que el backend no esté levantado; el diagrama que tenés en pantalla no se ve afectado.',
+  comoSeHace: 'Probá de nuevo en un momento, o tocá una de las preguntas de acá abajo.',
+  elementoId: null,
+}
 
 interface Props {
   guia: GuiaVista | null
@@ -41,9 +66,18 @@ export default function Guia({
   alSenalar,
 }: Props) {
   const [pregunta, setPregunta] = useState('')
-  const [respuestas, setRespuestas] = useState<Consejo[] | null>(null)
+  const [conversacion, setConversacion] = useState<Turno[]>([])
   const [preguntando, setPreguntando] = useState(false)
+  const [temas, setTemas] = useState<TemaGuia[]>([])
   const campo = useRef<HTMLInputElement>(null)
+  const finDeLaCharla = useRef<HTMLDivElement>(null)
+
+  // Las sugerencias vienen del servidor y no de una lista escrita aca: son el
+  // mismo catalogo que responde, asi que no puede ofrecerse una pregunta que
+  // despues no se sepa contestar. Si no llegan, no pasa nada: no se muestran.
+  useEffect(() => {
+    api.temas().then(setTemas).catch(() => setTemas([]))
+  }, [])
 
   useEffect(() => {
     const escape = (evento: KeyboardEvent) => {
@@ -53,19 +87,31 @@ export default function Guia({
     return () => document.removeEventListener('keydown', escape)
   }, [alCerrar])
 
-  const preguntar = async (evento: React.FormEvent) => {
-    evento.preventDefault()
-    if (!pregunta.trim()) return
+  const preguntar = async (texto: string) => {
+    const dicha = texto.trim()
+    if (!dicha || preguntando) return
+
+    setPregunta('')
     setPreguntando(true)
+    // El tema de la ultima respuesta viaja con la pregunta: es lo que permite
+    // que "¿y eso?" se entienda como "contame mas de eso".
+    const ultimo = conversacion.at(-1)?.respuestas[0]?.id ?? null
     try {
-      setRespuestas(await api.preguntar(pregunta.trim()))
+      const respuestas = await api.preguntar(dicha, ultimo)
+      setConversacion((charla) => [...charla, { pregunta: dicha, respuestas }])
     } catch {
-      setRespuestas(null)
+      // Nunca se deja la pregunta sin contestar, ni siquiera sin servidor.
+      setConversacion((charla) => [...charla, { pregunta: dicha, respuestas: [SIN_RESPUESTA] }])
     } finally {
       setPreguntando(false)
       campo.current?.focus()
     }
   }
+
+  // La charla crece hacia abajo: al contestar, se mira lo ultimo.
+  useEffect(() => {
+    finDeLaCharla.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [conversacion])
 
   const pasos = guia?.recorrido.pasos ?? []
   const hechos = pasos.filter((paso) => paso.hecho).length
@@ -123,46 +169,82 @@ export default function Guia({
           </section>
         )}
 
-        {respuestas ? (
-          <section>
-            <div className="recorrido-titulo">
-              <h3>Lo que sé de eso</h3>
-              <button className="desnudo" onClick={() => setRespuestas(null)}>
-                Volver a los consejos
+        <section>
+          <div className="recorrido-titulo">
+            <h3>{enUnDiagrama ? 'Sobre esto que estás haciendo' : 'Por dónde seguir'}</h3>
+            {conversacion.length > 0 && (
+              <button className="desnudo" onClick={() => setConversacion([])}>
+                Limpiar la charla
               </button>
-            </div>
-            {respuestas.map((respuesta) => (
+            )}
+          </div>
+          {!guia && <p className="vacio">Mirando…</p>}
+          {guia && guia.consejos.length === 0 && (
+            <p className="vacio">Nada que señalar por ahora. Vuelvo a mirar con cada cambio.</p>
+          )}
+          {guia?.consejos.map((consejo) => (
+            <Tarjeta
+              key={consejo.id}
+              consejo={consejo}
+              alDescartar={() => alDescartar(consejo.id)}
+              alSenalar={
+                consejo.elementoId && alSenalar ? () => alSenalar(consejo.elementoId!) : undefined
+              }
+            />
+          ))}
+        </section>
+
+        {/*
+          La charla queda a la vista, turno por turno.
+          Antes la respuesta reemplazaba a los consejos y la pregunta
+          desaparecia al contestar: se leia como un buscador. Viendo lo que se
+          pregunto arriba de lo que se contesto, se lee como lo que es, y ademas
+          se puede repreguntar sabiendo de que se venia hablando.
+        */}
+        {conversacion.map((turno, indice) => (
+          <section key={indice} className="turno">
+            <p className="lo-que-pregunte">{turno.pregunta}</p>
+            {turno.respuestas.map((respuesta) => (
               <Tarjeta key={respuesta.id} consejo={respuesta} />
             ))}
           </section>
-        ) : (
+        ))}
+
+        {preguntando && (
           <section>
-            <h3 style={{ marginBottom: 10 }}>
-              {enUnDiagrama ? 'Sobre esto que estás haciendo' : 'Por dónde seguir'}
-            </h3>
-            {!guia && <p className="vacio">Mirando…</p>}
-            {guia && guia.consejos.length === 0 && (
-              <p className="vacio">Nada que señalar por ahora. Vuelvo a mirar con cada cambio.</p>
-            )}
-            {guia?.consejos.map((consejo) => (
-              <Tarjeta
-                key={consejo.id}
-                consejo={consejo}
-                alDescartar={() => alDescartar(consejo.id)}
-                alSenalar={
-                  consejo.elementoId && alSenalar
-                    ? () => alSenalar(consejo.elementoId!)
-                    : undefined
-                }
-              />
-            ))}
+            <p className="vacio">Buscando en lo que sé…</p>
           </section>
         )}
+
+        <div ref={finDeLaCharla} />
       </div>
+
+      {/*
+        Las sugerencias van PEGADAS AL CAMPO, fuera de lo que se desplaza.
+        Dentro del cuerpo quedaban debajo del pliegue, que es donde no sirven:
+        se ven al momento de escribir o no se ven nunca. Un campo vacio admite
+        infinitas formas de no acertar; estas preguntas lo vuelven un menu donde
+        todo lo que se toca anda -hay una prueba que garantiza justamente eso-.
+      */}
+      {temas.length > 0 && (
+        <div className="tira-sugerencias">
+          {temas.slice(0, 4).map((tema) => (
+            <button key={tema.id} disabled={preguntando} onClick={() => preguntar(tema.pregunta)}>
+              {tema.pregunta}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* El campo va fijo abajo: se puede preguntar en cualquier momento, sin
           tener que desplazarse hasta el final de los consejos. */}
-      <form className="cajon-pregunta" onSubmit={preguntar}>
+      <form
+        className="cajon-pregunta"
+        onSubmit={(evento) => {
+          evento.preventDefault()
+          void preguntar(pregunta)
+        }}
+      >
         <input
           ref={campo}
           value={pregunta}

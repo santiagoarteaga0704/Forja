@@ -1384,14 +1384,66 @@ ol.pasos-recorrido .glosa {
   margin-top: 2px;
 }
 
+/* ---------- La charla ---------- */
+
+/*
+ * Lo que se pregunto queda arriba de lo que se contesto.
+ *
+ * Se dibuja distinto de una respuesta a proposito -alineado a la derecha, en
+ * una pastilla- porque son dos voces. Sin esa diferencia el panel parece una
+ * lista de fichas y no una conversacion, que es justo lo que se le pide.
+ */
+.lo-que-pregunte {
+  margin: 0 0 10px auto;
+  max-width: 88%;
+  width: fit-content;
+  background: var(--instrumento-alto);
+  border: 1px solid var(--canto);
+  border-radius: var(--radio) var(--radio) 2px var(--radio);
+  padding: 7px 11px;
+  font-size: 12.5px;
+  color: var(--tiza);
+}
+
+/*
+ * Las preguntas que si tienen respuesta, pegadas al campo donde se escribe.
+ *
+ * Dentro del cuerpo desplazable quedaban debajo del pliegue: se ven justo
+ * cuando hacen falta, o no se ven nunca.
+ */
+.tira-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 11px 12px 0;
+  flex-shrink: 0;
+  background: var(--mesa);
+  border-top: 1px solid var(--canto);
+}
+
+.tira-sugerencias button {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 5px 10px;
+  border-radius: 99px;
+  color: var(--acero);
+  text-align: left;
+  white-space: normal;
+}
+
+.tira-sugerencias button:hover:not(:disabled) {
+  color: var(--fuego-claro);
+  border-color: rgba(232, 128, 31, 0.45);
+  background: var(--fuego-tenue);
+}
+
 /* ---------- Preguntarle ---------- */
 
 .cajon-pregunta {
   display: flex;
   gap: 8px;
-  padding: 12px;
+  padding: 11px 12px 12px;
   flex-shrink: 0;
-  border-top: 1px solid var(--canto);
   background: var(--mesa);
 }
 

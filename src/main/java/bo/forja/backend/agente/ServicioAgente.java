@@ -148,9 +148,14 @@ public class ServicioAgente {
      * "nunca-pregunto" dejar de insistir en cuanto alguien descubrio que al
      * agente se le puede preguntar.
      */
-    public List<Consejo> responder(UUID usuarioId, String texto) {
+    public List<Consejo> responder(UUID usuarioId, String texto, String sobre) {
         uso.anotar(usuarioId, Herramienta.AGENTE_CONSULTADO);
-        return preguntas.responder(texto);
+        return preguntas.responder(texto, sobre);
+    }
+
+    /** Las preguntas que si tienen respuesta, para ofrecerlas antes de fallar. */
+    public List<Preguntas.Tema> temas() {
+        return preguntas.temas();
     }
 
     /** El estado de la aplicacion entera para esta persona, en una sola pasada. */
