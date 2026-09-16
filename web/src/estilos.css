@@ -1,41 +1,80 @@
 /*
- * Sistema visual de FORJA.
+ * Sistema visual de FORJA: una mesa de dibujo.
  *
- * Una herramienta de modelado se usa durante horas seguidas y con muchos
- * elementos a la vista, asi que la interfaz esta pensada densa y de bajo
- * contraste de fondo, con el color reservado para lo que hay que distinguir:
- * el tipo de relacion, quien tiene bloqueado un elemento, que esta
- * seleccionado. El ambar viene del nombre -una fragua- y se usa solo como
- * acento, nunca como fondo de superficies grandes.
+ * La idea que ordena todo: la aplicacion es la MESA -grafito, instrumentos,
+ * controles- y el diagrama es una HOJA de papel de ingenieria apoyada encima.
+ * Hay una sola superficie clara en toda la pantalla y es el modelo. Todo lo
+ * demas se aparta.
+ *
+ * De ahi salen las reglas:
+ *
+ * - La mesa nunca compite con la hoja. Barras, paneles y dialogos son grafito
+ *   con texto acero; el color fuerte se reserva para dos significados y nada
+ *   mas: FUEGO (esta vivo, es tuyo, esta seleccionado) y AJENO (otra persona lo
+ *   tiene tomado). Un tercer color decorativo arruinaria los dos.
+ * - Los instrumentos tienen esquina apenas redondeada; el modelo tiene esquina
+ *   viva. No es un capricho: en UML una clase es un rectangulo, y que la unica
+ *   cosa con angulos rectos sea el modelo lo separa del software que lo rodea.
+ * - La cuadricula se dibuja DENTRO del SVG y se transforma con la vista, porque
+ *   esta sobre el papel: al acercarse tiene que acercarse con el.
+ *
+ * Tipografia: IBM Plex Sans y IBM Plex Mono, empaquetadas con la aplicacion
+ * (@fontsource, importadas en main.tsx). No se cargan de la red a proposito:
+ * la demostracion no puede depender de que haya internet en el aula, por la
+ * misma razon por la que el motor de OCR viaja con la aplicacion. Plex es una
+ * grotesca de ingenieria -la encargo IBM justamente para este registro- y la
+ * variante mono lleva todo lo que es MODELO: identificadores, tipos, firmas,
+ * multiplicidades y codigo generado. Sans para la interfaz, mono para el
+ * contenido: se distingue de un vistazo que es lo que dice la herramienta y
+ * que es lo que dice tu diagrama.
  */
 
 :root {
-  --fondo: #0e1116;
-  --fondo-lienzo: #12161d;
-  --superficie: #171c24;
-  --superficie-alta: #1f2630;
-  --borde: #2a323d;
-  --borde-suave: #212832;
+  /* --- La mesa: cromo de la aplicacion --- */
+  --mesa: #15181e;
+  --instrumento: #1d222a;
+  --instrumento-alto: #262d37;
+  --instrumento-vivo: #30394506;
+  --canto: #323a46;
+  --canto-suave: #262d37;
 
-  --texto: #e4e8ee;
-  --texto-medio: #9aa4b2;
-  --texto-debil: #697585;
+  --tiza: #e7eaef;
+  --acero: #98a2b0;
+  --acero-debil: #6d7784;
 
-  --ambar: #e8913c;
-  --ambar-claro: #f6b26b;
-  --ambar-tenue: rgba(232, 145, 60, 0.12);
+  /* --- La hoja: papel de ingenieria --- */
+  --papel: #f2f4ed;
+  --papel-hondo: #e6eadd;
+  --reticula: #dfe4d5;
+  --reticula-mayor: #cbd3bd;
+  --caja: #ffffff;
+  --caja-cabecera: #ebeee3;
+  --canto-caja: #b4bcc4;
+  --tinta: #22262c;
+  --tinta-media: #4e5661;
+  --tinta-debil: #79828e;
 
-  --exito: #4bb37b;
-  --peligro: #e05c5c;
-  --aviso: #d9a441;
-  --ajeno: #7c6ce0;
+  /* --- Significado. Solo dos colores tienen trabajo. --- */
+  --fuego: #e8801f;
+  --fuego-claro: #f6a84f;
+  --fuego-hondo: #b45c0c;
+  --fuego-tenue: rgba(232, 128, 31, 0.13);
+  --ajeno: #6672de;
+  --ajeno-tenue: rgba(102, 114, 222, 0.14);
 
-  --radio: 6px;
-  --radio-chico: 4px;
-  --sombra: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --exito: #43a473;
+  --peligro: #dd5450;
+  --aviso: #d59a25;
 
-  --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  /* --- Medidas --- */
+  --radio: 4px;
+  --radio-chico: 3px;
+  --sombra-baja: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sombra: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --sombra-hoja: 0 1px 3px rgba(34, 38, 44, 0.16), 0 6px 16px -6px rgba(34, 38, 44, 0.2);
+
+  --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
 * {
@@ -50,58 +89,127 @@ body,
 }
 
 body {
-  background: var(--fondo);
-  color: var(--texto);
+  background: var(--mesa);
+  color: var(--tiza);
   font-family: var(--sans);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* Un unico anillo de foco en toda la aplicacion, sobre cualquier fondo. */
+:focus-visible {
+  outline: 2px solid var(--fuego);
+  outline-offset: 2px;
+  border-radius: var(--radio-chico);
+}
+
+/* ============================================================
+   Controles
+   ============================================================ */
 
 button {
   font-family: inherit;
   font-size: 13px;
-  color: var(--texto);
-  background: var(--superficie-alta);
-  border: 1px solid var(--borde);
+  font-weight: 500;
+  color: var(--tiza);
+  background: var(--instrumento-alto);
+  border: 1px solid var(--canto);
   border-radius: var(--radio-chico);
   padding: 6px 11px;
   cursor: pointer;
-  transition: background 120ms, border-color 120ms;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background 110ms ease, border-color 110ms ease, color 110ms ease;
 }
 
 button:hover:not(:disabled) {
-  background: #273041;
-  border-color: #3a4756;
+  background: #2f3947;
+  border-color: #414c5c;
+}
+
+button:active:not(:disabled) {
+  background: #232a34;
 }
 
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+button .icono {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
 button.principal {
-  background: var(--ambar);
-  border-color: var(--ambar);
-  color: #1a1206;
+  background: var(--fuego);
+  border-color: var(--fuego);
+  color: #22160a;
   font-weight: 600;
 }
 
 button.principal:hover:not(:disabled) {
-  background: var(--ambar-claro);
-  border-color: var(--ambar-claro);
+  background: var(--fuego-claro);
+  border-color: var(--fuego-claro);
+}
+
+button.principal .icono {
+  opacity: 1;
+}
+
+/* Boton de texto: sin caja, para acciones secundarias dentro de un bloque. */
+button.desnudo {
+  background: none;
+  border-color: transparent;
+  color: var(--acero);
+  padding: 4px 7px;
+}
+
+button.desnudo:hover:not(:disabled) {
+  background: var(--instrumento-alto);
+  border-color: transparent;
+  color: var(--tiza);
 }
 
 button.peligro:hover:not(:disabled) {
-  background: rgba(224, 92, 92, 0.15);
+  background: rgba(221, 84, 80, 0.16);
   border-color: var(--peligro);
-  color: #f2a0a0;
+  color: #f1a9a6;
 }
 
-button.activo {
-  background: var(--ambar-tenue);
-  border-color: var(--ambar);
-  color: var(--ambar-claro);
+/*
+ * El boton que confirma algo irreversible.
+ *
+ * No puede ser el boton principal ambar: el ambar en toda la aplicacion
+ * significa "esto esta vivo y es tuyo", y usarlo para borrar lo volveria
+ * ambiguo justo donde mas caro sale equivocarse.
+ */
+button.destructivo {
+  background: var(--peligro);
+  border-color: var(--peligro);
+  color: #fff;
+  font-weight: 600;
+}
+
+button.destructivo:hover:not(:disabled) {
+  background: #e66a66;
+  border-color: #e66a66;
+}
+
+button.activo,
+button[aria-pressed='true'] {
+  background: var(--fuego-tenue);
+  border-color: rgba(232, 128, 31, 0.5);
+  color: var(--fuego-claro);
+}
+
+button.activo .icono,
+button[aria-pressed='true'] .icono {
+  opacity: 1;
 }
 
 input,
@@ -109,228 +217,596 @@ select,
 textarea {
   font-family: inherit;
   font-size: 13px;
-  color: var(--texto);
-  background: var(--fondo);
-  border: 1px solid var(--borde);
+  color: var(--tiza);
+  background: var(--mesa);
+  border: 1px solid var(--canto);
   border-radius: var(--radio-chico);
-  padding: 6px 9px;
+  padding: 7px 9px;
   width: 100%;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--acero-debil);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--ambar);
-  box-shadow: 0 0 0 2px var(--ambar-tenue);
+  border-color: var(--fuego);
+  box-shadow: 0 0 0 3px var(--fuego-tenue);
 }
 
+/*
+ * Las etiquetas NO van en versalitas espaciadas. Ese recurso se ve como
+ * prolijidad y es ruido: convierte cada palabra corriente en un rotulo y
+ * obliga a leer letra por letra. Basta con bajarles el peso visual.
+ */
 label {
   display: block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--texto-debil);
-  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--acero);
+  margin-bottom: 5px;
 }
 
-/* ---------- Marca ---------- */
+.campos {
+  display: grid;
+  gap: 14px;
+}
+
+.par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--acero);
+  margin: 0;
+  cursor: pointer;
+}
+
+.casilla input {
+  width: auto;
+  accent-color: var(--fuego);
+}
+
+.formulario-linea {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Texto de apoyo: explica, no manda. Vale en cualquier superficie de la mesa. */
+.sutil {
+  color: var(--acero);
+  font-size: 12.5px;
+}
+
+/* ============================================================
+   Marca
+   ============================================================ */
 
 .marca {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.13em;
   font-size: 13px;
+  color: var(--tiza);
 }
 
+/* El yunque: un cuadrado en angulo, al rojo. Es la unica marca de la casa. */
 .marca .yunque {
   width: 9px;
   height: 9px;
-  background: var(--ambar);
+  flex-shrink: 0;
+  background: var(--fuego);
   transform: rotate(45deg);
-  box-shadow: 0 0 12px rgba(232, 145, 60, 0.6);
+  box-shadow: 0 0 14px rgba(232, 128, 31, 0.55);
 }
 
-/* ---------- Entrar ---------- */
+/* ============================================================
+   Entrada
+   ============================================================ */
 
 .entrar {
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 32px 24px;
   background:
-    radial-gradient(900px 500px at 50% -10%, rgba(232, 145, 60, 0.09), transparent 70%),
-    var(--fondo);
+    radial-gradient(1100px 600px at 18% 8%, rgba(232, 128, 31, 0.07), transparent 62%),
+    var(--mesa);
+}
+
+.entrar-cuerpo {
+  width: 100%;
+  max-width: 980px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 372px;
+  gap: 48px;
+  align-items: center;
+}
+
+.entrar-presentacion h1 {
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  margin: 22px 0 12px;
+  max-width: 15ch;
+}
+
+.entrar-presentacion p {
+  color: var(--acero);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 46ch;
+}
+
+/* La hoja de muestra: el producto dibujandose solo, antes de entrar. */
+.hoja-muestra {
+  margin-top: 26px;
+  border-radius: var(--radio);
+  background: var(--papel);
+  box-shadow: var(--sombra-hoja);
+  overflow: hidden;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/*
+ * El trazo se dibuja recorriendo su propio contorno: una linea larguisima de
+ * guiones, desplazada hasta quedar fuera y traida de vuelta a su lugar. 900
+ * alcanza para el perimetro de cualquier caja del dibujo.
+ */
+.hoja-muestra .trazo {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: trazar 0.7s ease-out forwards;
+}
+
+@keyframes trazar {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.hoja-muestra .rotulo {
+  opacity: 0;
+  animation: revelar 0.35s ease-out forwards;
+}
+
+@keyframes revelar {
+  to {
+    opacity: 1;
+  }
 }
 
 .entrar .tarjeta {
-  width: 100%;
-  max-width: 380px;
-  background: var(--superficie);
-  border: 1px solid var(--borde);
+  background: var(--instrumento);
+  border: 1px solid var(--canto);
   border-radius: var(--radio);
-  padding: 28px;
+  padding: 26px;
   box-shadow: var(--sombra);
 }
 
-.entrar h1 {
-  font-size: 19px;
-  margin: 18px 0 4px;
+.entrar .tarjeta h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 3px;
 }
 
-.entrar p.bajada {
-  color: var(--texto-medio);
+.entrar .tarjeta .bajada {
+  color: var(--acero);
   font-size: 13px;
-  margin: 0 0 22px;
-}
-
-.campos {
-  display: grid;
-  gap: 13px;
+  margin: 0 0 20px;
 }
 
 .alterna {
-  margin-top: 16px;
+  margin-top: 18px;
   text-align: center;
-  font-size: 12px;
-  color: var(--texto-medio);
+  font-size: 12.5px;
+  color: var(--acero);
 }
 
 .alterna button {
   background: none;
   border: none;
-  color: var(--ambar-claro);
-  padding: 0 3px;
-  font-size: 12px;
+  color: var(--fuego-claro);
+  padding: 0 2px;
+  font-size: 12.5px;
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-/* ---------- Estructura general ---------- */
+.alterna button:hover {
+  background: none;
+  border-color: transparent;
+  color: var(--fuego);
+}
+
+@media (max-width: 880px) {
+  .entrar-cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+    max-width: 420px;
+  }
+
+  .entrar-presentacion h1 {
+    font-size: 25px;
+    margin-top: 16px;
+  }
+
+  .hoja-muestra {
+    display: none;
+  }
+}
+
+/* ============================================================
+   Estructura
+   ============================================================ */
 
 .aplicacion {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--mesa);
 }
 
+/*
+ * El riel de instrumentos.
+ *
+ * Diez botones iguales en fila obligan a leerlos todos para encontrar uno. Van
+ * en grupos, y cada grupo responde una pregunta distinta: con que dibujo, por
+ * que otra via puedo entrar el modelo, quien me ayuda, que sale de aca. El
+ * espacio entre grupos es lo que hace la lectura, no una linea divisoria.
+ */
 .barra {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 9px 14px;
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
+  gap: 8px;
+  padding: 0 12px;
+  height: 52px;
   flex-shrink: 0;
-}
-
-.barra .separador {
-  width: 1px;
-  height: 22px;
-  background: var(--borde);
+  background: var(--instrumento);
+  border-bottom: 1px solid var(--canto);
 }
 
 .barra .crece {
   flex: 1;
 }
 
-.barra .titulo {
-  font-weight: 600;
+.barra .separador {
+  width: 1px;
+  height: 24px;
+  background: var(--canto);
+  margin: 0 3px;
+  flex-shrink: 0;
 }
 
-.barra .sutil {
-  color: var(--texto-debil);
-  font-size: 12px;
+.grupo {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--mesa);
+  border: 1px solid var(--canto-suave);
+  border-radius: var(--radio);
+}
+
+.grupo button {
+  border-color: transparent;
+  background: none;
+}
+
+.grupo button:hover:not(:disabled) {
+  background: var(--instrumento-alto);
+  border-color: transparent;
+}
+
+.grupo button.activo,
+.grupo button[aria-pressed='true'] {
+  background: var(--fuego-tenue);
+  border-color: transparent;
+  color: var(--fuego-claro);
+}
+
+/* Identidad del documento: que estoy editando y de que proyecto es. */
+.identidad {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.identidad .titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tiza);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identidad .procedencia {
+  font-size: 11.5px;
+  color: var(--acero-debil);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .senal {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 12px;
-  color: var(--texto-medio);
+  color: var(--acero-debil);
+  padding-left: 2px;
+  flex-shrink: 0;
 }
 
 .senal .punto {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--peligro);
+  background: var(--acero-debil);
+}
+
+.senal.viva {
+  color: var(--acero);
 }
 
 .senal.viva .punto {
   background: var(--exito);
-  box-shadow: 0 0 8px rgba(75, 179, 123, 0.7);
+  box-shadow: 0 0 9px rgba(67, 164, 115, 0.8);
 }
 
-/* ---------- Proyectos ---------- */
+.contador {
+  display: inline-block;
+  min-width: 17px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--fuego);
+  color: #22160a;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 16px;
+}
+
+/* ============================================================
+   Menu desplegable
+   ============================================================ */
+
+.desplegable {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 40;
+  min-width: 210px;
+  padding: 4px;
+  background: var(--instrumento);
+  border: 1px solid var(--canto);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  animation: aparecer 110ms ease-out;
+}
+
+.menu.izquierda {
+  right: auto;
+  left: 0;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.menu button,
+.menu .opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radio-chico);
+  padding: 7px 9px;
+  color: var(--tiza);
+  font-weight: 400;
+}
+
+.menu button:hover:not(:disabled) {
+  background: var(--instrumento-alto);
+  border-color: transparent;
+}
+
+.menu .opcion .glosa {
+  display: block;
+  font-size: 11.5px;
+  color: var(--acero-debil);
+  margin-top: 1px;
+}
+
+/*
+ * El selector de relaciones dibuja el conector de UML, no su nombre.
+ *
+ * Es lo que hay que reconocer en el diagrama: el rombo lleno, el hueco, el
+ * triangulo, la punteada. Una lista de palabras obliga a traducir dos veces
+ * -palabra a simbolo, simbolo a significado- y es justo lo que a alguien que
+ * esta aprendiendo UML mas le cuesta.
+ */
+.opcion-relacion {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 11px;
+}
+
+.opcion-relacion .glifo {
+  color: var(--tiza);
+}
+
+.opcion-relacion.elegida {
+  background: var(--fuego-tenue);
+  color: var(--fuego-claro);
+}
+
+.opcion-relacion.elegida .glifo {
+  color: var(--fuego-claro);
+}
+
+/* ============================================================
+   Proyectos
+   ============================================================ */
 
 .proyectos {
-  padding: 26px;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
+  flex: 1;
   overflow: auto;
+  padding: 34px 26px 60px;
 }
 
-.proyectos h2 {
-  font-size: 15px;
-  margin: 0 0 14px;
-  color: var(--texto-medio);
-  font-weight: 600;
+.proyectos-cuerpo {
+  max-width: 880px;
+  margin: 0 auto;
 }
 
-.rejilla {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 12px;
-}
-
-.ficha {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  padding: 14px;
-  text-align: left;
-  cursor: pointer;
-  display: block;
-  width: 100%;
-}
-
-.ficha:hover {
-  border-color: var(--ambar);
-}
-
-.ficha .nombre {
-  font-weight: 600;
-  margin-bottom: 3px;
-}
-
-.ficha .detalle {
-  font-size: 12px;
-  color: var(--texto-debil);
-}
-
-.ficha.nueva {
-  border-style: dashed;
-  color: var(--texto-medio);
-  display: grid;
-  place-items: center;
-  min-height: 78px;
-}
-
-.formulario-linea {
+.seccion-titulo {
   display: flex;
-  gap: 9px;
-  margin-bottom: 18px;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
 }
 
-.formulario-linea input {
-  max-width: 320px;
+.seccion-titulo h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--tiza);
 }
 
-/* ---------- Lienzo ---------- */
+/* Un numero al lado de un titulo: cuantos hay, sin competir con el titulo. */
+.cuenta {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--acero-debil);
+}
+
+.bloque {
+  margin-bottom: 36px;
+}
+
+/*
+ * Los proyectos son una lista, no una rejilla de tarjetas.
+ *
+ * Una rejilla de fichas iguales sugiere que cada una tiene contenido visual
+ * propio -una portada, una miniatura- y aca no lo hay: son nombres. En lista
+ * se leen en una sola pasada y el nombre queda alineado, que es lo que se
+ * compara.
+ */
+.lista {
+  border: 1px solid var(--canto-suave);
+  border-radius: var(--radio);
+  overflow: hidden;
+  background: var(--instrumento);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--canto-suave);
+  border-radius: 0;
+  text-align: left;
+  color: var(--tiza);
+  font-weight: 400;
+}
+
+.fila:last-child {
+  border-bottom: none;
+}
+
+.fila:hover:not(:disabled) {
+  background: var(--instrumento-alto);
+  border-color: transparent;
+  border-bottom-color: var(--canto-suave);
+}
+
+.fila .nombre {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.fila .detalle {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--acero-debil);
+  flex-shrink: 0;
+}
+
+.fila .icono {
+  color: var(--acero-debil);
+  opacity: 1;
+}
+
+/*
+ * Lo elegido se marca con un canto, no con un fondo.
+ *
+ * El mismo tinte ambar que funciona en un boton de la barra, estirado a lo
+ * ancho de una fila, se convierte en una banda marron que se come la pagina.
+ * Un filo de 2 en el borde izquierdo dice lo mismo y no pinta nada.
+ */
+.fila.elegida {
+  background: rgba(232, 128, 31, 0.06);
+  box-shadow: inset 2px 0 0 var(--fuego);
+}
+
+.fila.elegida .nombre {
+  color: var(--fuego-claro);
+}
+
+.fila.elegida .icono {
+  color: var(--fuego);
+}
+
+/* Estado vacio: una invitacion a hacer algo, no un cartel de que no hay nada. */
+.vacio-bloque {
+  border: 1px dashed var(--canto);
+  border-radius: var(--radio);
+  padding: 22px 18px;
+  text-align: center;
+  color: var(--acero);
+  font-size: 13px;
+  background: rgba(29, 34, 42, 0.5);
+}
+
+/* ============================================================
+   La hoja
+   ============================================================ */
 
 .area {
   flex: 1;
@@ -342,7 +818,7 @@ label {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: var(--fondo-lienzo);
+  background: var(--papel);
 }
 
 .lienzo svg {
@@ -351,6 +827,15 @@ label {
   display: block;
   /* La seleccion de texto arruina el arrastre del lienzo. */
   user-select: none;
+}
+
+/* La hoja recibe luz: apenas mas clara en el centro, cae hacia los bordes. */
+.lienzo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(80, 92, 70, 0.14);
 }
 
 .lienzo.relacionando {
@@ -369,57 +854,71 @@ label {
   pointer-events: none;
 }
 
+/*
+ * La pista flotante.
+ *
+ * Va sobre la hoja, asi que se dibuja como una nota sobre el papel y no como
+ * un control de la aplicacion: si fuera grafito pareceria que la mesa tapa el
+ * dibujo.
+ */
 .pista {
   position: absolute;
   left: 50%;
-  bottom: 18px;
+  bottom: 20px;
   transform: translateX(-50%);
-  background: var(--superficie-alta);
-  border: 1px solid var(--ambar);
-  color: var(--ambar-claro);
-  border-radius: 99px;
-  padding: 6px 15px;
-  font-size: 12px;
-  box-shadow: var(--sombra);
+  max-width: min(520px, calc(100% - 32px));
+  background: var(--caja);
+  border: 1px solid var(--canto-caja);
+  border-left: 3px solid var(--fuego);
+  color: var(--tinta-media);
+  border-radius: var(--radio-chico);
+  padding: 8px 14px;
+  font-size: 12.5px;
+  box-shadow: var(--sombra-hoja);
   pointer-events: none;
+  z-index: 5;
 }
 
-/* ---------- Panel lateral ---------- */
-
-.panel {
-  width: 310px;
-  flex-shrink: 0;
-  background: var(--superficie);
-  border-left: 1px solid var(--borde);
-  overflow-y: auto;
-  padding: 15px;
-}
-
-.panel h3 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--texto-debil);
-  margin: 0 0 10px;
+.pista strong {
+  color: var(--tinta);
   font-weight: 600;
 }
 
+/* ============================================================
+   Panel lateral
+   ============================================================ */
+
+.panel {
+  width: 318px;
+  flex-shrink: 0;
+  background: var(--instrumento);
+  border-left: 1px solid var(--canto);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.panel h3 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--acero);
+  margin: 0 0 10px;
+}
+
 .panel .seccion {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .panel .vacio {
-  color: var(--texto-debil);
-  font-size: 12px;
-  font-style: italic;
+  color: var(--acero-debil);
+  font-size: 12.5px;
 }
 
 .miembro-fila {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--borde-suave);
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--canto-suave);
   font-family: var(--mono);
   font-size: 12px;
 }
@@ -428,7 +927,7 @@ label {
   margin-left: auto;
   background: none;
   border: none;
-  color: var(--texto-debil);
+  color: var(--acero-debil);
   padding: 0 4px;
   font-size: 14px;
   line-height: 1;
@@ -437,124 +936,144 @@ label {
 .miembro-fila .quitar:hover {
   color: var(--peligro);
   background: none;
+  border-color: transparent;
 }
 
 .insignia {
   display: inline-block;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--ambar-tenue);
-  color: var(--ambar-claro);
-  border: 1px solid rgba(232, 145, 60, 0.35);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--fuego-tenue);
+  color: var(--fuego-claro);
+  border: 1px solid rgba(232, 128, 31, 0.32);
   font-family: var(--sans);
-  letter-spacing: 0.04em;
+  font-weight: 500;
 }
 
 .aviso-bloqueo {
-  background: rgba(124, 108, 224, 0.12);
-  border: 1px solid var(--ajeno);
-  color: #b9aefa;
+  background: var(--ajeno-tenue);
+  border: 1px solid rgba(102, 114, 222, 0.55);
+  color: #b3baf5;
   border-radius: var(--radio-chico);
-  padding: 8px 10px;
-  font-size: 12px;
-  margin-bottom: 12px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+  margin-bottom: 14px;
 }
 
+/* ============================================================
+   Mensajes
+   ============================================================ */
+
 .mensaje {
-  padding: 8px 11px;
+  padding: 9px 12px;
   border-radius: var(--radio-chico);
-  font-size: 12px;
+  font-size: 12.5px;
   margin-bottom: 12px;
   border: 1px solid;
+  border-left-width: 3px;
 }
 
 .mensaje.error {
-  background: rgba(224, 92, 92, 0.1);
-  border-color: var(--peligro);
-  color: #f0a5a5;
+  background: rgba(221, 84, 80, 0.1);
+  border-color: rgba(221, 84, 80, 0.45);
+  border-left-color: var(--peligro);
+  color: #f0aaa7;
 }
 
 .mensaje.bien {
-  background: rgba(75, 179, 123, 0.1);
-  border-color: var(--exito);
-  color: #8fd9b2;
+  background: rgba(67, 164, 115, 0.1);
+  border-color: rgba(67, 164, 115, 0.45);
+  border-left-color: var(--exito);
+  color: #8ad4ac;
 }
 
 .mensaje.informacion {
-  background: var(--ambar-tenue);
-  border-color: rgba(232, 145, 60, 0.4);
-  color: var(--ambar-claro);
+  background: var(--fuego-tenue);
+  border-color: rgba(232, 128, 31, 0.4);
+  border-left-color: var(--fuego);
+  color: var(--fuego-claro);
 }
 
-/* ---------- Dialogo ---------- */
+.cinta-aviso {
+  padding: 10px 14px 0;
+  flex-shrink: 0;
+}
+
+.cinta-aviso .mensaje {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   Dialogos
+   ============================================================ */
 
 .telon {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 9, 0.72);
+  background: rgba(8, 10, 14, 0.66);
+  backdrop-filter: blur(2px);
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 24px;
   z-index: 50;
+  animation: entrar-telon 120ms ease-out;
+}
+
+@keyframes entrar-telon {
+  from {
+    opacity: 0;
+  }
 }
 
 .dialogo {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
+  background: var(--instrumento);
+  border: 1px solid var(--canto);
   border-radius: var(--radio);
-  padding: 20px;
+  padding: 22px;
   width: 100%;
   max-width: 440px;
   box-shadow: var(--sombra);
-  max-height: 85vh;
+  max-height: 86vh;
   overflow: auto;
 }
 
 .dialogo h2 {
-  font-size: 15px;
-  margin: 0 0 15px;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.dialogo .bajada {
+  color: var(--acero);
+  font-size: 12.5px;
+  margin: 0 0 18px;
+}
+
+.dialogo h2:last-of-type:not(:only-child) + .campos {
+  margin-top: 16px;
 }
 
 .dialogo .botonera {
   display: flex;
   gap: 9px;
   justify-content: flex-end;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
-.par {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.casilla {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--texto-medio);
-  text-transform: none;
-  letter-spacing: 0;
-  margin: 0;
-}
-
-.casilla input {
-  width: auto;
-}
-
-/* ---------- Codigo generado ---------- */
+/* ============================================================
+   Codigo generado
+   ============================================================ */
 
 .arbol-archivos {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 11.5px;
   max-height: 190px;
   overflow: auto;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--canto);
   border-radius: var(--radio-chico);
-  background: var(--fondo);
-  padding: 7px;
+  background: var(--mesa);
+  padding: 6px;
 }
 
 .arbol-archivos button {
@@ -563,55 +1082,63 @@ label {
   text-align: left;
   background: none;
   border: none;
-  color: var(--texto-medio);
-  padding: 2px 5px;
+  color: var(--acero);
+  padding: 3px 6px;
   font-family: inherit;
   font-size: inherit;
-  border-radius: 3px;
+  font-weight: 400;
+  border-radius: 2px;
 }
 
 .arbol-archivos button:hover {
-  background: var(--superficie-alta);
-  color: var(--texto);
+  background: var(--instrumento-alto);
+  border-color: transparent;
+  color: var(--tiza);
 }
 
+/* Igual que la fila de proyecto: un canto, no una banda pintada. */
 .arbol-archivos button.elegido {
-  background: var(--ambar-tenue);
-  color: var(--ambar-claro);
+  background: rgba(232, 128, 31, 0.07);
+  box-shadow: inset 2px 0 0 var(--fuego);
+  color: var(--fuego-claro);
 }
 
 pre.codigo {
   font-family: var(--mono);
   font-size: 11.5px;
-  line-height: 1.55;
-  background: var(--fondo);
-  border: 1px solid var(--borde);
+  line-height: 1.6;
+  background: var(--mesa);
+  border: 1px solid var(--canto);
   border-radius: var(--radio-chico);
-  padding: 11px;
+  padding: 12px;
   overflow: auto;
   max-height: 340px;
   margin: 10px 0 0;
-  color: #c8d0da;
+  color: #c4ccd7;
+  tab-size: 2;
 }
 
-/* ---------- Barra de dictado ---------- */
+/* ============================================================
+   Dictado
+   ============================================================ */
 
 .dictado {
   position: absolute;
   left: 50%;
-  bottom: 16px;
+  bottom: 18px;
   transform: translateX(-50%);
   width: min(620px, calc(100% - 32px));
-  background: var(--superficie);
-  border: 1px solid var(--borde);
+  background: var(--instrumento);
+  border: 1px solid var(--canto);
   border-radius: var(--radio);
-  padding: 10px;
+  padding: 11px;
   box-shadow: var(--sombra);
+  z-index: 6;
 }
 
 .dictado-linea {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   align-items: center;
 }
 
@@ -622,37 +1149,45 @@ pre.codigo {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 15px;
   padding: 0;
+}
+
+/* Grabando: el microfono deja lugar a un punto, que es la senal universal. */
+.punto-grabando {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 /* El microfono encendido late, para que no queden dudas de que esta grabando. */
 .microfono.escuchando {
-  background: var(--ambar);
-  border-color: var(--ambar);
-  color: #1a1206;
+  background: var(--fuego);
+  border-color: var(--fuego);
+  color: #22160a;
   animation: latido 1.1s ease-in-out infinite;
 }
 
 @keyframes latido {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 145, 60, 0.55); }
-  50%      { box-shadow: 0 0 0 7px rgba(232, 145, 60, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .microfono.escuchando { animation: none; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 128, 31, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(232, 128, 31, 0);
+  }
 }
 
 .dictado-respuesta {
-  margin: 9px 0 0;
+  margin: 10px 0 0;
 }
 
 ul.sugerencias {
-  margin: 7px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 ul.sugerencias button {
@@ -661,45 +1196,41 @@ ul.sugerencias button {
   color: inherit;
   font-family: var(--mono);
   font-size: 11.5px;
+  font-weight: 400;
   text-align: left;
-  padding: 2px 5px;
+  padding: 3px 6px;
   width: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ul.sugerencias button:hover {
-  background: var(--superficie-alta);
+  background: var(--instrumento-alto);
+  border-color: transparent;
 }
 
-/* ---------- Agente guia ---------- */
-
-.barra .contador {
-  display: inline-block;
-  margin-left: 6px;
-  min-width: 17px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: var(--ambar);
-  color: #1a1206;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-align: center;
-  line-height: 16px;
-}
+/* ============================================================
+   Agente guia
+   ============================================================ */
 
 .consejo {
-  border: 1px solid var(--borde);
+  border: 1px solid var(--canto-suave);
   border-left-width: 3px;
   border-radius: var(--radio-chico);
-  background: var(--fondo);
-  padding: 10px 11px;
+  background: var(--mesa);
+  padding: 11px 12px;
   margin-bottom: 10px;
 }
 
 /* El color del borde dice de que clase de consejo se trata sin leerlo. */
-.consejo.modelo { border-left-color: var(--peligro); }
-.consejo.diseno { border-left-color: var(--ajeno); }
-.consejo.descubrimiento { border-left-color: var(--ambar); }
+.consejo.modelo {
+  border-left-color: var(--peligro);
+}
+.consejo.diseno {
+  border-left-color: var(--ajeno);
+}
+.consejo.descubrimiento {
+  border-left-color: var(--fuego);
+}
 
 .consejo header {
   display: flex;
@@ -709,109 +1240,157 @@ ul.sugerencias button:hover {
 }
 
 .consejo .etiqueta {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--texto-debil);
+  font-size: 11.5px;
+  color: var(--acero-debil);
 }
 
 .consejo .quitar {
   margin-left: auto;
   background: none;
   border: none;
-  color: var(--texto-debil);
+  color: var(--acero-debil);
   padding: 0 3px;
   font-size: 15px;
   line-height: 1;
 }
 
 .consejo .quitar:hover {
-  color: var(--texto);
+  color: var(--tiza);
   background: none;
+  border-color: transparent;
 }
 
 .consejo p {
-  margin: 0 0 6px;
+  margin: 0 0 7px;
   font-size: 12.5px;
 }
 
 .consejo .que {
   font-weight: 600;
-  color: var(--texto);
+  color: var(--tiza);
 }
 
 .consejo .porque {
-  color: var(--texto-medio);
+  color: var(--acero);
   font-size: 12px;
 }
 
 .consejo .como {
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--ambar-claro);
-  background: var(--superficie-alta);
-  border-radius: 3px;
-  padding: 5px 7px;
+  color: var(--fuego-claro);
+  background: var(--instrumento-alto);
+  border-radius: 2px;
+  padding: 6px 8px;
   /* Es una instruccion dictable: conviene poder copiarla tal cual. */
   user-select: all;
 }
 
 .consejo .senalar {
-  font-size: 11px;
+  font-size: 11.5px;
   padding: 3px 8px;
 }
 
-/* ---------- Leer una pizarra ---------- */
+/* ============================================================
+   Leer una pizarra
+   ============================================================ */
 
 .dialogo.foto {
-  max-width: 640px;
+  max-width: 660px;
+}
+
+/* Los tres pasos son una secuencia de verdad: se numeran. */
+.pasos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--acero-debil);
+}
+
+.pasos li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pasos li::before {
+  content: counter(list-item);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--canto);
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.pasos li.aqui {
+  color: var(--fuego-claro);
+}
+
+.pasos li.aqui::before {
+  background: var(--fuego);
+  border-color: var(--fuego);
+  color: #22160a;
+}
+
+.pasos li.hecho::before {
+  border-color: var(--exito);
+  color: var(--exito);
+}
+
+.pasos .flecha {
+  color: var(--canto);
 }
 
 .pasos-foto {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .elegir-imagen {
   margin: 0;
-  text-transform: none;
-  letter-spacing: 0;
   font-size: 13px;
-  color: var(--texto);
+  color: var(--tiza);
   cursor: pointer;
 }
 
 .elegir-imagen span {
-  display: inline-block;
-  border: 1px dashed var(--borde);
-  background: var(--superficie-alta);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--canto);
+  background: var(--instrumento-alto);
   border-radius: var(--radio-chico);
-  padding: 9px 14px;
+  padding: 10px 15px;
+  transition: border-color 110ms ease, color 110ms ease;
 }
 
 .elegir-imagen:hover span {
-  border-color: var(--ambar);
-  color: var(--ambar-claro);
-}
-
-.elegir-imagen input {
-  display: none;
+  border-color: var(--fuego);
+  color: var(--fuego-claro);
 }
 
 .vista-previa {
-  max-height: 90px;
+  max-height: 92px;
   max-width: 180px;
   border-radius: var(--radio-chico);
-  border: 1px solid var(--borde);
+  border: 1px solid var(--canto);
   object-fit: cover;
 }
 
 textarea.texto-pizarra {
   font-family: var(--mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.55;
   resize: vertical;
   /* El texto de una pizarra se lee por columnas: no conviene que se parta. */
   white-space: pre;
@@ -820,18 +1399,16 @@ textarea.texto-pizarra {
 }
 
 .resumen-lectura {
-  margin-top: 14px;
-  border-top: 1px solid var(--borde);
-  padding-top: 12px;
+  margin-top: 16px;
+  border-top: 1px solid var(--canto-suave);
+  padding-top: 14px;
 }
 
 .resumen-lectura h3 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--texto-debil);
-  margin: 0 0 8px;
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--acero);
+  margin: 0 0 8px;
 }
 
 ul.ignoradas {
@@ -843,5 +1420,53 @@ ul.ignoradas {
 }
 
 ul.ignoradas li {
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   Angosto
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .panel {
+    width: 272px;
+  }
+}
+
+@media (max-width: 900px) {
+  .barra {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    row-gap: 8px;
+  }
+
+  .barra .crece {
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .panel {
+    display: none;
+  }
+}
+
+/* ============================================================
+   Movimiento
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    /*
+     * Tambien hay que anular el retardo, no solo la duracion: la hoja de
+     * muestra escalona sus trazos con `animation-delay` en el atributo style,
+     * y sin esto el dibujo seguiria apareciendo a pedazos durante un segundo.
+     */
+    animation-delay: 0s !important;
+  }
 }

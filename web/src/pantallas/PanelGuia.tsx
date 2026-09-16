@@ -27,8 +27,8 @@ export default function PanelGuia({
   if (cargando && consejos.length === 0) {
     return (
       <>
-        <h3>Guia</h3>
-        <p className="vacio">Mirando el diagrama...</p>
+        <h3>Guía</h3>
+        <p className="vacio">Mirando el diagrama…</p>
       </>
     )
   }
@@ -36,9 +36,9 @@ export default function PanelGuia({
   if (consejos.length === 0) {
     return (
       <>
-        <h3>Guia</h3>
+        <h3>Guía</h3>
         <p className="vacio">
-          Nada que senalar por ahora. El agente vuelve a mirar el diagrama con cada cambio.
+          Nada que señalar por ahora. El agente vuelve a mirar el diagrama con cada cambio.
         </p>
       </>
     )
@@ -46,14 +46,16 @@ export default function PanelGuia({
 
   return (
     <>
-      <h3>Guia · {consejos.length}</h3>
+      <h3>
+        Guía <span className="cuenta">{consejos.length}</span>
+      </h3>
       {consejos.map((consejo) => (
         <article key={consejo.id} className={`consejo ${consejo.categoria.toLowerCase()}`}>
           <header>
             <span className="etiqueta">{etiqueta(consejo.categoria)}</span>
             <button
               className="quitar"
-              title="No mostrar mas este aviso"
+              title="No mostrar más este aviso"
               aria-label="Descartar"
               onClick={() => alDescartar(consejo.id)}
             >
@@ -79,10 +81,10 @@ export default function PanelGuia({
 function etiqueta(categoria: CategoriaConsejo) {
   switch (categoria) {
     case 'DESCUBRIMIENTO':
-      return 'Podes hacer esto'
+      return 'Podés hacer esto'
     case 'MODELO':
       return 'Afecta lo que se genera'
     case 'DISENO':
-      return 'Mejora de diseno'
+      return 'Mejora de diseño'
   }
 }

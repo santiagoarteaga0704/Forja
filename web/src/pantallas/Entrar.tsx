@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { ErrorApi, api } from '../api'
+import HojaMuestra from '../lienzo/HojaMuestra'
 import type { Credencial } from '../tipos'
 
-/** Entrada y alta de cuenta, en una sola pantalla que alterna de modo. */
+/**
+ * Entrada y alta de cuenta, en una sola pantalla que alterna de modo.
+ *
+ * La mitad izquierda no es decoracion: es una hoja de FORJA con un diagrama
+ * real y la notacion correcta. Quien abre la herramienta por primera vez ve
+ * antes que nada que hace, y no una promesa escrita.
+ */
 export default function Entrar({ alEntrar }: { alEntrar: (credencial: Credencial) => void }) {
   const [esAlta, setEsAlta] = useState(false)
   const [email, setEmail] = useState('')
@@ -29,67 +36,96 @@ export default function Entrar({ alEntrar }: { alEntrar: (credencial: Credencial
 
   return (
     <div className="entrar">
-      <form className="tarjeta" onSubmit={enviar}>
-        <div className="marca">
-          <span className="yunque" />
-          FORJA
-        </div>
-        <h1>{esAlta ? 'Crear una cuenta' : 'Entrar'}</h1>
-        <p className="bajada">Herramienta CASE colaborativa para diagramas de clases</p>
-
-        {error && <div className="mensaje error">{error}</div>}
-
-        <div className="campos">
-          <div>
-            <label htmlFor="email">Correo</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
+      <div className="entrar-cuerpo">
+        <section className="entrar-presentacion">
+          <div className="marca">
+            <span className="yunque" />
+            FORJA
           </div>
+          <h1>Del pizarrón al backend andando.</h1>
+          <p>
+            Dibujá el diagrama de clases entre varios, dictalo o sacale una foto a la pizarra.
+            FORJA lo convierte en un proyecto Spring Boot que compila, y lo intercambia con
+            Enterprise Architect.
+          </p>
+          <HojaMuestra />
+        </section>
 
-          {esAlta && (
+        <form className="tarjeta" onSubmit={enviar}>
+          <h2>{esAlta ? 'Crear una cuenta' : 'Entrar'}</h2>
+          <p className="bajada">
+            {esAlta
+              ? 'Con la cuenta creada podés abrir proyectos y que te inviten a los de otros.'
+              : 'Entrá con la cuenta que usás en este servidor.'}
+          </p>
+
+          {error && <div className="mensaje error">{error}</div>}
+
+          <div className="campos">
             <div>
-              <label htmlFor="nombre">Nombre</label>
+              <label htmlFor="email">Correo</label>
               <input
-                id="nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                autoComplete="name"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
               />
             </div>
-          )}
 
-          <div>
-            <label htmlFor="password">Contrasena</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={esAlta ? 'new-password' : 'current-password'}
-              required
-              minLength={esAlta ? 8 : undefined}
-            />
+            {esAlta && (
+              <div>
+                <label htmlFor="nombre">Nombre</label>
+                <input
+                  id="nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  autoComplete="name"
+                  placeholder="Como te van a ver los demás"
+                  required
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="password">Contraseña</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={esAlta ? 'new-password' : 'current-password'}
+                required
+                minLength={esAlta ? 8 : undefined}
+              />
+            </div>
+
+            <button className="principal" type="submit" disabled={enviando}>
+              {enviando
+                ? esAlta
+                  ? 'Creando la cuenta…'
+                  : 'Entrando…'
+                : esAlta
+                  ? 'Crear la cuenta'
+                  : 'Entrar'}
+            </button>
           </div>
 
-          <button className="principal" type="submit" disabled={enviando}>
-            {enviando ? 'Un momento...' : esAlta ? 'Crear la cuenta' : 'Entrar'}
-          </button>
-        </div>
-
-        <div className="alterna">
-          {esAlta ? 'Ya tenes cuenta?' : 'Primera vez?'}
-          <button type="button" onClick={() => { setEsAlta(!esAlta); setError(null) }}>
-            {esAlta ? 'Entrar' : 'Crear una cuenta'}
-          </button>
-        </div>
-      </form>
+          <div className="alterna">
+            {esAlta ? '¿Ya tenés cuenta?' : '¿Primera vez?'}
+            <button
+              type="button"
+              onClick={() => {
+                setEsAlta(!esAlta)
+                setError(null)
+              }}
+            >
+              {esAlta ? 'Entrar' : 'Crear una cuenta'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ErrorApi, api } from '../api'
+import { IconoCarpeta, IconoClase, IconoPersona, IconoSalir } from '../iconos'
 import type { Credencial, DiagramaResumen, ProyectoVista } from '../tipos'
 
 interface Props {
@@ -8,7 +9,14 @@ interface Props {
   alSalir: () => void
 }
 
-/** Eleccion del proyecto y del diagrama sobre el que se va a trabajar. */
+/**
+ * Eleccion del proyecto y del diagrama sobre el que se va a trabajar.
+ *
+ * Va en lista y no en rejilla de fichas: una rejilla promete que cada elemento
+ * tiene algo visual propio -una portada, una miniatura- y aca son nombres. En
+ * lista quedan alineados, que es lo que se compara, y se recorren de un
+ * vistazo.
+ */
 export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
   const [proyectos, setProyectos] = useState<ProyectoVista[]>([])
   const [elegido, setElegido] = useState<ProyectoVista | null>(null)
@@ -83,100 +91,138 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
           FORJA
         </div>
         <div className="crece" />
-        <span className="sutil">{credencial.nombre}</span>
-        <button onClick={alSalir}>Salir</button>
+        <span className="senal">
+          <IconoPersona tamano={14} />
+          {credencial.nombre}
+        </span>
+        <button onClick={alSalir}>
+          <IconoSalir />
+          Salir
+        </button>
       </header>
 
       <div className="proyectos">
-        {error && <div className="mensaje error">{error}</div>}
-        {aviso && <div className="mensaje bien">{aviso}</div>}
+        <div className="proyectos-cuerpo">
+          {error && <div className="mensaje error">{error}</div>}
+          {aviso && <div className="mensaje bien">{aviso}</div>}
 
-        <h2>Proyectos</h2>
-        <form className="formulario-linea" onSubmit={crearProyecto}>
-          <input
-            placeholder="Nombre del proyecto nuevo"
-            value={nombreProyecto}
-            onChange={(e) => setNombreProyecto(e.target.value)}
-          />
-          <button className="principal" type="submit" disabled={!nombreProyecto.trim()}>
-            Crear
-          </button>
-        </form>
+          <section className="bloque">
+            <div className="seccion-titulo">
+              <h2>Proyectos</h2>
+              {proyectos.length > 0 && (
+                <span className="cuenta">
+                  {proyectos.length === 1 ? '1 proyecto' : `${proyectos.length} proyectos`}
+                </span>
+              )}
+            </div>
 
-        {proyectos.length === 0 ? (
-          <p className="ficha nueva">Todavia no hay proyectos. Crea el primero.</p>
-        ) : (
-          <div className="rejilla">
-            {proyectos.map((proyecto) => (
-              <button
-                key={proyecto.id}
-                className="ficha"
-                onClick={() => setElegido(proyecto)}
-                style={
-                  elegido?.id === proyecto.id ? { borderColor: 'var(--ambar)' } : undefined
-                }
-              >
-                <div className="nombre">{proyecto.nombre}</div>
-                <div className="detalle">
-                  {proyecto.propietarioId === credencial.usuarioId ? 'Tuyo' : 'Compartido con vos'}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {elegido && (
-          <>
-            <h2 style={{ marginTop: 30 }}>Diagramas de {elegido.nombre}</h2>
-            <form className="formulario-linea" onSubmit={crearDiagrama}>
+            <form className="formulario-linea" onSubmit={crearProyecto} style={{ marginBottom: 14 }}>
               <input
-                placeholder="Nombre del diagrama nuevo"
-                value={nombreDiagrama}
-                onChange={(e) => setNombreDiagrama(e.target.value)}
+                placeholder="Nombre del proyecto nuevo"
+                value={nombreProyecto}
+                onChange={(e) => setNombreProyecto(e.target.value)}
+                style={{ maxWidth: 340 }}
               />
-              <button className="principal" type="submit" disabled={!nombreDiagrama.trim()}>
-                Crear y abrir
+              <button className="principal" type="submit" disabled={!nombreProyecto.trim()}>
+                Crear proyecto
               </button>
             </form>
 
-            {diagramas.length === 0 ? (
-              <p className="ficha nueva">Este proyecto todavia no tiene diagramas.</p>
+            {proyectos.length === 0 ? (
+              <p className="vacio-bloque">
+                Todavía no tenés proyectos. Un proyecto agrupa los diagramas de un mismo sistema y
+                la gente que puede editarlos.
+              </p>
             ) : (
-              <div className="rejilla">
-                {diagramas.map((diagrama) => (
+              <div className="lista">
+                {proyectos.map((proyecto) => (
                   <button
-                    key={diagrama.id}
-                    className="ficha"
-                    onClick={() => alAbrir(elegido, diagrama)}
+                    key={proyecto.id}
+                    className={`fila${elegido?.id === proyecto.id ? ' elegida' : ''}`}
+                    onClick={() => setElegido(proyecto)}
                   >
-                    <div className="nombre">{diagrama.nombre}</div>
-                    <div className="detalle">
-                      {diagrama.tipo === 'CLASES' ? 'Clases' : 'Secuencia'} · version{' '}
-                      {diagrama.version}
-                    </div>
+                    <IconoCarpeta />
+                    <span className="nombre">{proyecto.nombre}</span>
+                    <span className="detalle">
+                      {proyecto.propietarioId === credencial.usuarioId
+                        ? 'Tuyo'
+                        : 'Compartido con vos'}
+                    </span>
                   </button>
                 ))}
               </div>
             )}
+          </section>
 
-            {elegido.propietarioId === credencial.usuarioId && (
-              <>
-                <h2 style={{ marginTop: 30 }}>Invitar a colaborar</h2>
-                <form className="formulario-linea" onSubmit={invitar}>
+          {elegido && (
+            <>
+              <section className="bloque">
+                <div className="seccion-titulo">
+                  <h2>Diagramas de {elegido.nombre}</h2>
+                </div>
+
+                <form
+                  className="formulario-linea"
+                  onSubmit={crearDiagrama}
+                  style={{ marginBottom: 14 }}
+                >
                   <input
-                    type="email"
-                    placeholder="Correo de una cuenta ya registrada"
-                    value={invitado}
-                    onChange={(e) => setInvitado(e.target.value)}
+                    placeholder="Nombre del diagrama nuevo"
+                    value={nombreDiagrama}
+                    onChange={(e) => setNombreDiagrama(e.target.value)}
+                    style={{ maxWidth: 340 }}
                   />
-                  <button type="submit" disabled={!invitado.trim()}>
-                    Invitar como editor
+                  <button className="principal" type="submit" disabled={!nombreDiagrama.trim()}>
+                    Crear y abrir
                   </button>
                 </form>
-              </>
-            )}
-          </>
-        )}
+
+                {diagramas.length === 0 ? (
+                  <p className="vacio-bloque">
+                    Este proyecto todavía no tiene diagramas. Creá uno y se abre el lienzo.
+                  </p>
+                ) : (
+                  <div className="lista">
+                    {diagramas.map((diagrama) => (
+                      <button
+                        key={diagrama.id}
+                        className="fila"
+                        onClick={() => alAbrir(elegido, diagrama)}
+                      >
+                        <IconoClase />
+                        <span className="nombre">{diagrama.nombre}</span>
+                        <span className="detalle">
+                          {diagrama.tipo === 'CLASES' ? 'Clases' : 'Secuencia'}, versión{' '}
+                          {diagrama.version}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {elegido.propietarioId === credencial.usuarioId && (
+                <section className="bloque">
+                  <div className="seccion-titulo">
+                    <h2>Invitar a colaborar</h2>
+                  </div>
+                  <form className="formulario-linea" onSubmit={invitar}>
+                    <input
+                      type="email"
+                      placeholder="Correo de una cuenta ya registrada"
+                      value={invitado}
+                      onChange={(e) => setInvitado(e.target.value)}
+                      style={{ maxWidth: 340 }}
+                    />
+                    <button type="submit" disabled={!invitado.trim()}>
+                      Invitar como editor
+                    </button>
+                  </form>
+                </section>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

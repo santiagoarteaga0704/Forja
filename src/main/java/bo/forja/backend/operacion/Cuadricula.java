@@ -14,8 +14,18 @@ package bo.forja.backend.operacion;
  */
 public final class Cuadricula {
 
-    private static final double PASO_X = 260;
-    private static final double PASO_Y = 200;
+    /*
+     * El paso deja sitio para el conector, no solo para la caja.
+     *
+     * Una clase mide 220 de ancho, asi que un paso de 260 dejaba 40 de hueco:
+     * entraba la linea y nada mas. El rombo de una composicion ocupa 14 y cada
+     * multiplicidad se dibuja a 26 de su extremo, de modo que con 40 de hueco
+     * los dos rotulos se montaban uno sobre otro y el rombo quedaba pisando la
+     * caja vecina. Se vio recien al dictar un modelo entero y mirarlo: con
+     * frases sueltas nunca hay dos clases contiguas.
+     */
+    private static final double PASO_X = 380;
+    private static final double PASO_Y = 260;
     private static final int POR_FILA = 4;
 
     private Cuadricula() {

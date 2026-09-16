@@ -39,7 +39,7 @@ export default function LineaRelacion({
                 ${origen.posX + ANCHO_CLASE + 30} ${origen.posY - 20},
                 ${origen.posX + ANCHO_CLASE} ${origen.posY + 22}`}
           fill="none"
-          stroke={seleccionada ? 'var(--ambar)' : 'var(--texto-debil)'}
+          stroke={seleccionada ? 'var(--fuego)' : 'var(--tinta-media)'}
           strokeWidth={seleccionada ? 2 : 1.4}
         />
       </g>
@@ -50,7 +50,7 @@ export default function LineaRelacion({
   const hasta = borde(destino, centroDestino, centroOrigen)
 
   const punteada = relacion.tipo === 'REALIZACION' || relacion.tipo === 'DEPENDENCIA'
-  const color = seleccionada ? 'var(--ambar)' : 'var(--texto-debil)'
+  const color = seleccionada ? 'var(--fuego)' : 'var(--tinta-media)'
   const grosor = seleccionada ? 2 : 1.4
 
   // Los adornos se recortan de la linea para que no queden dibujados encima.
@@ -85,7 +85,7 @@ export default function LineaRelacion({
       {rombo && (
         <polygon
           points={puntosRombo(desde, hasta)}
-          fill={relacion.tipo === 'COMPOSICION' ? color : 'var(--fondo-lienzo)'}
+          fill={relacion.tipo === 'COMPOSICION' ? color : 'var(--caja)'}
           stroke={color}
           strokeWidth={grosor}
         />
@@ -94,7 +94,7 @@ export default function LineaRelacion({
       {triangulo && (
         <polygon
           points={puntosTriangulo(hasta, desde)}
-          fill="var(--fondo-lienzo)"
+          fill="var(--caja)"
           stroke={color}
           strokeWidth={grosor}
         />
@@ -115,7 +115,7 @@ export default function LineaRelacion({
           <text
             {...corrido(desde, hasta, 20)}
             fontSize={10.5}
-            fill="var(--texto-medio)"
+            fill="var(--tinta-debil)"
             fontFamily="var(--mono)"
           >
             {relacion.multiplicidadOrigen}
@@ -123,7 +123,7 @@ export default function LineaRelacion({
           <text
             {...corrido(hasta, desde, 20)}
             fontSize={10.5}
-            fill="var(--texto-medio)"
+            fill="var(--tinta-debil)"
             fontFamily="var(--mono)"
           >
             {relacion.multiplicidadDestino}
@@ -137,7 +137,7 @@ export default function LineaRelacion({
           y={(desde.y + hasta.y) / 2 - 6}
           textAnchor="middle"
           fontSize={10.5}
-          fill="var(--texto-medio)"
+          fill="var(--tinta-media)"
           fontFamily="var(--sans)"
         >
           {relacion.etiqueta}

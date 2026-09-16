@@ -43,18 +43,18 @@ export default function PanelClase({
     const destino = clases.find((c) => c.id === relacion.destinoId)
     return (
       <>
-        <h3>Relacion</h3>
+        <h3>Relación</h3>
         <div className="seccion">
           <p style={{ margin: '0 0 10px' }}>
             <span className="insignia">{relacion.tipo}</span>
           </p>
           <div className="miembro-fila">
-            <span style={{ color: 'var(--texto-debil)' }}>desde</span>
+            <span style={{ color: 'var(--acero-debil)' }}>desde</span>
             <span>{origen?.nombre ?? '?'}</span>
             <span className="insignia">{relacion.multiplicidadOrigen}</span>
           </div>
           <div className="miembro-fila">
-            <span style={{ color: 'var(--texto-debil)' }}>hasta</span>
+            <span style={{ color: 'var(--acero-debil)' }}>hasta</span>
             <span>{destino?.nombre ?? '?'}</span>
             <span className="insignia">{relacion.multiplicidadDestino}</span>
           </div>
@@ -69,10 +69,10 @@ export default function PanelClase({
   if (!clase) {
     return (
       <>
-        <h3>Sin seleccion</h3>
+        <h3>Nada seleccionado</h3>
         <p className="vacio">
-          Hace clic en una clase para editarla, o arrastrala para moverla. Con la rueda se acerca y
-          arrastrando el fondo se desplaza.
+          Hacé clic en una clase para editarla, o arrastrala para moverla. Con la rueda se acerca y
+          arrastrando el fondo se desplaza la hoja.
         </p>
       </>
     )
@@ -231,7 +231,7 @@ function ContenidoDeClase({
           <label htmlFor="estereotipo">Estereotipo</label>
           <input
             id="estereotipo"
-            placeholder="interface, enumeration, catalogo..."
+            placeholder="interface, enumeration, catálogo…"
             value={estereotipo}
             disabled={ajeno}
             onChange={(e) => setEstereotipo(e.target.value)}
@@ -254,7 +254,7 @@ function ContenidoDeClase({
 
       <h3>Atributos</h3>
       <div className="seccion">
-        {clase.atributos.length === 0 && <p className="vacio">Todavia no tiene atributos.</p>}
+        {clase.atributos.length === 0 && <p className="vacio">Todavía no tiene atributos.</p>}
         {clase.atributos.map((a) => (
           <div className="miembro-fila" key={a.id}>
             <span>
@@ -352,7 +352,7 @@ function ContenidoDeClase({
 
       <h3>Operaciones</h3>
       <div className="seccion">
-        {clase.metodos.length === 0 && <p className="vacio">Todavia no tiene operaciones.</p>}
+        {clase.metodos.length === 0 && <p className="vacio">Todavía no tiene operaciones.</p>}
         {clase.metodos.map((m) => (
           <div className="miembro-fila" key={m.id}>
             <span style={{ fontStyle: m.esAbstracto ? 'italic' : 'normal' }}>

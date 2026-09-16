@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ErrorApi, api } from '../api'
+import { IconoMicrofono } from '../iconos'
 import { SESION_ID } from '../sesion'
 import type { ResultadoDictado } from '../tipos'
 
@@ -119,10 +120,10 @@ export default function Dictado({
             className={`microfono${escuchando ? ' escuchando' : ''}`}
             onClick={escuchar}
             disabled={escuchando || enviando}
-            title="Dictar una instruccion"
-            aria-label="Dictar una instruccion"
+            title="Dictar hablando"
+            aria-label="Dictar hablando"
           >
-            {escuchando ? '●' : '🎙'}
+            {escuchando ? <span className="punto-grabando" /> : <IconoMicrofono tamano={17} />}
           </button>
         )}
 
@@ -131,7 +132,7 @@ export default function Dictado({
           value={frase}
           placeholder={
             escuchando
-              ? 'Escuchando...'
+              ? 'Escuchando…'
               : 'un Paciente tiene muchas Consultas'
           }
           onChange={(e) => setFrase(e.target.value)}
@@ -143,7 +144,7 @@ export default function Dictado({
         />
 
         <button className="principal" onClick={() => aplicar()} disabled={enviando || !frase.trim()}>
-          {enviando ? '...' : 'Aplicar'}
+          {enviando ? '…' : 'Aplicar'}
         </button>
         <button onClick={alCerrar} title="Cerrar">
           ×
@@ -160,14 +161,14 @@ export default function Dictado({
             <>
               {resultado.explicacion}
               {resultado.problemas.length > 0 && (
-                <div style={{ marginTop: 4 }}>No entro: {resultado.problemas.join('; ')}</div>
+                <div style={{ marginTop: 4 }}>No entró: {resultado.problemas.join('; ')}</div>
               )}
             </>
           ) : resultado.retenidoPor ? (
-            <>Entendi la instruccion, pero {resultado.retenidoPor} tiene tomado ese elemento.</>
+            <>Entendí la instrucción, pero {resultado.retenidoPor} tiene tomado ese elemento.</>
           ) : (
             <>
-              <strong>{resultado.explicacion}.</strong> Proba con alguna de estas:
+              <strong>{resultado.explicacion}.</strong> Probá con alguna de estas:
               <ul className="sugerencias">
                 {resultado.sugerencias.slice(0, 4).map((sugerencia) => (
                   <li key={sugerencia}>

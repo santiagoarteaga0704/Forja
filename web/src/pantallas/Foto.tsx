@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ErrorApi, api } from '../api'
+import { IconoCamara } from '../iconos'
 import { SESION_ID } from '../sesion'
 import type { Lectura } from '../tipos'
 
@@ -34,6 +35,11 @@ export default function Foto({
 
   const areaDeTexto = useRef<HTMLTextAreaElement>(null)
 
+  // En que paso esta la lectura. Se deduce del estado en vez de guardarse
+  // aparte: guardarlo abriria la puerta a que el indicador y la pantalla
+  // discrepen, que es el error clasico de los asistentes por pasos.
+  const paso = !texto.trim() ? 1 : lectura ? 3 : 2
+
   useEffect(() => {
     // La vista previa es un blob: hay que devolverlo o queda retenido.
     return () => {
@@ -45,7 +51,7 @@ export default function Foto({
     setImagen(URL.createObjectURL(archivo))
     setLectura(null)
     setAviso(null)
-    setProgreso('Preparando el reconocimiento...')
+    setProgreso('Preparando el reconocimiento…')
 
     try {
       const { createWorker } = await import('tesseract.js')
@@ -73,15 +79,15 @@ export default function Foto({
       if (!data.text.trim()) {
         setAviso({
           clase: 'informacion',
-          texto: 'No se reconocio texto en la imagen. Proba con mas luz, mas de frente, '
-            + 'o escribi el contenido a mano en el cuadro.',
+          texto: 'No se reconoció texto en la imagen. Probá con más luz y más de frente, '
+            + 'o escribí el contenido a mano en el cuadro.',
         })
       }
     } catch (error) {
       setProgreso(null)
       setAviso({
         clase: 'error',
-        texto: 'No se pudo iniciar el reconocimiento. Podes escribir el contenido de la '
+        texto: 'No se pudo iniciar el reconocimiento. Podés escribir el contenido de la '
           + 'pizarra en el cuadro y seguir igual. (' + String(error) + ')',
       })
     }
@@ -111,16 +117,16 @@ export default function Foto({
         setAviso({
           clase: 'bien',
           texto: `Se aplicaron ${resultado.aplicadas} cambios`
-            + (resultado.problemas.length ? `. No entro: ${resultado.problemas[0]}` : ''),
+            + (resultado.problemas.length ? `. No entró: ${resultado.problemas[0]}` : ''),
         })
         setLectura(resultado.lectura)
       } else if (resultado.retenidoPor) {
         setAviso({
           clase: 'informacion',
-          texto: `${resultado.retenidoPor} tiene tomado un elemento. Intenta en un momento.`,
+          texto: `${resultado.retenidoPor} tiene tomado un elemento. Intentá en un momento.`,
         })
       } else {
-        setAviso({ clase: 'informacion', texto: 'No se reconocio nada que aplicar.' })
+        setAviso({ clase: 'informacion', texto: 'No se reconoció nada que aplicar.' })
       }
     } catch (e) {
       setAviso({ clase: 'error', texto: e instanceof ErrorApi ? e.message : 'No responde el servidor' })
@@ -133,10 +139,35 @@ export default function Foto({
     <div className="telon" onClick={alCerrar}>
       <div className="dialogo foto" onClick={(e) => e.stopPropagation()}>
         <h2>Leer una pizarra</h2>
+        <p className="bajada">
+          El reconocimiento ocurre en esta pantalla: la foto no sale de tu computadora, al servidor
+          va el texto.
+        </p>
+
+        {/*
+          Los tres pasos se muestran porque son una secuencia de verdad, y
+          porque el del medio -revisar- es el que hace que esto funcione. Sobre
+          letra manuscrita el reconocimiento nunca es exacto, y que se vea que
+          hay un paso de revision antes de tocar el modelo evita que alguien
+          espere magia y lo aplique a ciegas.
+        */}
+        <ol className="pasos">
+          {['Elegir la foto', 'Revisar el texto', 'Aplicar'].map((nombre, indice) => (
+            <li
+              key={nombre}
+              className={indice + 1 < paso ? 'hecho' : indice + 1 === paso ? 'aqui' : ''}
+            >
+              {nombre}
+            </li>
+          ))}
+        </ol>
 
         <div className="pasos-foto">
           <label className="elegir-imagen">
-            <span>1 · Elegir la foto</span>
+            <span>
+              <IconoCamara />
+              {imagen ? 'Elegir otra foto' : 'Elegir la foto'}
+            </span>
             <input
               type="file"
               accept="image/*"
@@ -155,10 +186,10 @@ export default function Foto({
         {progreso && <div className="mensaje informacion">{progreso}</div>}
         {aviso && <div className={`mensaje ${aviso.clase}`}>{aviso.texto}</div>}
 
-        <label htmlFor="texto-pizarra">2 · Revisar el texto</label>
+        <label htmlFor="texto-pizarra">Revisar el texto</label>
         <p className="sutil" style={{ margin: '0 0 6px' }}>
-          Corregi lo que el reconocimiento haya entendido mal antes de aplicarlo. Tambien podes
-          escribirlo directamente.
+          Corregí lo que el reconocimiento haya entendido mal antes de aplicarlo. También podés
+          escribirlo a mano.
         </p>
         <textarea
           id="texto-pizarra"
@@ -179,10 +210,10 @@ export default function Foto({
         <div className="botonera">
           <button onClick={alCerrar}>Cerrar</button>
           <button onClick={revisar} disabled={trabajando || !texto.trim()}>
-            Ver que entiendo
+            Ver qué entiendo
           </button>
           <button className="principal" onClick={aplicar} disabled={trabajando || !texto.trim()}>
-            3 · Aplicar al diagrama
+            Aplicar al diagrama
           </button>
         </div>
       </div>
@@ -195,9 +226,9 @@ function ResumenDeLectura({ lectura }: { lectura: Lectura }) {
   const nada = lectura.clases.length === 0 && lectura.relaciones.length === 0
   return (
     <div className="resumen-lectura">
-      <h3>Entendi esto</h3>
+      <h3>Esto entendí</h3>
 
-      {nada && <p className="vacio">Ninguna clase. Revisa el formato del texto.</p>}
+      {nada && <p className="vacio">Ninguna clase. Revisá el formato del texto.</p>}
 
       {lectura.clases.map((clase) => (
         <div className="miembro-fila" key={clase.nombre}>
@@ -209,8 +240,8 @@ function ResumenDeLectura({ lectura }: { lectura: Lectura }) {
               ya estaba
             </span>
           ) : (
-            <span style={{ color: 'var(--texto-debil)' }}>
-              {clase.atributos} atributos · {clase.operaciones} operaciones
+            <span style={{ color: 'var(--acero-debil)' }}>
+              {clase.atributos} atributos, {clase.operaciones} operaciones
             </span>
           )}
         </div>
@@ -222,7 +253,7 @@ function ResumenDeLectura({ lectura }: { lectura: Lectura }) {
           <span>
             {relacion.origen} → {relacion.destino}
           </span>
-          <span style={{ color: 'var(--texto-debil)' }}>{relacion.multiplicidades}</span>
+          <span style={{ color: 'var(--acero-debil)' }}>{relacion.multiplicidades}</span>
         </div>
       ))}
 
@@ -230,7 +261,7 @@ function ResumenDeLectura({ lectura }: { lectura: Lectura }) {
         <>
           {/* Lo que no se entendio se muestra con su numero de linea, en lugar de
               descartarse en silencio. */}
-          <h3 style={{ marginTop: 14 }}>No entendi estas lineas</h3>
+          <h3 style={{ marginTop: 14 }}>Estas líneas no las entendí</h3>
           <ul className="ignoradas">
             {lectura.ignoradas.map((linea) => (
               <li key={linea}>{linea}</li>

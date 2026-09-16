@@ -32,6 +32,10 @@ const ALTO_FILA = 18
  * que acercarse, alejarse y desplazarse como una sola pieza: una transformacion
  * en el grupo que las contiene mueve todo a la vez, y las lineas de relacion
  * quedan en el mismo sistema de coordenadas que las cajas.
+ *
+ * La esquina es VIVA, sin redondear. Es lo unico de la pantalla que no tiene
+ * radio, y esa es la idea: en UML una clase es un rectangulo, y que el modelo
+ * sea la unica cosa con angulos rectos lo separa del software que lo rodea.
  */
 export default function CajaClase({
   clase,
@@ -44,12 +48,10 @@ export default function CajaClase({
   const alto = altoDe(clase)
   const cabecera = clase.estereotipo ? 44 : 30
   const ajeno = bloqueo && !propio
+  const destacada = seleccionada || senalada
 
-  const borde = ajeno
-    ? 'var(--ajeno)'
-    : seleccionada || senalada
-      ? 'var(--ambar)'
-      : 'var(--borde)'
+  const borde = ajeno ? 'var(--ajeno)' : destacada ? 'var(--fuego)' : 'var(--canto-caja)'
+  const grosor = destacada || ajeno ? 2 : 1.2
 
   // Las posiciones se calculan por indice en lugar de ir acumulando una
   // variable mientras se dibuja: el orden en que React evalua el JSX no es algo
@@ -66,22 +68,41 @@ export default function CajaClase({
       transform={`translate(${clase.posX}, ${clase.posY})`}
       onMouseDown={alPresionar}
     >
+      {/* La sombra es un rectangulo corrido y no un filtro: un filtro por caja
+          se nota al arrastrar en cuanto el diagrama pasa de unas pocas clases. */}
+      <rect
+        x={1.5}
+        y={2.5}
+        width={ANCHO_CLASE}
+        height={alto}
+        fill="rgba(34, 38, 44, 0.13)"
+      />
+
+      <rect width={ANCHO_CLASE} height={alto} fill="var(--caja)" />
+      <rect width={ANCHO_CLASE} height={cabecera} fill="var(--caja-cabecera)" />
+      <line x1={0} y1={cabecera} x2={ANCHO_CLASE} y2={cabecera} stroke={borde} strokeWidth={1.2} />
       <rect
         width={ANCHO_CLASE}
         height={alto}
-        rx={4}
-        fill="var(--superficie)"
+        fill="none"
         stroke={borde}
-        strokeWidth={seleccionada || senalada || ajeno ? 2 : 1}
+        strokeWidth={grosor}
       />
 
-      {/* Cabecera con un fondo apenas distinto: separa el nombre del contenido
-          sin necesidad de una linea mas. */}
-      <path
-        d={`M 0 4 a 4 4 0 0 1 4 -4 h ${ANCHO_CLASE - 8} a 4 4 0 0 1 4 4 v ${cabecera - 4} h -${ANCHO_CLASE} z`}
-        fill="var(--superficie-alta)"
-      />
-      <line x1={0} y1={cabecera} x2={ANCHO_CLASE} y2={cabecera} stroke={borde} />
+      {/* Lo seleccionado se rodea de un halo tenue: el borde solo se pierde
+          cuando hay muchas cajas juntas. */}
+      {destacada && (
+        <rect
+          x={-3}
+          y={-3}
+          width={ANCHO_CLASE + 6}
+          height={alto + 6}
+          fill="none"
+          stroke="var(--fuego)"
+          strokeWidth={1}
+          opacity={0.32}
+        />
+      )}
 
       {clase.estereotipo && (
         <text
@@ -89,7 +110,7 @@ export default function CajaClase({
           y={16}
           textAnchor="middle"
           fontSize={10.5}
-          fill="var(--ambar-claro)"
+          fill="var(--fuego-hondo)"
           fontFamily="var(--sans)"
         >
           {`«${clase.estereotipo}»`}
@@ -102,7 +123,7 @@ export default function CajaClase({
         fontSize={13}
         fontWeight={600}
         fontStyle={clase.esAbstracta ? 'italic' : 'normal'}
-        fill="var(--texto)"
+        fill="var(--tinta)"
         fontFamily="var(--sans)"
       >
         {clase.nombre}
@@ -114,7 +135,7 @@ export default function CajaClase({
           x={9}
           y={yAtributo(indice)}
           fontSize={11.5}
-          fill="var(--texto-medio)"
+          fill="var(--tinta-media)"
           fontFamily="var(--mono)"
         >
           {textoDeAtributo(atributo)}
@@ -122,7 +143,14 @@ export default function CajaClase({
       ))}
 
       {clase.metodos.length > 0 && (
-        <line x1={0} y1={ySeparador} x2={ANCHO_CLASE} y2={ySeparador} stroke="var(--borde-suave)" />
+        <line
+          x1={0}
+          y1={ySeparador}
+          x2={ANCHO_CLASE}
+          y2={ySeparador}
+          stroke="var(--canto-caja)"
+          strokeWidth={1}
+        />
       )}
 
       {clase.metodos.map((metodo, indice) => (
@@ -131,7 +159,7 @@ export default function CajaClase({
           x={9}
           y={yMetodo(indice)}
           fontSize={11.5}
-          fill="var(--texto-medio)"
+          fill="var(--tinta-media)"
           fontFamily="var(--mono)"
           fontStyle={metodo.esAbstracto ? 'italic' : 'normal'}
         >
@@ -143,20 +171,17 @@ export default function CajaClase({
         <>
           <rect
             x={0}
-            y={-20}
-            width={Math.min(ANCHO_CLASE, 9 + bloqueo.poseedorNombre.length * 6.2)}
-            height={16}
-            rx={3}
+            y={-21}
+            width={Math.min(ANCHO_CLASE, 16 + bloqueo.poseedorNombre.length * 6.4)}
+            height={17}
             fill="var(--ajeno)"
           />
-          <text x={5} y={-8} fontSize={10} fill="#fff" fontFamily="var(--sans)">
-            {bloqueo.poseedorNombre} esta editando
+          <text x={7} y={-8.5} fontSize={10.5} fill="#fff" fontFamily="var(--sans)">
+            {bloqueo.poseedorNombre} está editando
           </text>
         </>
       )}
-      {propio && (
-        <circle cx={ANCHO_CLASE - 9} cy={9} r={3.5} fill="var(--ambar)" />
-      )}
+      {propio && <circle cx={ANCHO_CLASE - 10} cy={10} r={3.5} fill="var(--fuego)" />}
     </g>
   )
 }
