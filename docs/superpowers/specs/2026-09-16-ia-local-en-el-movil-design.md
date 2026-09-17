@@ -20,7 +20,10 @@ código:
 
 Y el usuario lo ve como un rechazo (`lienzo.dart:191-193`): *"El dictado necesita conexión por ahora."*
 
-El agente guía del móvil tampoco es local: pregunta al servidor (`movil/lib/api.dart:159-163`).
+El agente guía **no existe en el móvil**. Hay un método de cliente (`api.consejos`) que llama a
+`GET /api/diagramas/{id}/agente`, pero ninguna pantalla lo usa: es código muerto. La primera versión
+de este documento decía que el agente del teléfono pedía red, y era falso — se leyó el cliente de API
+y se dio por hecho que había una pantalla detrás.
 
 De fondo hay algo más grande: **no existe ningún LLM en el repositorio**. Ni en la web, ni en el
 backend, ni en el móvil. Lo que hay es reconocimiento de voz del sistema operativo, OCR con
@@ -44,7 +47,6 @@ es un pasivo.
 4. **En la web el LLM propone varias frases de una vez**, así un pedido se convierte en un diagrama.
 5. **Los dos LLM son locales**: Gemma 3 1B en el teléfono, Gemma 3 4B en la máquina. Ninguna clave
    de API, ningún costo por token, ninguna dependencia de la red el día de la defensa.
-6. **El agente guía del móvil se porta a Dart**, para que el teléfono no le pregunte nada a nadie.
 
 El punto 3 cambia lo anotado el 12 de septiembre ("el LLM traduce la frase a un comando JSON"). El
 punto 5 cambia la primera versión de este documento, que usaba la API de Claude: se descartó porque
@@ -199,21 +201,7 @@ Diferencias de lenguaje a cuidar en el port, y por eso están en el corpus:
 - Java usa `matches()` (ancla la expresión entera); en Dart hay que anclar con `^...$` a mano.
 - Dart no tiene `Optional`; se usa nulable.
 
-### 3. El agente guía del móvil, portado a Dart — `movil/lib/agente/`
-
-Hoy el teléfono pide los consejos al servidor. El alcance del port es **acotado**: el móvil consume
-un solo endpoint del agente, `GET /api/diagramas/{id}/agente` (`api.dart:159-163`), que devuelve las
-observaciones de `BaseDeConocimiento` sobre el diagrama. El recorrido de 8 pasos y el catálogo de
-preguntas son de la web y **no se portan**.
-
-Son las 15 reglas de inferencia de `BaseDeConocimiento.java:46-68` sobre el modelo local, más la
-heurística de singular/plural de `:34-45`. Sin modelo de lenguaje: es el paradigma simbólico, y por
-eso es el caso fácil — no depende del puente frágil.
-
-Mismo tratamiento contra la deriva: **`compartido/corpus-agente.json`** con los casos de
-`BaseDeConocimientoTest.java` (19 pruebas), leído por las dos suites.
-
-### 4. El traductor local del móvil — `movil/lib/voz/traductor_gemma.dart` + canal Kotlin
+### 3. El traductor local del móvil — `movil/lib/voz/traductor_gemma.dart` + canal Kotlin
 
 El puente a MediaPipe se escribe como **canal de plataforma propio en Kotlin**, no con el plugin
 comunitario `flutter_gemma`. Dos razones: el paso 4 de la evaluación es defensa de autoría, y no
@@ -225,7 +213,7 @@ queda atado a que un tercero siga el ritmo de MediaPipe. Es ~100 líneas contra
 - Si el archivo no está, `TraductorGemma` se comporta como `TraductorNulo`. La aplicación no cambia
   de comportamiento, solo pierde el respaldo.
 
-### 5. El traductor local del backend — `bo.forja.backend.ia`
+### 4. El traductor local del backend — `bo.forja.backend.ia`
 
 - **Ollama en `localhost:11434`**, modelo `gemma3:4b`. El tamaño lo decide el hardware de la máquina
   de la demostración: 16 GB de RAM y una RTX 3050 de **4 GB de VRAM**. Un 7B en Q4 pide ~5 GB y se
@@ -241,7 +229,7 @@ queda atado a que un tercero siga el ritmo de MediaPipe. Es ~100 líneas contra
 El prompt le da las clases que existen y las formas canónicas con ejemplos, y le pide una frase por
 línea. Lo que no parsea se descarta.
 
-### 6. El cableado
+### 5. El cableado
 
 **Móvil (`lienzo.dart::_dictar`)** — deja de llamar a `api.dictar(...)`. El texto que devuelve
 `SpeechToText` entra al parser local, y los comandos salen por el `Sincronizador` que ya existe:
@@ -263,7 +251,9 @@ nuevo, hermano del de la foto: `POST /api/diagramas/{id}/pedido/lectura` para pr
   contra lo que hay.
 - El formato de los comandos, los tipos de operación y la bitácora.
 - Los endpoints existentes y sus contratos.
-- El agente guía de la web, que sigue siendo simbólico y no se mezcla con el LLM.
+- El agente guía, que sigue siendo simbólico, del cliente web, y no se mezcla con el LLM. Portarlo al
+  móvil se evaluó y se dejó fuera: el teléfono nunca lo tuvo, y el presupuesto que queda rinde más en
+  los pasos 4 y 5, que es lo que al proyecto todavía le falta.
 
 ## Pruebas
 
@@ -271,8 +261,6 @@ nuevo, hermano del de la foto: `POST /api/diagramas/{id}/pedido/lectura` para pr
 |---|---|---|
 | La gramática, en Java | `ParserVozCorpusTest.java` | lee `compartido/corpus-voz.json` |
 | La gramática, en Dart | `test/voz/parser_voz_corpus_test.dart` | lee el mismo archivo |
-| Las reglas del agente, en Java | `BaseDeConocimientoCorpusTest.java` | lee `compartido/corpus-agente.json` |
-| Las reglas del agente, en Dart | `test/agente/agente_corpus_test.dart` | lee el mismo archivo |
 | Lo que no entra en el corpus | `ParserVozTest.java` | casos propios de Java que no se puedan expresar como datos |
 | Traductor de Ollama | `TraductorOllamaTest.java` | servidor HTTP de prueba local; el modelo real no entra |
 | Traductor de Gemma | `traductor_gemma_test.dart` | canal falso; el modelo real no entra |
@@ -294,12 +282,11 @@ El orden está puesto para que el requisito quede cumplido **antes** de que empi
 | 1 | Corpus de voz + migración de los 28 casos en Java | la red de seguridad | bajo |
 | 2 | Parser en Dart hasta pasar el corpus | el teléfono entiende solo | bajo, mecánico |
 | 3 | Cablearlo en `lienzo.dart` | **el requisito cumplido**: dicta en modo avión | bajo |
-| 4 | Corpus de agente + reglas en Dart | el teléfono no le pregunta nada a nadie | bajo, mecánico |
-| 5 | `TraductorOllama` + pedido explícito con previsualización | **la IA que hace lo que le pedís** | medio |
-| 6 | Canal Kotlin + Gemma 1B en el móvil | IA generativa local en el teléfono | **alto** |
+| 4 | `TraductorOllama` + pedido explícito con previsualización | **la IA que hace lo que le pedís** | medio |
+| 5 | Canal Kotlin + Gemma 1B en el móvil | IA generativa local en el teléfono | **alto** |
 
-Después del paso 3 el enunciado está satisfecho. Después del 5 hay IA generativa demostrable aunque
-el 6 no salga. El paso 6 es el único que puede recortarse, y recortarlo no deja sin aplicación ni
+Después del paso 3 el enunciado está satisfecho: el teléfono no le pregunta nada a nadie. Después del
+4 hay IA generativa demostrable aunque el 5 no salga. El paso 5 es el único que puede recortarse, y recortarlo no deja sin aplicación ni
 obliga a reescribir el documento: obliga a no prometerlo.
 
 El riesgo declarado sigue siendo el mismo y no es el modelo: es el puente Flutter↔MediaPipe. Tres
