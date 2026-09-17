@@ -2,6 +2,7 @@ package bo.forja.backend.voz;
 
 import bo.forja.backend.dominio.ClaseUml;
 import bo.forja.backend.dominio.OrigenOperacion;
+import bo.forja.backend.ia.Traductor;
 import bo.forja.backend.operacion.ComandoInvalido;
 import bo.forja.backend.operacion.ComandoOperacion;
 import bo.forja.backend.operacion.ContextoDelDiagrama;
@@ -30,6 +31,11 @@ import java.util.UUID;
  * <p>
  * La posicion de una clase nueva no la decide el parser: se la asigna
  * {@link Cuadricula}, que es la misma regla que usa la lectura de una pizarra.
+ * <p>
+ * La gramatica va primero SIEMPRE. Solo cuando ella no entiende, y solo si hay
+ * un traductor configurado, se le pide al modelo local que reescriba la frase
+ * en una forma que la gramatica si conozca: ver {@link DictadoConRespaldo}. Sin
+ * traductor, este servicio se comporta exactamente como antes de que existiera.
  */
 @Service
 public class ServicioVoz {
@@ -40,22 +46,26 @@ public class ServicioVoz {
     private final ServicioOperaciones operaciones;
     private final ClaseUmlRepositorio clases;
     private final ParserVoz parser;
+    private final Traductor traductor;
 
     public ServicioVoz(ServicioProyectos proyectos,
                        ServicioOperaciones operaciones,
                        ClaseUmlRepositorio clases,
-                       ParserVoz parser) {
+                       ParserVoz parser,
+                       Traductor traductor) {
         this.proyectos = proyectos;
         this.operaciones = operaciones;
         this.clases = clases;
         this.parser = parser;
+        this.traductor = traductor;
     }
 
     public ResultadoDictado dictar(UUID diagramaId, UUID usuarioId, String sesionId, String frase) {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
 
         ContextoDelDiagrama contexto = contextoDe(diagramaId);
-        Interpretacion interpretacion = parser.interpretar(frase, contexto);
+        Interpretacion interpretacion =
+                DictadoConRespaldo.interpretar(parser, traductor, frase, contexto);
 
         if (!interpretacion.entendida()) {
             log.debug("Dictado no reconocido en el diagrama {}: \"{}\"", diagramaId, frase);
@@ -102,7 +112,7 @@ public class ServicioVoz {
     @Transactional(readOnly = true)
     public Interpretacion interpretarSinAplicar(UUID diagramaId, UUID usuarioId, String frase) {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
-        return parser.interpretar(frase, contextoDe(diagramaId));
+        return DictadoConRespaldo.interpretar(parser, traductor, frase, contextoDe(diagramaId));
     }
 
     @Transactional(readOnly = true)
