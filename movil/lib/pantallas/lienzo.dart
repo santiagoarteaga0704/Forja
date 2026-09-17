@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../almacen.dart';
 import '../api.dart';
 import '../comandos.dart';
+import '../identificadores.dart';
 import '../lienzo/pintor.dart';
 import '../main.dart';
 import '../sincronizador.dart';
@@ -128,7 +129,7 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
 
     final cuantas = _diagrama?.clases.length ?? 0;
     await _ejecutar(Comando.crearClase(
-      claseId: Sincronizador.nuevoToken(),
+      claseId: nuevoIdDeModelo(),
       nombre: nombre.trim(),
       posX: (cuantas % 3) * 230,
       posY: (cuantas ~/ 3) * 190,
@@ -145,7 +146,7 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
 
     final esJerarquia = tipo == 'HERENCIA' || tipo == 'REALIZACION';
     await _ejecutar(Comando.crearRelacion(
-      relacionId: Sincronizador.nuevoToken(),
+      relacionId: nuevoIdDeModelo(),
       origenId: origenId,
       destinoId: destinoId,
       tipoDeRelacion: tipo,
@@ -478,7 +479,7 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
                     if (nombre != null && nombre.trim().isNotEmpty) {
                       await _ejecutar(Comando.agregarMetodo(
                           claseId: clase.id,
-                          metodoId: Sincronizador.nuevoToken(),
+                          metodoId: nuevoIdDeModelo(),
                           nombre: nombre.trim(),
                           token: Sincronizador.nuevoToken()));
                     }
@@ -566,7 +567,7 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
     if (confirmado == true && nombre.text.trim().isNotEmpty) {
       await _ejecutar(Comando.agregarAtributo(
         claseId: clase.id,
-        atributoId: Sincronizador.nuevoToken(),
+        atributoId: nuevoIdDeModelo(),
         nombre: nombre.text.trim(),
         tipo: tipo.text.trim().isEmpty ? 'String' : tipo.text.trim(),
         esIdentificador: esClave,
