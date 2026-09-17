@@ -22,6 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * carga del comando, y con tipos del lenguaje eso se lee mejor y no ata la
  * prueba a la version de la libreria.
  * <p>
+ * Se comparan solo los campos que el caso nombra, y se entra en listas y
+ * objetos anidados -los parametros de una operacion, por ejemplo- con las
+ * mismas reglas.
+ * <p>
  * Los identificadores no se comparan literal porque el parser los inventa. Hay
  * dos convenciones, y las dos tienen que valer igual en la suite de Dart:
  * <ul>
@@ -138,6 +142,25 @@ final class CorpusDeVoz {
                 assertThat(String.valueOf(salio)).as(etiqueta + ": " + marca + " tiene que repetirse")
                         .isEqualTo(yaLigado);
             }
+            return;
+        }
+
+        if (esperado instanceof List<?> lista) {
+            assertThat(salio).as(etiqueta + ": se esperaba una lista").isInstanceOf(List.class);
+            List<?> salieron = (List<?>) salio;
+            assertThat(salieron).as(etiqueta + ": cantidad").hasSize(lista.size());
+            for (int i = 0; i < lista.size(); i++) {
+                compararCampo(etiqueta, "[" + i + "]", lista.get(i), salieron.get(i), caso, ligados);
+            }
+            return;
+        }
+
+        if (esperado instanceof Map<?, ?> mapa) {
+            assertThat(salio).as(etiqueta + ": se esperaba un objeto").isInstanceOf(Map.class);
+            Map<?, ?> salieron = (Map<?, ?>) salio;
+            mapa.forEach((subcampo, subesperado) -> compararCampo(
+                    etiqueta, String.valueOf(subcampo), subesperado,
+                    salieron.get(subcampo), caso, ligados));
             return;
         }
 
