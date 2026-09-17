@@ -1,0 +1,36 @@
+{
+  "_comentario": "Casos de la gramatica de dictado. Los leen ParserVozCorpusTest (Java) y parser_voz_corpus_test (Dart). Si tocas una regla, los dos lados tienen que seguir dando lo mismo: es lo unico que impide que la copia del telefono y la del servidor se separen sin que nadie se entere.",
+  "_identificadores": "Los ids no se comparan literal porque el parser los inventa. '@Paciente' es el id de una clase que ya estaba en el contexto. '$nueva1' es uno recien inventado: se liga a lo que haya salido la primera vez y despues tiene que repetirse, que es como se verifica que los atributos cuelguen de la clase que se acaba de crear.",
+  "contextos": {
+    "clinica": { "clases": ["Paciente", "Consulta", "Persona", "Medico", "Auditable"] },
+    "vacio": { "clases": [] }
+  },
+  "casos": [
+    {
+      "id": "crear-clase-formas-usuales",
+      "contexto": "clinica",
+      "frases": [
+        "crea la clase Factura",
+        "crear clase Factura",
+        "nueva clase Factura",
+        "agrega una clase llamada Factura",
+        "creame una clase Factura",
+        "dibuja la clase Factura"
+      ],
+      "entendida": true,
+      "pasos": [
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "claseId": "$nueva1",
+            "nombre": "Factura",
+            "estereotipo": null,
+            "esAbstracta": false,
+            "posX": 0,
+            "posY": 0
+          }
+        }
+      ]
+    }
+  ]
+}
