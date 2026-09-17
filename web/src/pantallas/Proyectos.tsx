@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ErrorApi, api } from '../api'
 import { useGuia } from '../guia'
 import { IconoCarpeta, IconoClase, IconoGuia, IconoPersona, IconoSalir } from '../iconos'
+import { Marca } from '../marca'
 import type { Credencial, DiagramaResumen, ProyectoVista } from '../tipos'
 import Guia from './Guia'
 
@@ -93,10 +94,7 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
   return (
     <div className="aplicacion">
       <header className="barra">
-        <div className="marca">
-          <span className="yunque" />
-          FORJA
-        </div>
+        <Marca />
         <div className="crece" />
         <button
           aria-pressed={mostrandoGuia}

@@ -77,11 +77,11 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(children: const [
-                    Yunque(),
-                    SizedBox(width: 10),
+                    Yunque(lado: 30),
+                    SizedBox(width: 12),
                     Text('FORJA',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, letterSpacing: 3, fontSize: 14)),
+                            fontWeight: FontWeight.bold, letterSpacing: 2.4, fontSize: 15)),
                   ]),
                   const SizedBox(height: 20),
                   Text(_esAlta ? 'Crear una cuenta' : 'Entrar',

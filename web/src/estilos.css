@@ -302,14 +302,25 @@ label {
   color: var(--tiza);
 }
 
-/* El yunque: un cuadrado en angulo, al rojo. Es la unica marca de la casa. */
+/*
+ * El yunque cortado a 45 grados: la unica marca de la casa.
+ *
+ * El dibujo vive en marca.tsx -hereda --fuego y --fuego-claro de aca- y esta
+ * regla solo lo separa del logotipo. Antes habia un cuadrado en angulo con un
+ * halo; el halo se fue con el: a 9 px un resplandor hacia falta para que el
+ * signo existiera, a 22 px la silueta ya se sostiene sola y el brillo la
+ * ensuciaba. El tamano no baja de 20: por debajo el rombo del talon se cierra.
+ */
 .marca .yunque {
-  width: 9px;
-  height: 9px;
   flex-shrink: 0;
-  background: var(--fuego);
-  transform: rotate(45deg);
-  box-shadow: 0 0 14px rgba(232, 128, 31, 0.55);
+  display: block;
+}
+
+/* En la entrada la marca es lo primero que se lee, y ahi si tiene cuerpo. */
+.entrar-presentacion .marca {
+  gap: 12px;
+  font-size: 15px;
+  letter-spacing: 0.16em;
 }
 
 /* ============================================================

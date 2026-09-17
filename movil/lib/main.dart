@@ -23,8 +23,11 @@ class Colores {
   static const texto = Color(0xFFE4E8EE);
   static const textoMedio = Color(0xFF9AA4B2);
   static const textoDebil = Color(0xFF697585);
-  static const ambar = Color(0xFFE8913C);
-  static const ambarClaro = Color(0xFFF6B26B);
+  // El ambar es el unico color con trabajo en las dos aplicaciones, asi que es
+  // el mismo numero: --fuego y --fuego-claro de web/src/estilos.css. Habian
+  // quedado corridos un tono entre un cliente y el otro.
+  static const ambar = Color(0xFFE8801F);
+  static const ambarClaro = Color(0xFFF6A84F);
   static const exito = Color(0xFF4BB37B);
   static const peligro = Color(0xFFE05C5C);
   static const ajeno = Color(0xFF7C6CE0);
@@ -150,15 +153,65 @@ class _AplicacionForjaState extends State<AplicacionForja> {
   }
 }
 
-/// Rombo de la marca, el mismo signo que en la web.
+/// La marca: un yunque cortado a 45 grados, el mismo dibujo que en la web.
+///
+/// Va pintado a mano y no como imagen por la misma razon por la que el cliente
+/// web lo dibuja en linea: asi toma los colores de [Colores] y no hay dos
+/// ambares parecidos en la aplicacion. Ademas ahorra la dependencia de
+/// flutter_svg por una sola figura de lineas rectas.
 class Yunque extends StatelessWidget {
-  const Yunque({super.key, this.lado = 10});
+  const Yunque({super.key, this.lado = 22});
 
+  /// Nunca por debajo de 20: mas chico, el rombo del talon se cierra.
   final double lado;
 
   @override
-  Widget build(BuildContext context) => Transform.rotate(
-        angle: 0.785,
-        child: Container(width: lado, height: lado, color: Colores.ambar),
+  Widget build(BuildContext context) => SizedBox(
+        width: lado,
+        height: lado,
+        child: CustomPaint(painter: _PintorYunque()),
       );
+}
+
+class _PintorYunque extends CustomPainter {
+  /// El contorno esta trazado sobre una grilla de 64 y cada corte interno es de
+  /// 45 grados, el mismo angulo con el que el editor dibuja las relaciones.
+  static const _cuerpo = <Offset>[
+    Offset(3, 20), Offset(18, 12), Offset(53, 12), Offset(59, 18),
+    Offset(59, 28), Offset(44, 28), Offset(38, 34), Offset(38, 40),
+    Offset(45, 47), Offset(46, 47), Offset(46, 53), Offset(17, 53),
+    Offset(17, 47), Offset(18, 47), Offset(25, 40), Offset(25, 34),
+    Offset(19, 28), Offset(14, 28),
+  ];
+
+  /// El rombo del talon: calado, no pintado. Deja pasar el fondo.
+  static const _rombo = <Offset>[
+    Offset(46, 17.5), Offset(50.5, 22), Offset(46, 26.5), Offset(41.5, 22),
+  ];
+
+  /// El bisel de arriba: el metal caliente. Da volumen sin un degradado.
+  static const _cara = <Offset>[
+    Offset(18, 12), Offset(53, 12), Offset(57, 16), Offset(10.5, 16),
+  ];
+
+  static Path _figura(List<Offset> puntos, double escala) {
+    final camino = Path()..moveTo(puntos.first.dx * escala, puntos.first.dy * escala);
+    for (final punto in puntos.skip(1)) {
+      camino.lineTo(punto.dx * escala, punto.dy * escala);
+    }
+    return camino..close();
+  }
+
+  @override
+  void paint(Canvas lienzo, Size medida) {
+    final escala = medida.width / 64;
+    final silueta = _figura(_cuerpo, escala)
+      ..addPath(_figura(_rombo, escala), Offset.zero)
+      ..fillType = PathFillType.evenOdd;
+    lienzo.drawPath(silueta, Paint()..color = Colores.ambar);
+    lienzo.drawPath(_figura(_cara, escala), Paint()..color = Colores.ambarClaro);
+  }
+
+  @override
+  bool shouldRepaint(_PintorYunque otro) => false;
 }

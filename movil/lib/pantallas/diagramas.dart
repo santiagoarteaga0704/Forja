@@ -89,8 +89,8 @@ class _PantallaDiagramasState extends State<PantallaDiagramas> {
     return Scaffold(
       appBar: AppBar(
         title: Row(children: const [
-          Yunque(lado: 9),
-          SizedBox(width: 9),
+          Yunque(),
+          SizedBox(width: 10),
           Text('FORJA', style: TextStyle(letterSpacing: 3, fontSize: 14, fontWeight: FontWeight.bold)),
         ]),
         actions: [

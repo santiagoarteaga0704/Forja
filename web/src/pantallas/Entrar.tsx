@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ErrorApi, api } from '../api'
 import HojaMuestra from '../lienzo/HojaMuestra'
+import { Marca } from '../marca'
 import type { Credencial } from '../tipos'
 
 /**
@@ -38,10 +39,7 @@ export default function Entrar({ alEntrar }: { alEntrar: (credencial: Credencial
     <div className="entrar">
       <div className="entrar-cuerpo">
         <section className="entrar-presentacion">
-          <div className="marca">
-            <span className="yunque" />
-            FORJA
-          </div>
+          <Marca tamano={30} />
           <h1>Del pizarrón al backend andando.</h1>
           <p>
             Dibujá el diagrama de clases entre varios, dictalo o sacale una foto a la pizarra.

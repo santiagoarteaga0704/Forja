@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!--
+  La pantalla que se ve mientras arranca el proceso, antes del primer cuadro
+  de Flutter. Venia en blanco: un fogonazo blanco delante de una aplicacion
+  oscura. Ahora es el grafito de la mesa. En drawable-v23 ademas lleva el
+  yunque centrado; aca no, porque antes de API 23 un item de layer-list no
+  acepta medida y el dibujo saldria estirado a pantalla completa.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
-
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+    <item android:drawable="@color/fondo_lanzador" />
 </layer-list>
