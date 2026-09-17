@@ -2,6 +2,7 @@ import '../identificadores.dart';
 import 'contexto.dart';
 import 'gramatica.dart';
 import 'interpretacion.dart';
+import 'tipos_declarados.dart';
 
 /// La gramatica de dictado, corriendo en el aparato.
 ///
@@ -62,6 +63,78 @@ class ParserVoz {
       r'clase\s+)?'
       '$nom'
       r'\s+es\s+una\s+(?:interfaz|interface)');
+
+  // ---------- Atributos y metodos -----------------------------------------
+
+  static final _atributoDestinoPrimero = regla(
+      r'(?:a|en|para)\s+'
+      '(?:$articulo'
+      r'clase\s+)?'
+      '$nom'
+      r'\s+' '$agregar' r'\s+'
+      '$articulo'
+      r'atributo\s+(.+)');
+
+  static final _atributoDestinoUltimo = regla('$agregar'
+      r'\s+'
+      '$articulo'
+      r'atributo\s+(.+?)\s+(?:a|en)\s+'
+      '(?:$articulo'
+      r'clase\s+)?'
+      '$nomFin');
+
+  /// Forma declarativa: "el Paciente tiene un nombre de tipo texto". Exige que
+  /// aparezca la palabra "tipo" para no confundirse con la asociacion, que
+  /// empieza igual; la relacion se evalua antes y solo gana si sus dos extremos
+  /// son clases conocidas.
+  ///
+  /// Ojo: aca el articulo son SEIS y no ocho. Es asi en el servidor.
+  static final _atributoDeclarativo = regla(
+      r'(?:(?:el|la|los|las|un|una)\s+)?(?:clase\s+)?'
+      '$nom'
+      r'\s+(?:tiene|posee|lleva)\s+(?:(?:un|una|el|la)\s+)?(.+\s+tipo\s+.+)');
+
+  static final _metodoDestinoPrimero = regla(
+      r'(?:a|en|para)\s+'
+      '(?:$articulo'
+      r'clase\s+)?'
+      '$nom'
+      r'\s+' '$agregar' r'\s+'
+      '$articulo'
+      r'(?:metodo|operacion)\s+(.+)');
+
+  static final _metodoDestinoUltimo = regla('$agregar'
+      r'\s+'
+      '$articulo'
+      r'(?:metodo|operacion)\s+(.+?)\s+(?:a|en)\s+'
+      '(?:$articulo'
+      r'clase\s+)?'
+      '$nomFin');
+
+  /// Detalle de un atributo. Son DOS patrones y no uno por una razon concreta:
+  /// con el tipo opcional y un grupo final que acepta cualquier cosa, el nombre
+  /// quedaba siempre en su forma mas corta y el resto se lo tragaba ese final.
+  /// "fecha de nacimiento de tipo fecha" producia un atributo llamado "fecha"
+  /// de tipo texto. Exigiendo el tipo en el primer intento, el nombre se
+  /// extiende hasta donde corresponde.
+  static final _detalleAtributoConTipo = regla('$nom'
+      r'\s+(?:de\s+)?tipo\s+([\p{L}\p{N}_]+)'
+      r'((?:\s+(?:de\s+|con\s+|y\s+)?' '$marcas' r')*)');
+
+  /// Sin tipo declarado se asume texto. El nombre llega hasta la primera
+  /// palabra de marca, que es lo unico que permite separar "historia clinica
+  /// obligatorio" en un nombre de dos palabras y una marca.
+  static final _detalleAtributoSinTipo = regla('$nom'
+      r'((?:\s+(?:de\s+|con\s+|y\s+)?' '$marcas' r')*)');
+
+  static final _detalleMetodo = regla('$nom'
+      r'(?:\s+con\s+(?:los\s+)?parametros?\s+(.+?))?'
+      r'(?:\s+que\s+(?:devuelve|retorna)\s+([\p{L}\p{N}_]+))?');
+
+  static final _parametro = regla('$nom'
+      r'\s+(?:de\s+)?tipo\s+([\p{L}\p{N}_]+)');
+
+  static final _longitud = RegExp(r'longitud\s+(\d+)', caseSensitive: false);
 
   // ---------- Interpretacion ----------------------------------------------
 
@@ -130,6 +203,24 @@ class ParserVoz {
           {'claseId': clase.id, 'estereotipo': 'interface', 'esAbstracta': false});
     }
 
+    m = _atributoDeclarativo.firstMatch(frase);
+    if (m != null) {
+      final comoAtributo = _comoAtributo(frase, m.group(1)!, m.group(2)!, contexto);
+      if (comoAtributo != null) return comoAtributo;
+    }
+
+    m = _atributoDestinoPrimero.firstMatch(frase);
+    if (m != null) return _comoAtributo(frase, m.group(1)!, m.group(2)!, contexto);
+
+    m = _atributoDestinoUltimo.firstMatch(frase);
+    if (m != null) return _comoAtributo(frase, m.group(2)!, m.group(1)!, contexto);
+
+    m = _metodoDestinoPrimero.firstMatch(frase);
+    if (m != null) return _comoMetodo(frase, m.group(1)!, m.group(2)!, contexto);
+
+    m = _metodoDestinoUltimo.firstMatch(frase);
+    if (m != null) return _comoMetodo(frase, m.group(2)!, m.group(1)!, contexto);
+
     return null;
   }
 
@@ -147,13 +238,132 @@ class ParserVoz {
       };
 
   /// Una frase puede crear la clase y sus atributos de una vez. Los atributos
-  /// los completa la parte de la gramatica que sabe leer un detalle; por ahora
-  /// queda la clase sola.
+  /// cuelgan de la clase que se acaba de crear, no de una que haya que buscar.
   Interpretacion _crearClaseConSusAtributos(
       String frase, String nombre, String listaDeAtributos) {
     final carga = _crearClaseCarga(nombre);
-    return Interpretacion.entendida(
-        frase, 'Cree la clase $nombre', [Paso(tipo: 'CLASE_CREAR', comando: carga)]);
+    final claseId = carga['claseId'] as String;
+
+    final pasos = <Paso>[Paso(tipo: 'CLASE_CREAR', comando: carga)];
+    final agregados = <String>[];
+
+    for (final trozo in separarEnumeracion(listaDeAtributos)) {
+      final atributo = _atributoDesdeDetalle(claseId, trozo);
+      if (atributo != null) {
+        pasos.add(Paso(tipo: 'ATRIBUTO_AGREGAR', comando: atributo));
+        agregados.add(atributo['nombre'] as String);
+      }
+    }
+
+    final explicacion = agregados.isEmpty
+        ? 'Cree la clase $nombre'
+        : 'Cree la clase $nombre con ${agregados.join(', ')}';
+    return Interpretacion.entendida(frase, explicacion, pasos);
+  }
+
+  // ---------- Atributos y metodos -----------------------------------------
+
+  Interpretacion? _comoAtributo(String frase, String nombreDeLaClase, String detalle,
+      ContextoDelDiagrama contexto) {
+    final clase = contexto.resolver(nombreDeLaClase);
+    if (clase == null) return _noConozco(frase, nombreDeLaClase, contexto);
+
+    final carga = _atributoDesdeDetalle(clase.id, detalle);
+    if (carga == null) return null;
+
+    return _uno(
+        frase,
+        'Agregue ${carga['nombre']}: ${carga['tipo']} a ${clase.nombre}',
+        'ATRIBUTO_AGREGAR',
+        carga);
+  }
+
+  /// Los nombres de campo son los del registro ComandoOperacion.AgregarAtributo.
+  Map<String, dynamic>? _atributoDesdeDetalle(String claseId, String detalle) {
+    final limpio = detalle.trim();
+
+    // Se intenta primero con el tipo declarado; la forma sin tipo es el
+    // respaldo, no la primera opcion.
+    var m = _detalleAtributoConTipo.firstMatch(limpio);
+    final conTipo = m != null;
+    if (!conTipo) {
+      m = _detalleAtributoSinTipo.firstMatch(limpio);
+      if (m == null) return null;
+    }
+
+    final nombre = limpiarNombre(m.group(1));
+    if (nombre.isEmpty) return null;
+
+    final tipo = conTipo ? normalizarTipo(m.group(2)) : 'String';
+    final marcasDichas = (m.group(conTipo ? 3 : 2) ?? '').toLowerCase();
+
+    final esClave = marcasDichas.contains('clave') ||
+        marcasDichas.contains('identificador') ||
+        marcasDichas.contains('primaria');
+    // Una clave es obligatoria y unica por definicion, aunque no se diga.
+    final esUnico = esClave ||
+        marcasDichas.contains('unico') ||
+        marcasDichas.contains('unica');
+    final esRequerido = esClave ||
+        marcasDichas.contains('obligatorio') ||
+        marcasDichas.contains('obligatoria') ||
+        marcasDichas.contains('requerido') ||
+        marcasDichas.contains('requerida') ||
+        marcasDichas.contains('no nulo');
+
+    final mLongitud = _longitud.firstMatch(marcasDichas);
+
+    return {
+      'claseId': claseId,
+      'atributoId': nuevoIdDeModelo(),
+      'nombre': nombre,
+      'tipo': tipo,
+      'visibilidad': 'PRIVADO',
+      'esIdentificador': esClave,
+      'esRequerido': esRequerido,
+      'esUnico': esUnico,
+      'longitud': mLongitud == null ? null : int.parse(mLongitud.group(1)!),
+    };
+  }
+
+  Interpretacion? _comoMetodo(String frase, String nombreDeLaClase, String detalle,
+      ContextoDelDiagrama contexto) {
+    final clase = contexto.resolver(nombreDeLaClase);
+    if (clase == null) return _noConozco(frase, nombreDeLaClase, contexto);
+
+    final m = _detalleMetodo.firstMatch(detalle.trim());
+    if (m == null) return null;
+
+    final nombre = limpiarNombre(m.group(1));
+    if (nombre.isEmpty) return null;
+
+    final parametros = <Map<String, dynamic>>[];
+    if (m.group(2) != null) {
+      for (final trozo in separarEnumeracion(m.group(2)!)) {
+        final mParametro = _parametro.firstMatch(trozo.trim());
+        if (mParametro != null) {
+          parametros.add({
+            'parametroId': nuevoIdDeModelo(),
+            'nombre': limpiarNombre(mParametro.group(1)),
+            'tipo': normalizarTipo(mParametro.group(2)),
+          });
+        }
+      }
+    }
+
+    final retorno = m.group(3) == null ? 'void' : normalizarTipo(m.group(3));
+
+    return _uno(frase, 'Agregue la operacion $nombre(): $retorno a ${clase.nombre}',
+        'METODO_AGREGAR', {
+      'claseId': clase.id,
+      'metodoId': nuevoIdDeModelo(),
+      'nombre': nombre,
+      'tipoRetorno': retorno,
+      'visibilidad': 'PUBLICO',
+      'esAbstracto': false,
+      'esEstatico': false,
+      'parametros': parametros,
+    });
   }
 
   // ---------- Auxiliares --------------------------------------------------

@@ -10,6 +10,8 @@
 /// el telefono los ids viajan dentro de la carga del comando, que es un mapa
 /// JSON.
 
+library;
+
 /// Acentos que hay que sacar.
 ///
 /// Dart no trae la normalizacion NFD que usa el servidor, asi que la tabla va

@@ -11,6 +11,8 @@
 /// del modelo, o un enumerado que la persona va a crear despues. Inventar una
 /// equivalencia seria peor que no tener ninguna.
 
+library;
+
 const _equivalencias = <String, String>{
   // Texto
   'texto': 'String', 'cadena': 'String', 'string': 'String',
