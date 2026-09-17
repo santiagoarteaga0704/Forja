@@ -28,6 +28,17 @@ forja:
   bloqueo:
     vigencia-segundos: 60
     barrido-ms: 30000
+  ia:
+    local:
+      # Apagada por omision a proposito: sin esto la aplicacion es la de
+      # siempre, y ese es justamente el punto. Se prende con
+      # FORJA_IA_HABILITADA=true y Ollama corriendo en la maquina.
+      habilitada: ${FORJA_IA_HABILITADA:false}
+      url: ${FORJA_IA_URL:http://localhost:11434}
+      # El nombre lleva dos puntos, que en un marcador de posicion separa el
+      # valor por omision. Spring parte en el PRIMERO, asi que el resto
+      # -incluidos sus dos puntos- es el valor por omision y esto funciona.
+      modelo: ${FORJA_IA_MODELO:gemma3:4b}
 
 server:
   port: 8080
