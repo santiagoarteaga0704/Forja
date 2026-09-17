@@ -150,12 +150,6 @@ class Api {
     return json.map((o) => OperacionRemota.desdeJson(o as Map<String, dynamic>)).toList();
   }
 
-  Future<Map<String, dynamic>> dictar(String diagramaId, String frase, String sesionId) async {
-    final json = await _pedir('POST', '/api/diagramas/$diagramaId/voz',
-        cuerpo: {'frase': frase, 'sesionId': sesionId});
-    return Map<String, dynamic>.from(json as Map);
-  }
-
   Future<List<Map<String, dynamic>>> consejos(String diagramaId) async {
     final json = await _pedir('GET', '/api/diagramas/$diagramaId/agente') as List<dynamic>;
     return json.map((c) => Map<String, dynamic>.from(c as Map)).toList();

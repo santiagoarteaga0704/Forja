@@ -5,6 +5,8 @@ import '../almacen.dart';
 import '../api.dart';
 import '../comandos.dart';
 import '../identificadores.dart';
+import '../voz/contexto.dart';
+import '../voz/dictado_local.dart';
 import '../lienzo/pintor.dart';
 import '../main.dart';
 import '../sincronizador.dart';
@@ -177,24 +179,31 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
     await _voz.stop();
     if (frase == null || frase.trim().isEmpty) return;
 
-    // El dictado lo interpreta el servidor: la gramatica vive alli para que el
-    // telefono y la web entiendan exactamente lo mismo. Sin conexion todavia no
-    // funciona, y se dice en lugar de fallar en silencio.
-    try {
-      final resultado = await widget.api.dictar(widget.resumen.id, frase, widget.sesionId);
-      if (resultado['entendida'] == true) {
-        _avisar(resultado['explicacion'] as String? ?? 'Aplicado');
-        await _sincronizador.sincronizar();
-      } else {
-        final sugerencias = (resultado['sugerencias'] as List<dynamic>? ?? []).take(2).join(' · ');
-        _avisar('No entendi. Proba: $sugerencias');
-      }
-    } on SinConexion {
-      _avisar('El dictado necesita conexion por ahora. Lo que ya hiciste se '
-          'guarda igual y se envia cuando vuelva la red.');
-    } on ErrorApi catch (e) {
-      _avisar(e.mensaje);
+    // La frase se interpreta ACA, en el aparato. La gramatica esta portada a
+    // Dart y el corpus compartido de compartido/corpus-voz.json prueba que dice
+    // exactamente lo mismo que la del servidor. Por eso el dictado funciona en
+    // modo avion: no sale nada del telefono.
+    final resultado = interpretarDictado(
+      frase,
+      ContextoDelDiagrama.de([
+        for (final clase in _diagrama?.clases ?? const <Clase>[])
+          ClaseConocida(id: clase.id, nombre: clase.nombre),
+      ]),
+      Sincronizador.nuevoToken,
+    );
+
+    if (!resultado.interpretacion.entendida) {
+      final sugerencias = resultado.interpretacion.sugerencias.take(2).join(' · ');
+      _avisar('No entendi. Proba: $sugerencias');
+      return;
     }
+
+    // Se aplican por el mismo camino que los cambios hechos con el dedo: al
+    // modelo local en el momento, y a la cola para cuando haya red.
+    for (final comando in resultado.comandos) {
+      await _ejecutar(comando);
+    }
+    _avisar(resultado.interpretacion.explicacion);
   }
 
   // ---------- Interfaz ------------------------------------------------------
