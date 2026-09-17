@@ -29,9 +29,9 @@ public class ConfiguracionIa {
             @Value("${forja.ia.local.url:http://localhost:11434}") String url,
             @Value("${forja.ia.local.modelo:gemma3:4b}") String modelo) {
 
-        // La rama que habla llega en el commit siguiente. Hasta entonces la
-        // configuracion existe, se lee, y no cambia nada: es exactamente el
-        // estado en el que el bloque de IA esta recortado.
-        return new TraductorNulo();
+        if (!habilitada) {
+            return new TraductorNulo();
+        }
+        return new TraductorOllama(new AjustesDeIa(true, url, modelo));
     }
 }

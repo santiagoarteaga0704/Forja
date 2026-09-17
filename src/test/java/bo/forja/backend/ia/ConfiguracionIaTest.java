@@ -1,6 +1,7 @@
 package bo.forja.backend.ia;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,28 @@ class ConfiguracionIaTest {
         assertThat(traductor.disponible()).isFalse();
         assertThat(traductor.aFrasesCanonicas("lo que sea", List.of("Paciente"),
                 Duration.ofSeconds(3))).isEmpty();
+    }
+
+    /**
+     * La otra mitad del contrato. Existe porque escribiendo esto se rompio al
+     * reves: la guarda del if se perdio en una edicion y el bean devolvia
+     * siempre el de Ollama. Lo agarro porOmisionEsNulo; esta prueba cubre el
+     * lado que aquella no puede ver.
+     */
+    @Nested
+    @SpringBootTest(properties = "forja.ia.local.habilitada=true")
+    @DisplayName("con la IA habilitada")
+    class Habilitada {
+
+        @Autowired
+        private Traductor traductor;
+
+        @Test
+        @DisplayName("se registra el traductor que habla con Ollama")
+        void seRegistraElDeOllama() {
+            assertThat(traductor).isInstanceOf(TraductorOllama.class);
+            assertThat(traductor.disponible()).isTrue();
+        }
     }
 
     @Test
