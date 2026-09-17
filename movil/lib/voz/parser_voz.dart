@@ -64,6 +64,38 @@ class ParserVoz {
       '$nom'
       r'\s+es\s+una\s+(?:interfaz|interface)');
 
+  // ---------- Relaciones ---------------------------------------------------
+
+  static final _herencia = regla('(?:$articulo'
+      r'clase\s+)?'
+      '$nom'
+      r'\s+(?:hereda\s+de|extiende|es\s+un\s+tipo\s+de|es\s+una?\s+subclase\s+de)\s+'
+      '$nomFin');
+
+  static final _realizacion = regla('$nom'
+      r'\s+(?:implementa|realiza|cumple\s+con)\s+'
+      '$nomFin');
+
+  static final _composicion = regla('$nom'
+      r'\s+(?:se\s+compone\s+de|esta\s+compuesta?\s+(?:de|por)|contiene)\s+'
+      '(?:$cantidad' r'\s+)?'
+      '$nomFin');
+
+  static final _agregacion = regla('$nom'
+      r'\s+(?:agrupa|reune)\s+'
+      '(?:$cantidad' r'\s+)?'
+      '$nomFin');
+
+  static final _dependencia = regla('$nom'
+      r'\s+(?:depende\s+de|usa\s+a)\s+'
+      '$nomFin');
+
+  static final _asociacion = regla(r'(?:un[ao]?\s+)?'
+      '$nom'
+      r'\s+(?:tiene|posee|se\s+relaciona\s+con|se\s+asocia\s+con)\s+'
+      '(?:$cantidad' r'\s+)?'
+      '$nomFin');
+
   // ---------- Atributos y metodos -----------------------------------------
 
   static final _atributoDestinoPrimero = regla(
@@ -203,6 +235,12 @@ class ParserVoz {
           {'claseId': clase.id, 'estereotipo': 'interface', 'esAbstracta': false});
     }
 
+    // Las relaciones van ANTES que los atributos: "tiene" puede empezar las dos
+    // y solo se decide mirando si el destino es una clase conocida. Mover esto
+    // de lugar rompe la mitad de la gramatica sin romper la compilacion.
+    final relacion = _comoRelacion(frase, contexto);
+    if (relacion != null) return relacion;
+
     m = _atributoDeclarativo.firstMatch(frase);
     if (m != null) {
       final comoAtributo = _comoAtributo(frase, m.group(1)!, m.group(2)!, contexto);
@@ -259,6 +297,68 @@ class ParserVoz {
         ? 'Cree la clase $nombre'
         : 'Cree la clase $nombre con ${agregados.join(', ')}';
     return Interpretacion.entendida(frase, explicacion, pasos);
+  }
+
+  // ---------- Relaciones ---------------------------------------------------
+
+  /// Devuelve null -y deja pasar a las reglas de atributo- cuando alguno de los
+  /// dos extremos no es una clase conocida. "Paciente tiene muchas Consultas"
+  /// relaciona porque Consulta existe; "Paciente tiene muchas deudas" describe
+  /// un atributo porque deudas no existe.
+  Interpretacion? _comoRelacion(String frase, ContextoDelDiagrama contexto) {
+    // Cada forma dice si lleva grupo de cantidad, porque de eso depende en que
+    // grupo cae el destino.
+    final formas = <(RegExp, String, bool)>[
+      (_herencia, 'HERENCIA', false),
+      (_realizacion, 'REALIZACION', false),
+      (_composicion, 'COMPOSICION', true),
+      (_agregacion, 'AGREGACION', true),
+      (_dependencia, 'DEPENDENCIA', false),
+      (_asociacion, 'ASOCIACION', true),
+    ];
+
+    for (final (patron, tipo, conCantidad) in formas) {
+      final m = patron.firstMatch(frase);
+      if (m == null) continue;
+
+      final cantidadDicha = conCantidad ? m.group(2) : null;
+      final nombreDestino = conCantidad ? m.group(3) : m.group(2);
+
+      final origen = contexto.resolver(m.group(1));
+      final destino = contexto.resolver(nombreDestino);
+      if (origen == null || destino == null) continue;
+
+      return _uno(
+          frase,
+          'Relacione ${origen.nombre} con ${destino.nombre} (${tipo.toLowerCase()})',
+          'RELACION_CREAR',
+          {
+            'relacionId': nuevoIdDeModelo(),
+            'origenId': origen.id,
+            'destinoId': destino.id,
+            'tipo': tipo,
+            'multiplicidadOrigen': '1',
+            'multiplicidadDestino': _multiplicidad(cantidadDicha),
+            'rolOrigen': null,
+            'rolDestino': null,
+            'etiqueta': null,
+          });
+    }
+    return null;
+  }
+
+  /// "muchas" se traduce a cero o mas y no a uno o mas. Es la lectura
+  /// conservadora: si el modelo dice que puede no haber ninguna, el esquema
+  /// generado no impone una restriccion que nadie pidio, mientras que al
+  /// contrario obligaria a crear filas que quiza no existen.
+  String _multiplicidad(String? cantidadDicha) {
+    if (cantidadDicha == null) return '1';
+    final limpia = cantidadDicha.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    return switch (limpia) {
+      'muchas' || 'muchos' || 'varias' || 'varios' || 'cero o mas' => '0..*',
+      'al menos una' || 'al menos uno' => '1..*',
+      _ => '1',
+    };
   }
 
   // ---------- Atributos y metodos -----------------------------------------
