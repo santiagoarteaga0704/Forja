@@ -33,4 +33,16 @@ public interface Traductor {
 
     /** Para no ofrecer en la interfaz algo que no va a contestar. */
     boolean disponible();
+
+    /**
+     * Deja el modelo listo para contestar rapido.
+     * <p>
+     * Cargar uno de 4B a memoria la primera vez cuesta mas de un minuto, mas que
+     * cualquiera de los dos presupuestos: sin esto la primera traduccion se
+     * pierde entera, siempre, y quien mira la aplicacion ve que la funcion no
+     * anda. Es una comodidad y nunca un requisito, asi que no devuelve nada ni
+     * lanza: si falla, se paga el arranque en frio y ya.
+     */
+    default void precalentar() {
+    }
 }

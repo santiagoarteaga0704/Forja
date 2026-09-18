@@ -41,7 +41,10 @@ class ConfiguracionIaTest {
      * lado que aquella no puede ver.
      */
     @Nested
-    @SpringBootTest(properties = "forja.ia.local.habilitada=true")
+    @SpringBootTest(properties = {"forja.ia.local.habilitada=true",
+            // Que se registre el de Ollama no significa hablarle: sin esto el
+            // calentador saldria a cargar un modelo de verdad al levantar el contexto.
+            "forja.ia.local.precalentar=false"})
     @DisplayName("con la IA habilitada")
     class Habilitada {
 

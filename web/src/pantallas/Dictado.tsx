@@ -329,7 +329,7 @@ export default function Dictado({
 
       {pidiendo && (
         <div className="mensaje informacion dictado-respuesta pensando">
-          <span>Pensando el diagrama… puede tardar hasta 30 segundos.</span>
+          <span>Pensando el diagrama… suele tardar medio minuto, a veces más.</span>
           <button type="button" onClick={cancelarPedido}>
             Cancelar
           </button>

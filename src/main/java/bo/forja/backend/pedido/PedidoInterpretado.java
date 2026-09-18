@@ -22,8 +22,27 @@ import java.util.List;
  */
 public final class PedidoInterpretado {
 
-    /** Es una accion deliberada: se puede esperar, con el progreso a la vista. */
-    public static final Duration PRESUPUESTO = Duration.ofSeconds(30);
+    /**
+     * Es una accion deliberada: se puede esperar, con el progreso a la vista.
+     * <p>
+     * Eran 30 s hasta que se midio contra Gemma 3 4B de verdad, el 17 de
+     * septiembre, en la maquina donde se va a demostrar: una RTX 3050 de portatil
+     * con 4 GB de VRAM. El modelo ocupa 3,5 GB, asi que con un navegador abierto
+     * NO ENTRA ENTERO y Ollama lo reparte entre GPU y CPU. El mismo pedido, la
+     * misma maquina, el mismo prompt:
+     * <ul>
+     *   <li>con el modelo entero en la GPU: 12 a 25 s
+     *   <li>repartido 54% CPU / 46% GPU: 39 a 46 s
+     * </ul>
+     * El reparto lo decide Ollama al cargar, segun la VRAM que haya libre en ese
+     * momento, asi que no es algo que la aplicacion pueda elegir. Por eso el
+     * presupuesto se pone en 90 s: no porque se espere tardar eso, sino porque
+     * quedarse corto no cuesta una espera mas larga, cuesta la respuesta entera.
+     * <p>
+     * El prompt no mueve este numero. Se probo acotarlo -menos atributos, sin
+     * metodos, techo de tokens- y bajo 6 segundos empeorando lo que propone.
+     */
+    public static final Duration PRESUPUESTO = Duration.ofSeconds(90);
 
     private PedidoInterpretado() {
     }

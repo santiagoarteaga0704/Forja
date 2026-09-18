@@ -41,6 +41,19 @@ public class TraductorOllama implements Traductor {
     /** Vinetas y numeracion que los modelos chicos agregan aunque se les pida que no. */
     private static final String ADORNOS = "^\\s*(?:[-*•]|\\d+[.)])\\s*";
 
+    /**
+     * Cuanto tiempo Ollama mantiene el modelo en memoria despues de contestar.
+     * <p>
+     * Por omision son cinco minutos, y eso no alcanza: entre que alguien abre la
+     * aplicacion, arma algo a mano y recien despues prueba un pedido pasan mas,
+     * y la llamada vuelve a pagar el arranque en frio, que cuesta mas de un
+     * minuto y por lo tanto se pierde entera.
+     */
+    private static final String RESIDENCIA = "30m";
+
+    /** Cargar el modelo a memoria la primera vez, que es lo lento de verdad. */
+    private static final Duration ESPERA_DE_CARGA = Duration.ofMinutes(5);
+
     private final ConfiguracionIa.AjustesDeIa ajustes;
 
     public TraductorOllama(ConfiguracionIa.AjustesDeIa ajustes) {
@@ -67,6 +80,7 @@ public class TraductorOllama implements Traductor {
                             "model", ajustes.modelo(),
                             "prompt", promptPara(pedido, clasesConocidas),
                             "stream", false,
+                            "keep_alive", RESIDENCIA,
                             "options", Map.of("temperature", 0)))
                     .retrieve()
                     .body(String.class);
@@ -94,6 +108,25 @@ public class TraductorOllama implements Traductor {
      * La fuente de verdad es compartido/corpus-voz.json: si alguna vez se agrega
      * una forma aca que la gramatica no entiende, el modelo va a proponerla y
      * todas esas lineas se van a descartar en silencio.
+     * <p>
+     * Esta version salio de medir contra Gemma 3 4B de verdad el 17 de
+     * septiembre, y cada regla arregla algo que el modelo hacia mal con la
+     * anterior:
+     * <ul>
+     *   <li><b>Las formas estan agrupadas por como empiezan.</b> Con una lista
+     *       sola el modelo le ponia "a " adelante a todo, y escribia
+     *       "a Mascota hereda de Dueno", que no parsea. Ninguna relacion
+     *       entraba.
+     *   <li><b>Prohibir una clase como tipo de atributo.</b> Proponia
+     *       "el atributo dueno de tipo Dueno", que se descarta, y encima usaba
+     *       eso EN LUGAR de una relacion: el diagrama salia sin ninguna.
+     *   <li><b>Crear todas las clases antes de usarlas.</b> Nombraba una clase
+     *       que recien creaba mas abajo, y esa linea no resolvia sus extremos.
+     * </ul>
+     * Medido asi, las relaciones aparecen en todas las corridas. Lo que no se
+     * arregla con el prompt es que el modelo conteste distinto cada vez -pasa
+     * igual con temperatura cero y semilla fija- y por eso lo que propone se
+     * revisa antes de aplicarlo.
      */
     private String promptPara(String pedido, List<String> clasesConocidas) {
         String existentes = clasesConocidas == null || clasesConocidas.isEmpty()
@@ -104,27 +137,63 @@ public class TraductorOllama implements Traductor {
                 Convertis un pedido en instrucciones para una herramienta de diagramas de clases UML.
 
                 Respondes SOLO con instrucciones, una por linea. Sin numerar, sin vinetas, sin
-                explicar y sin saludar. Si el pedido no se puede expresar con las formas de abajo,
-                no respondes nada.
+                explicar y sin saludar. Copias las formas EXACTAMENTE como estan escritas abajo,
+                cambiando solo los NOMBRE. Si el pedido no se puede expresar con esas formas, no
+                respondes nada.
 
-                Formas que entiende la herramienta, y son las unicas que podes usar:
+                Para crear una clase y darle atributos (estas empiezan con "crea" o con "a "):
                 crea la clase NOMBRE
-                crea la clase NOMBRE con los atributos UNO de tipo texto y OTRO de tipo entero
                 a NOMBRE agregale el atributo UNO de tipo texto
-                a NOMBRE agregale el atributo UNO de tipo texto obligatorio
+                a NOMBRE agregale el atributo UNO de tipo entero obligatorio
                 a NOMBRE agregale el metodo HACER que devuelve entero
+
+                Para unir dos clases (estas NUNCA empiezan con "a ", empiezan con el nombre de la clase):
                 NOMBRE hereda de OTRO
                 NOMBRE tiene muchas OTROS
                 NOMBRE se compone de muchas OTROS
                 marca NOMBRE como abstracta
 
-                Tipos que existen: texto, entero, decimal, booleano, fecha, fechayhora.
-                Los nombres de clase van en singular y con la primera letra en mayuscula.
+                Reglas que no se rompen:
+                - Los unicos tipos que existen son: texto, entero, decimal, booleano, fecha, fechayhora.
+                  Nunca uses el nombre de una clase como tipo de un atributo.
+                - Si una clase se relaciona con otra, lo decis con "tiene muchas" o "se compone de
+                  muchas", NUNCA con un atributo.
+                - Creas TODAS las clases primero, y recien despues sus atributos y sus relaciones.
+                - Los nombres de clase van en singular y con la primera letra en mayuscula.
 
                 Clases que ya estan en el diagrama, usalas en vez de crearlas de nuevo: %s
 
                 Pedido: %s
                 """.formatted(existentes, pedido);
+    }
+
+    @Override
+    public void precalentar() {
+        try {
+            JdkClientHttpRequestFactory fabrica = new JdkClientHttpRequestFactory();
+            fabrica.setReadTimeout(ESPERA_DE_CARGA);
+
+            RestClient.builder()
+                    .requestFactory(fabrica)
+                    .baseUrl(ajustes.url())
+                    .build()
+                    .post()
+                    .uri("/api/generate")
+                    .body(Map.of(
+                            "model", ajustes.modelo(),
+                            "prompt", "",
+                            "stream", false,
+                            "keep_alive", RESIDENCIA))
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("Modelo {} cargado y listo para traducir", ajustes.modelo());
+
+        } catch (Exception e) {
+            // Que Ollama no este es normal y no es un error: el traductor va a
+            // devolver vacio en cada llamada, que es una respuesta legitima.
+            log.debug("No se pudo precalentar el modelo: {}", e.toString());
+        }
     }
 
     @Override

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * El traductor contra un servidor de mentira.
@@ -153,5 +154,44 @@ class TraductorOllamaTest {
     @DisplayName("disponible es cierto cuando esta configurado")
     void disponibleCuandoEstaConfigurado() {
         assertThat(traductor().disponible()).isTrue();
+    }
+
+    @Test
+    @DisplayName("le pide a Ollama que no descargue el modelo de memoria")
+    void mantieneElModeloEnMemoria() {
+        respuesta = "{\"response\":\"crea la clase Dueno\"}";
+
+        traductor().aFrasesCanonicas("x", List.of(), Duration.ofSeconds(5));
+
+        // Sin esto Ollama lo descarga a los cinco minutos y la llamada siguiente
+        // vuelve a pagar el arranque en frio, que es de mas de un minuto: mas que
+        // cualquier presupuesto, o sea que se pierde entera.
+        assertThat(ultimoPedido.get()).contains("keep_alive");
+    }
+
+    @Test
+    @DisplayName("precalentar carga el modelo, para que el primer pedido no pague el arranque")
+    void precalentarTocaElServidor() {
+        respuesta = "{\"response\":\"\"}";
+
+        traductor().precalentar();
+
+        assertThat(ultimoPedido.get()).as("no llamo a Ollama").isNotNull();
+        assertThat(ultimoPedido.get()).contains("keep_alive").contains("gemma3:4b");
+    }
+
+    @Test
+    @DisplayName("precalentar sin Ollama no revienta: es una comodidad, no un requisito")
+    void precalentarSinServidorNoRevienta() {
+        Traductor sinNadie = new TraductorOllama(
+                new ConfiguracionIa.AjustesDeIa(true, "http://localhost:1", "gemma3:4b"));
+
+        assertThatCode(sinNadie::precalentar).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("el traductor nulo se deja precalentar sin hacer nada")
+    void elNuloSeDejaPrecalentar() {
+        assertThatCode(new TraductorNulo()::precalentar).doesNotThrowAnyException();
     }
 }
