@@ -7,8 +7,10 @@ import type {
   Credencial,
   DiagramaCompleto,
   DiagramaResumen,
+  Disponibilidad,
   OperacionRegistrada,
   OrigenOperacion,
+  Pedido,
   Problema,
   ProyectoVista,
   ResultadoBloqueo,
@@ -16,6 +18,7 @@ import type {
   ResumenGeneracion,
   ResultadoDictado,
   ResultadoFoto,
+  ResultadoPedido,
   ResumenImportacion,
   TipoDiagrama,
   TipoElemento,
@@ -230,6 +233,45 @@ export const api = {
     pedir<ResultadoFoto>(`/api/diagramas/${diagramaId}/foto`, {
       method: 'POST',
       body: JSON.stringify({ texto, sesionId, tokenLectura: crypto.randomUUID() }),
+    }),
+
+  // ---------- Pedido en una frase ------------------------------------------
+
+  /**
+   * Si hay un modelo con que contestar.
+   *
+   * Se pregunta antes de ofrecer el boton: sin traductor configurado la
+   * respuesta seria siempre vacia, y un boton que no hace nada es peor que no
+   * tenerlo.
+   */
+  hayTraductor: (diagramaId: string) =>
+    pedir<Disponibilidad>(`/api/diagramas/${diagramaId}/pedido/disponible`),
+
+  /**
+   * Primer paso: que propuso el modelo, sin tocar el diagrama.
+   *
+   * Lleva senal de cancelacion porque este es el unico pedido de la aplicacion
+   * que puede tardar treinta segundos: del otro lado hay alguien esperando y
+   * tiene que poder arrepentirse.
+   */
+  pedirLectura: (diagramaId: string, pedido: string, sesionId: string, senal?: AbortSignal) =>
+    pedir<Pedido>(`/api/diagramas/${diagramaId}/pedido/lectura`, {
+      method: 'POST',
+      body: JSON.stringify({ pedido, sesionId }),
+      signal: senal,
+    }),
+
+  /**
+   * Segundo paso: aplicar lo propuesto.
+   *
+   * El `tokenLectura` es el de la propuesta que se reviso: si la respuesta se
+   * pierde y se reintenta, el servidor reconoce los comandos como reenvio en
+   * lugar de duplicar el diagrama entero.
+   */
+  aplicarPedido: (diagramaId: string, pedido: string, sesionId: string, tokenLectura: string) =>
+    pedir<ResultadoPedido>(`/api/diagramas/${diagramaId}/pedido`, {
+      method: 'POST',
+      body: JSON.stringify({ pedido, sesionId, tokenLectura }),
     }),
 
   // ---------- Agente guia --------------------------------------------------

@@ -329,6 +329,39 @@ export interface ResultadoDictado {
   versionDelDiagrama: number
 }
 
+// ---------- Pedido en una frase ---------------------------------------------
+// El dictado aplica de una porque la gramatica es exacta. Un pedido no: lo
+// propone un modelo, y por eso viaja con las frases ademas de los comandos.
+// Son lo que se muestra antes de tocar el diagrama.
+
+/** Si el servidor tiene un modelo con que contestar un pedido. */
+export interface Disponibilidad {
+  hayModelo: boolean
+}
+
+export interface FrasePropuesta {
+  frase: string
+  seEntendio: boolean
+  /** Que se entendio, en palabras, o nulo si no se entendio. */
+  explicacion: string | null
+}
+
+export interface Pedido {
+  /** El pedido tal cual lo escribio la persona. */
+  pedido: string
+  frases: FrasePropuesta[]
+  comandos: Comando[]
+}
+
+export interface ResultadoPedido {
+  pedido: Pedido
+  aplicadas: number
+  /** Comandos que el servidor reconocio como reenvio de algo ya hecho. */
+  yaEstaban: number
+  problemas: string[]
+  retenidoPor: string | null
+}
+
 /** Cuerpo de error de la RFC 7807, que es como responde el backend. */
 export interface Problema {
   title?: string

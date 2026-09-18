@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ErrorApi, api } from '../api'
 import { IconoMicrofono } from '../iconos'
 import { SESION_ID } from '../sesion'
-import type { ResultadoDictado } from '../tipos'
+import type { Pedido, ResultadoDictado } from '../tipos'
 
 /**
  * Barra de dictado.
@@ -16,6 +16,15 @@ import type { ResultadoDictado } from '../tipos'
  * El reconocimiento ocurre en el navegador. No se sube audio al servidor: no
  * haria falta montar un reconocedor propio cuando el navegador ya tiene uno, y
  * el resultado llega como texto, que es lo unico que el parser necesita.
+ *
+ * De la misma barra salen dos caminos que no se tratan igual. **Aplicar** manda
+ * la frase a la gramatica, que es exacta, y por eso entra directo: no hay nada
+ * que revisar. **Pedir** se la da a un modelo, que propone varias frases, y esas
+ * se muestran antes de tocar el diagrama. Es el mismo criterio con el que se lee
+ * la foto de una pizarra: lo que adivina una maquina se mira primero.
+ *
+ * El boton de pedir solo aparece si el servidor tiene con que contestar. Sin
+ * traductor configurado esta pantalla es exactamente la de siempre.
  */
 export default function Dictado({
   diagramaId,
@@ -33,8 +42,24 @@ export default function Dictado({
   const [resultado, setResultado] = useState<ResultadoDictado | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // El pedido: lo que el modelo propuso y todavia no se aplico.
+  const [hayTraductor, setHayTraductor] = useState(false)
+  const [pedido, setPedido] = useState<Pedido | null>(null)
+  const [pidiendo, setPidiendo] = useState(false)
+  const [aplicandoPedido, setAplicandoPedido] = useState(false)
+  const [aviso, setAviso] = useState<{ clase: string; texto: string } | null>(null)
+
   const reconocedor = useRef<any>(null)
   const campo = useRef<HTMLInputElement>(null)
+  const cancelacion = useRef<AbortController | null>(null)
+  // El identificador de la propuesta que se esta revisando. Viaja al aplicar
+  // para que un reintento no duplique el diagrama.
+  const tokenLectura = useRef<string | null>(null)
+
+  // En que paso esta el pedido. Se deduce del estado en vez de guardarse
+  // aparte, por lo mismo que en la lectura de una pizarra: guardarlo abriria la
+  // puerta a que el indicador y la pantalla discrepen.
+  const paso = pedido ? 3 : pidiendo ? 2 : 1
 
   // El reconocimiento de voz no es estandar en todos los navegadores: se
   // resuelve una sola vez y si no esta, solo se oculta el boton del microfono.
@@ -50,8 +75,27 @@ export default function Dictado({
       } catch {
         // Si ya estaba detenido no hay nada que hacer.
       }
+      // Un pedido puede estar en vuelo treinta segundos: si la barra se cierra,
+      // se corta.
+      cancelacion.current?.abort()
     }
   }, [])
+
+  useEffect(() => {
+    let vivo = true
+    api
+      .hayTraductor(diagramaId)
+      .then((respuesta) => {
+        if (vivo) setHayTraductor(respuesta.hayModelo)
+      })
+      .catch(() => {
+        // Sin respuesta se asume que no hay: el boton no se ofrece y el dictado
+        // sigue funcionando igual.
+      })
+    return () => {
+      vivo = false
+    }
+  }, [diagramaId])
 
   const escuchar = () => {
     if (!hayMicrofono) return
@@ -96,6 +140,10 @@ export default function Dictado({
 
     setEnviando(true)
     setError(null)
+    // Aplicar por la gramatica descarta la propuesta que hubiera en revision:
+    // el campo ya dice otra cosa, y dejarla a la vista seria mentir.
+    setPedido(null)
+    setAviso(null)
     try {
       const respuesta = await api.dictar(diagramaId, dicho, SESION_ID)
       setResultado(respuesta)
@@ -111,6 +159,91 @@ export default function Dictado({
     }
   }
 
+  /** Primer paso del pedido: pedirle al modelo que proponga, sin aplicar nada. */
+  const proponer = async () => {
+    const texto = frase.trim()
+    if (!texto) return
+
+    const control = new AbortController()
+    cancelacion.current = control
+    tokenLectura.current = crypto.randomUUID()
+
+    setPidiendo(true)
+    setPedido(null)
+    setResultado(null)
+    setError(null)
+    setAviso(null)
+    try {
+      const propuesta = await api.pedirLectura(diagramaId, texto, SESION_ID, control.signal)
+      setPedido(propuesta)
+      if (propuesta.frases.length === 0) {
+        setAviso({
+          clase: 'informacion',
+          texto: 'El modelo no propuso nada. Probá pidiéndolo con otras palabras, '
+            + 'nombrando las clases que querés.',
+        })
+      }
+    } catch (e) {
+      // Cancelar no es un error: lo pidio el usuario y no hay nada que contarle.
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      setAviso({
+        clase: 'error',
+        texto: e instanceof ErrorApi ? e.message : 'No responde el servidor',
+      })
+    } finally {
+      setPidiendo(false)
+      cancelacion.current = null
+    }
+  }
+
+  const cancelarPedido = () => {
+    cancelacion.current?.abort()
+    cancelacion.current = null
+    setPidiendo(false)
+  }
+
+  /** Segundo paso: aplicar lo que se reviso. */
+  const aplicarPedido = async () => {
+    if (!pedido) return
+
+    setAplicandoPedido(true)
+    setAviso(null)
+    try {
+      const resultado = await api.aplicarPedido(
+        diagramaId,
+        pedido.pedido,
+        SESION_ID,
+        tokenLectura.current ?? crypto.randomUUID(),
+      )
+      if (resultado.aplicadas > 0) {
+        alAplicar()
+        setFrase('')
+        setPedido(null)
+        setAviso({
+          clase: 'bien',
+          texto: `Se aplicaron ${resultado.aplicadas} cambios`
+            + (resultado.yaEstaban > 0 ? `, ${resultado.yaEstaban} ya estaban` : '')
+            + (resultado.problemas.length ? `. No entró: ${resultado.problemas[0]}` : ''),
+        })
+      } else if (resultado.retenidoPor) {
+        setAviso({
+          clase: 'informacion',
+          texto: `${resultado.retenidoPor} tiene tomado un elemento. Intentá en un momento.`,
+        })
+      } else {
+        setAviso({ clase: 'informacion', texto: 'No quedó nada que aplicar.' })
+      }
+    } catch (e) {
+      setAviso({
+        clase: 'error',
+        texto: e instanceof ErrorApi ? e.message : 'No responde el servidor',
+      })
+    } finally {
+      setAplicandoPedido(false)
+      campo.current?.focus()
+    }
+  }
+
   return (
     <div className="dictado">
       <div className="dictado-linea">
@@ -119,7 +252,7 @@ export default function Dictado({
             type="button"
             className={`microfono${escuchando ? ' escuchando' : ''}`}
             onClick={escuchar}
-            disabled={escuchando || enviando}
+            disabled={escuchando || enviando || pidiendo}
             title="Dictar hablando"
             aria-label="Dictar hablando"
           >
@@ -135,21 +268,93 @@ export default function Dictado({
               ? 'Escuchando…'
               : 'un Paciente tiene muchas Consultas'
           }
-          onChange={(e) => setFrase(e.target.value)}
+          onChange={(e) => {
+            setFrase(e.target.value)
+            // La propuesta era sobre el texto anterior: al cambiarlo deja de
+            // corresponder y se descarta.
+            if (pedido) setPedido(null)
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') aplicar()
-            if (e.key === 'Escape') alCerrar()
+            if (e.key === 'Enter' && !pidiendo) aplicar()
+            if (e.key === 'Escape') {
+              // Escape deshace un paso por vez antes de cerrar la barra.
+              if (pidiendo) cancelarPedido()
+              else if (pedido) setPedido(null)
+              else alCerrar()
+            }
           }}
           disabled={enviando}
         />
 
-        <button className="principal" onClick={() => aplicar()} disabled={enviando || !frase.trim()}>
+        {hayTraductor && (
+          <button
+            onClick={proponer}
+            disabled={pidiendo || enviando || aplicandoPedido || !frase.trim()}
+            title="Pedir un diagrama entero en una frase, para revisarlo antes de aplicarlo"
+          >
+            {pidiendo ? '…' : 'Pedir'}
+          </button>
+        )}
+
+        <button
+          className="principal"
+          onClick={() => aplicar()}
+          disabled={enviando || pidiendo || !frase.trim()}
+        >
           {enviando ? '…' : 'Aplicar'}
         </button>
         <button onClick={alCerrar} title="Cerrar">
           ×
         </button>
       </div>
+
+      {/*
+        Los tres pasos aparecen solo cuando hay un pedido en curso: el dictado
+        no tiene pasos -es una frase y se aplica- y mostrarlos siempre daria a
+        entender que si. El del medio, revisar, es el que hace que esto se pueda
+        demostrar: lo que propone un modelo chico no se aplica a ciegas.
+      */}
+      {(pidiendo || pedido) && (
+        <ol className="pasos">
+          {['Pedir', 'Revisar', 'Aplicar'].map((nombre, indice) => (
+            <li
+              key={nombre}
+              className={indice + 1 < paso ? 'hecho' : indice + 1 === paso ? 'aqui' : ''}
+            >
+              {nombre}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {pidiendo && (
+        <div className="mensaje informacion dictado-respuesta pensando">
+          <span>Pensando el diagrama… puede tardar hasta 30 segundos.</span>
+          <button type="button" onClick={cancelarPedido}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {aviso && <div className={`mensaje ${aviso.clase} dictado-respuesta`}>{aviso.texto}</div>}
+
+      {pedido && !pidiendo && (
+        <>
+          <ResumenDelPedido pedido={pedido} />
+          <div className="botonera">
+            <button onClick={() => setPedido(null)} disabled={aplicandoPedido}>
+              Descartar
+            </button>
+            <button
+              className="principal"
+              onClick={aplicarPedido}
+              disabled={aplicandoPedido || pedido.comandos.length === 0}
+            >
+              {aplicandoPedido ? 'Aplicando…' : 'Aplicar al diagrama'}
+            </button>
+          </div>
+        </>
+      )}
 
       {error && <div className="mensaje error dictado-respuesta">{error}</div>}
 
@@ -181,6 +386,49 @@ export default function Dictado({
             </>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Lo que el modelo propuso, antes de aplicarlo.
+ *
+ * Las frases que no se entendieron se muestran con su contenido y no como un
+ * numero, igual que las lineas de una pizarra: "3 frases ignoradas" no le dice a
+ * nadie que corregir, y ver la frase suelta suele bastar para entender que fue
+ * lo que el modelo inventó.
+ */
+function ResumenDelPedido({ pedido }: { pedido: Pedido }) {
+  const entendidas = pedido.frases.filter((frase) => frase.seEntendio)
+  const ignoradas = pedido.frases.filter((frase) => !frase.seEntendio)
+
+  return (
+    <div className="resumen-lectura resumen-pedido">
+      <h3>Esto voy a hacer</h3>
+
+      {entendidas.length === 0 && pedido.frases.length > 0 && (
+        <p className="vacio">Ninguna de las frases propuestas se pudo interpretar.</p>
+      )}
+
+      {entendidas.map((frase, indice) => (
+        // Por posicion: el modelo puede proponer la misma frase dos veces, y la
+        // frase no sirve de clave.
+        <div className="miembro-fila" key={indice}>
+          <span className="frase-propuesta">{frase.frase}</span>
+          <span style={{ color: 'var(--acero-debil)' }}>{frase.explicacion}</span>
+        </div>
+      ))}
+
+      {ignoradas.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 14 }}>Estas frases no las entendí</h3>
+          <ul className="ignoradas">
+            {ignoradas.map((frase, indice) => (
+              <li key={indice}>{frase.frase}</li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   )

@@ -1193,6 +1193,48 @@ pre.codigo {
   margin: 10px 0 0;
 }
 
+/* ---- El pedido: proponer, revisar, aplicar -------------------------------- */
+
+/* Los pasos viven dentro de la barra, no de un dialogo: el margen de abajo
+   de .pasos dejaria un hueco donde no hay nada. */
+.dictado .pasos {
+  margin: 12px 0 0;
+}
+
+/* El aviso de espera lleva su propio boton de cancelar, a la derecha. */
+.dictado .pensando {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dictado .pensando button {
+  flex-shrink: 0;
+}
+
+.dictado .botonera {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* La propuesta puede ser larga -un diagrama entero son ocho o diez frases- y la
+   barra flota sobre el lienzo: se le pone techo y se desplaza adentro, para que
+   los botones de aplicar y descartar no se vayan abajo de la ventana. */
+.resumen-pedido {
+  max-height: min(38vh, 300px);
+  overflow-y: auto;
+}
+
+/* La frase propuesta es lo que la gramatica va a interpretar: se muestra en
+   monoespaciada, como el resto del lenguaje de la herramienta. */
+.frase-propuesta {
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
 ul.sugerencias {
   margin: 8px 0 0;
   padding: 0;
