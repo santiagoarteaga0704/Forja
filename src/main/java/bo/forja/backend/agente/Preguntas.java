@@ -284,6 +284,30 @@ public class Preguntas {
      * toca una y anda, siempre.
      */
     /**
+     * Las formas de preguntar "y ahora que hago".
+     * <p>
+     * Se listan aparte del catalogo porque NO se contestan con un texto fijo:
+     * esa pregunta solo tiene respuesta mirando lo que la persona ya hizo. Con
+     * una entrada de catalogo, alguien con el proyecto ya creado recibia
+     * "crea un proyecto", que es exactamente lo que no hay que contestarle.
+     * <p>
+     * No entra "por donde empiezo": esa si tiene una respuesta escrita buena,
+     * que explica el camino entero en vez de un solo paso.
+     */
+    private static final List<String> PROXIMO_PASO = List.of(
+            "ahora que hago", "que hago ahora", "y ahora", "ahora que",
+            "que sigue", "que sigo", "por donde sigo", "como sigo",
+            "proximo paso", "siguiente paso", "que me falta", "que falta",
+            "ya tengo el proyecto", "ya cree el proyecto", "ya tengo un proyecto",
+            "y despues", "y luego");
+
+    /** Si la pregunta es "y ahora que", que solo se contesta mirando el estado. */
+    public boolean pideElProximoPaso(String texto) {
+        String normalizado = normalizar(texto);
+        return PROXIMO_PASO.stream().anyMatch(normalizado::contains);
+    }
+
+    /**
      * Todo el catalogo en texto plano, para usarlo como contexto del modelo.
      * <p>
      * Es lo que hace que la respuesta del modelo salga de lo que la herramienta

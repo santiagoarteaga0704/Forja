@@ -74,6 +74,9 @@ public class ServicioAgente {
     /** Identificador de una respuesta que redacto el modelo y no el catalogo. */
     public static final String RESPUESTA_DEL_MODELO = "respuesta-del-modelo";
 
+    /** Identificador de la respuesta que mira el estado en vez de un catalogo. */
+    public static final String PROXIMO_PASO = "respuesta-proximo-paso";
+
     /**
      * Cuanto se espera al modelo por una pregunta escrita.
      * <p>
@@ -170,6 +173,18 @@ public class ServicioAgente {
     public List<Consejo> responder(UUID usuarioId, String texto, String sobre) {
         uso.anotar(usuarioId, Herramienta.AGENTE_CONSULTADO);
 
+        /*
+         * "Y ahora que hago" no se contesta con un texto fijo: se contesta
+         * MIRANDO. Antes caia en el catalogo y alguien con el proyecto ya creado
+         * recibia "crea un proyecto" -dos veces seguidas, si preguntaba dos
+         * veces-, que es la demostracion mas clara posible de que el agente no
+         * estaba monitoreando nada. Se responde con el primer paso pendiente del
+         * recorrido, que ya se calcula desde la bitacora y el registro de uso.
+         */
+        if (preguntas.pideElProximoPaso(texto)) {
+            return List.of(proximoPaso(mirarLaAplicacion(usuarioId, false)));
+        }
+
         List<Consejo> delCatalogo = preguntas.responder(texto, sobre);
         if (!soloDijoQueNoSabe(delCatalogo) || !respondedor.disponible()) {
             return delCatalogo;
@@ -192,6 +207,35 @@ public class ServicioAgente {
      */
     private static boolean dijoAlgo(String respuesta) {
         return !respuesta.toUpperCase(Locale.ROOT).contains(RespondedorOllama.NO_SABE);
+    }
+
+    /**
+     * Lo que sigue, segun lo que la persona de verdad hizo.
+     * <p>
+     * Los pasos se marcan con evidencia -la bitacora y el registro de uso-, no
+     * con pantallas visitadas, asi que esta respuesta no se puede falsear
+     * haciendo clic: cambia cuando cambia el modelo.
+     */
+    private Consejo proximoPaso(Panorama panorama) {
+        Recorrido recorrido = Recorrido.de(panorama);
+
+        return recorrido.loQueSigue()
+                .map(paso -> Consejo.de(PROXIMO_PASO, Consejo.Categoria.DESCUBRIMIENTO, 95,
+                        "Lo que sigue es: " + paso.titulo(),
+                        "Llevás " + recorrido.hechos() + " de " + recorrido.total()
+                                + " pasos del recorrido. " + paso.comoSeHace(),
+                        dondeSeHace(paso)))
+                .orElseGet(() -> Consejo.de(PROXIMO_PASO, Consejo.Categoria.DESCUBRIMIENTO, 95,
+                        "Ya recorriste los " + recorrido.total() + " pasos",
+                        "Modelaste por las tres vías, generaste el backend, intercambiaste con "
+                                + "Enterprise Architect y trabajaste con alguien más",
+                        "Lo que queda es seguir modelando, o invitar a alguien a un proyecto nuevo"));
+    }
+
+    private static String dondeSeHace(Recorrido.Paso paso) {
+        return "LIENZO".equals(paso.donde())
+                ? "Se hace en el lienzo, con un diagrama abierto"
+                : "Se hace en la pantalla de proyectos";
     }
 
     private boolean soloDijoQueNoSabe(List<Consejo> consejos) {
