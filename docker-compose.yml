@@ -16,5 +16,33 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------------------------------------------------------------------------
+  # Base SEPARADA para las pruebas.
+  #
+  # La suite vacia todas las tablas al empezar y al terminar -es lo que le
+  # permite verificar la exclusion mutua y la bitacora contra Postgres de
+  # verdad-, y hasta ahora lo hacia sobre la MISMA base en la que alguien podia
+  # estar probando la aplicacion. Se perdieron cuentas y proyectos varias veces
+  # por eso, y una promesa de "no la corro" no es una garantia: esto si lo es.
+  #
+  # Mismo usuario y misma contrasena a proposito; lo unico que cambia es el
+  # puerto, asi que no hay una segunda configuracion que mantener al dia.
+  db-pruebas:
+    image: postgres:17-alpine
+    container_name: forja-db-pruebas
+    environment:
+      POSTGRES_DB: forja
+      POSTGRES_USER: forja
+      POSTGRES_PASSWORD: forja_dev
+    ports:
+      - "5434:5432"
+    # Sin volumen: lo que hay adentro es descartable por definicion, y asi un
+    # `docker compose down` la deja limpia sin arrastrar nada.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forja -d forja"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   forja-pgdata:

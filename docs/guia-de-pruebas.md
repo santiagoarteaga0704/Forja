@@ -51,7 +51,7 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
 ## 1. Levantar todo
 
 ```powershell
-docker compose up -d                                  # Postgres 17 en el 5433
+docker compose up -d                                  # levanta LAS DOS bases
 $env:FORJA_JWT_SECRETO = "una-clave-de-32-caracteres-o-mas"
 $env:FORJA_IA_HABILITADA = "true"                     # solo si vas a probar el pedido por IA
 ./mvnw spring-boot:run                                # backend en 8080
@@ -65,7 +65,24 @@ npm run dev                                           # cliente en 5173
 ```
 
 **Está listo cuando** en el log aparece `Started ForjaBackendApplication` y
-`docker compose ps` muestra `forja-db` en `healthy`.
+`docker compose ps` muestra los dos contenedores en `healthy`.
+
+### Son dos bases, y es a propósito
+
+| Contenedor | Puerto | Para qué |
+|---|---|---|
+| `forja-db` | **5433** | La aplicación. Tus cuentas, proyectos y diagramas viven acá. |
+| `forja-db-pruebas` | **5434** | Solo la suite. Se vacía entera en cada corrida. |
+
+La suite **vacía todas las tablas** — es lo que le permite verificar la exclusión
+mutua y la bitácora contra Postgres de verdad. Mientras compartió base con el
+desarrollo se llevó puestas cuentas y proyectos de quien estuviera probando. Con
+la separación eso ya no puede pasar: **podés correr las pruebas con la
+aplicación abierta y no perdés nada.**
+
+El puerto lo fija `maven-surefire-plugin` en el `pom.xml`, no un
+`application.yml` de pruebas: ese archivo *reemplaza* al principal en lugar de
+complementarlo, y ya costó una tarde de «Could not resolve placeholder».
 
 ---
 
@@ -81,7 +98,8 @@ Necesita **Docker arriba**: son pruebas contra un Postgres de verdad, no contra
 una base en memoria. Eso es deliberado: la exclusión mutua y la serialización de
 la bitácora las arbitra Postgres, y contra H2 no se probaría lo que importa.
 
-**Vacían las tablas al terminar.** Si tenías datos cargados a mano, se van.
+Corren contra **`forja-db-pruebas`, en el 5434**. Vacían esa base entera y **no
+tocan la tuya**: podés correrlas con la aplicación abierta.
 
 Lo que cubren, por si te lo preguntan:
 
