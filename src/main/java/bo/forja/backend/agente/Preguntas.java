@@ -96,8 +96,17 @@ public class Preguntas {
             // ---------- Usar FORJA ----------
             new Entrada("como-empiezo", 90,
                     "¿Por dónde empiezo?",
+                    // La pregunta mas obvia -"como uso la aplicacion"- caia en "no la
+                    // se contestar" porque ninguna clave la cubria: "como se usa" no
+                    // es subcadena de "como uso la aplicacion". Es la primera que hace
+                    // cualquiera que abre la herramienta, asi que se listan todas las
+                    // formas naturales de pedir lo mismo.
                     List.of("como empiezo", "por donde empiezo", "primeros pasos", "como se usa",
-                            "no se que hacer", "ayuda", "que hago"),
+                            "no se que hacer", "ayuda", "que hago",
+                            "como uso", "como la uso", "como lo uso", "como utilizo",
+                            "usar forja", "usar la aplicacion", "usar esta",
+                            "como funciona", "para que sirve", "que puedo hacer",
+                            "que hace esto", "que es forja", "explicame"),
                     "El camino es: proyecto, diagrama, modelo, y de ahí salen el backend y el XMI",
                     "Todo en FORJA cuelga de un diagrama, y un diagrama vive dentro de un proyecto. "
                             + "Con el modelo hecho, las dos salidas son automáticas",

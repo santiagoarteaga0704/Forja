@@ -6,7 +6,6 @@ import bo.forja.backend.repositorio.UsoHerramientaRepositorio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
@@ -26,24 +25,29 @@ public class ServicioUso {
     private static final Logger log = LoggerFactory.getLogger(ServicioUso.class);
 
     private final UsoHerramientaRepositorio repositorio;
+    private final AnotadorDeUso anotador;
 
-    public ServicioUso(UsoHerramientaRepositorio repositorio) {
+    public ServicioUso(UsoHerramientaRepositorio repositorio, AnotadorDeUso anotador) {
         this.repositorio = repositorio;
+        this.anotador = anotador;
     }
 
     /**
-     * Anota un uso.
+     * Anota un uso. No falla nunca: llevar la cuenta de lo que alguien probo no
+     * puede hacer fracasar la accion que estaba haciendo.
      * <p>
-     * En transaccion PROPIA por dos motivos. Uno tecnico: se llama desde
-     * acciones de solo lectura -exportar, mirar el codigo generado- y escribir
-     * dentro de una transaccion marcada de solo lectura falla. Uno de criterio:
-     * llevar la cuenta de lo que alguien probo no puede hacer fracasar la accion
-     * que estaba haciendo, asi que el fallo se registra y se sigue.
+     * Este metodo NO es transaccional y es a proposito. La transaccion la abre
+     * y la cierra {@link AnotadorDeUso}, asi que el catch de aca envuelve
+     * tambien el cierre. Cuando el catch vivia dentro del metodo anotado no
+     * alcanzaba: una violacion de restriccion marca la transaccion de solo
+     * reversion y el proxy lanza {@code UnexpectedRollbackException} al cerrar,
+     * fuera del alcance del catch. Eso hacia que el agente guia devolviera 500
+     * en vez de contestar -exactamente lo que el diseno promete que no pasa- y
+     * se disparaba con un token todavia valido de un usuario que ya no estaba.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void anotar(UUID usuarioId, Herramienta herramienta) {
         try {
-            repositorio.anotar(usuarioId, herramienta.name());
+            anotador.anotar(usuarioId, herramienta);
         } catch (RuntimeException e) {
             log.warn("No se pudo anotar el uso de {} por {}: {}", herramienta, usuarioId, e.toString());
         }

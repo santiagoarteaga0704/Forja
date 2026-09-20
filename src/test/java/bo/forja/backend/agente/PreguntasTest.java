@@ -37,6 +37,17 @@ class PreguntasTest {
             "'que es una clave primaria',               respuesta-clave-primaria",
             "'no se por donde empiezo',                 respuesta-como-empiezo",
             "'que multiplicidad pongo',                 respuesta-multiplicidades",
+            // La pregunta mas obvia de todas, y la que mas probable es que haga
+            // alguien que abre la herramienta por primera vez. Caia en "no la se
+            // contestar" justo despues de anunciar que sabe explicar como se usa
+            // FORJA: el agente se contradecia solo.
+            "'como uso la aplicacion',                  respuesta-como-empiezo",
+            "'¿Cómo uso la aplicación?',                respuesta-como-empiezo",
+            "'como se usa esto',                        respuesta-como-empiezo",
+            "'como funciona',                           respuesta-como-empiezo",
+            "'para que sirve',                          respuesta-como-empiezo",
+            "'que puedo hacer aca',                     respuesta-como-empiezo",
+            "'como uso forja',                          respuesta-como-empiezo",
     })
     void encuentraLaRespuesta(String pregunta, String idEsperado) {
         assertThat(preguntas.responder(pregunta))
