@@ -5,6 +5,7 @@ import bo.forja.backend.dominio.ProyectoMiembro;
 import bo.forja.backend.dominio.ProyectoMiembroId;
 import bo.forja.backend.dominio.RolMiembro;
 import bo.forja.backend.dominio.Usuario;
+import bo.forja.backend.ia.Respondedor;
 import bo.forja.backend.repositorio.BloqueoElementoRepositorio;
 import bo.forja.backend.repositorio.ClaseUmlRepositorio;
 import bo.forja.backend.repositorio.DiagramaRepositorio;
@@ -19,8 +20,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,8 +53,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("El agente mira el estado para decir qué sigue")
 class AgenteMiraElEstadoTest {
 
+    /** Guarda el contexto que se le paso, que es lo que hay que verificar. */
+    static class RespondedorDeMentira implements Respondedor {
+        final List<String> contextos = new ArrayList<>();
+
+        @Override
+        public Optional<String> responder(String pregunta, String contexto, Duration presupuesto) {
+            contextos.add(contexto);
+            return Optional.of("Una respuesta cualquiera.");
+        }
+
+        @Override
+        public boolean disponible() {
+            return true;
+        }
+    }
+
+    @TestConfiguration
+    static class ConRespondedorDeMentira {
+        @Bean
+        @Primary
+        Respondedor respondedorDeMentira() {
+            return new RespondedorDeMentira();
+        }
+    }
+
     @Autowired
     private ServicioAgente agente;
+    @Autowired
+    private Respondedor respondedor;
 
     @Autowired
     private UsuarioRepositorio usuarios;
@@ -76,6 +110,7 @@ class AgenteMiraElEstadoTest {
         santiago.setNombre("Santiago");
         santiago.setPasswordHash("no-relevante");
         usuarios.save(santiago);
+        ((RespondedorDeMentira) respondedor).contextos.clear();
     }
 
     @AfterEach
@@ -123,6 +158,69 @@ class AgenteMiraElEstadoTest {
         assertThat(conProyecto)
                 .as("el agente monitorea: la misma pregunta da otra respuesta si el estado cambió")
                 .isNotEqualTo(sinNada);
+    }
+
+    /**
+     * El caso que lo motivo: con dos proyectos y ningun diagrama, se pregunto
+     * "como lo creo" y el modelo contesto "con el boton Clase de la barra".
+     * Ese boton vive en el lienzo, que la persona no tenia abierto, asi que la
+     * mando a buscar algo que no estaba en su pantalla. El modelo no tenia como
+     * saberlo: se le pasaba el catalogo y nada mas.
+     */
+    @Test
+    @DisplayName("al modelo se le pasa dónde está la persona y qué le falta")
+    void elModeloRecibeElEstado() {
+        crearProyecto("hola");
+
+        agente.responder(santiago.getId(), "y donde esta ese boton exactamente", null);
+
+        String contexto = ((RespondedorDeMentira) respondedor).contextos.getLast();
+        assertThat(contexto)
+                .as("tiene que saber qué hay y qué falta")
+                .contains("Crear un diagrama")
+                .containsIgnoringCase("proyectos");
+        assertThat(contexto)
+                .as("y que los botones del lienzo no existen sin un diagrama abierto")
+                .containsIgnoringCase("lienzo");
+    }
+
+    /**
+     * El paso tiene que decir QUE APRETAR, no solo en que pantalla. Decir "se
+     * hace en la pantalla de proyectos" obliga a preguntar de nuevo, y esa
+     * segunda pregunta caia en el modelo, que contestaba cualquier cosa.
+     */
+    @Test
+    @DisplayName("lo que sigue dice qué apretar, con el nombre del control")
+    void elPasoDiceQueApretar() {
+        crearProyecto("hola");
+
+        String texto = textoDe(agente.responder(santiago.getId(), "ahora que sigue", null));
+
+        assertThat(texto)
+                .as("el control que hay que usar, por su nombre")
+                .containsIgnoringCase("Crear y abrir");
+    }
+
+    /**
+     * El caso exacto: "¿cómo lo creo?" dicho justo despues de "lo que sigue es
+     * crear un diagrama". Es un seguimiento de ese paso y lo tienen que
+     * contestar las reglas, que saben cual es. Antes caia en el modelo y
+     * contestaba "con el boton Clase de la barra", que vive en otra pantalla.
+     */
+    @Test
+    @DisplayName("«cómo lo creo» después de un paso lo contestan las reglas, no el modelo")
+    void elSeguimientoLoContestanLasReglas() {
+        crearProyecto("hola");
+
+        List<Consejo> respuesta = agente.responder(
+                santiago.getId(), "como lo creo", ServicioAgente.PROXIMO_PASO);
+
+        assertThat(respuesta).extracting(Consejo::id)
+                .as("no puede haber ido al modelo")
+                .containsExactly(ServicioAgente.PROXIMO_PASO);
+        assertThat(textoDe(respuesta))
+                .containsIgnoringCase("diagrama")
+                .doesNotContainIgnoringCase("botón Clase");
     }
 
     private String textoDe(List<Consejo> consejos) {

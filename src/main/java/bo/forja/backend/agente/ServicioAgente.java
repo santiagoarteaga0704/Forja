@@ -77,6 +77,12 @@ public class ServicioAgente {
     /** Identificador de la respuesta que mira el estado en vez de un catalogo. */
     public static final String PROXIMO_PASO = "respuesta-proximo-paso";
 
+    /** Formas de decir "si, pero como" sobre el paso que se acaba de nombrar. */
+    private static final List<String> SEGUIMIENTOS = List.of(
+            "como lo hago", "como lo creo", "como se hace", "como hago", "como creo",
+            "donde esta", "donde lo hago", "donde se hace", "donde", "y como",
+            "como es", "mostrame", "no lo encuentro", "no lo veo", "cual es");
+
     /**
      * Cuanto se espera al modelo por una pregunta escrita.
      * <p>
@@ -181,7 +187,7 @@ public class ServicioAgente {
          * estaba monitoreando nada. Se responde con el primer paso pendiente del
          * recorrido, que ya se calcula desde la bitacora y el registro de uso.
          */
-        if (preguntas.pideElProximoPaso(texto)) {
+        if (preguntas.pideElProximoPaso(texto) || esSeguimientoDelPaso(texto, sobre)) {
             return List.of(proximoPaso(mirarLaAplicacion(usuarioId, false)));
         }
 
@@ -192,7 +198,14 @@ public class ServicioAgente {
 
         // Aca, y solo aca, se llega al modelo: el catalogo no engancho, asi que
         // lo unico que se puede perder es un "no la se contestar".
-        return respondedor.responder(texto, preguntas.baseComoTexto(), PRESUPUESTO_DE_RESPUESTA)
+        //
+        // Se le pasa la documentacion Y el estado. Sin el estado contestaba como
+        // si todas las pantallas estuvieran a la vez, y mandaba a apretar
+        // botones que en ese momento no existian.
+        String contexto = preguntas.baseComoTexto()
+                + contextoDelEstado(mirarLaAplicacion(usuarioId, false));
+
+        return respondedor.responder(texto, contexto, PRESUPUESTO_DE_RESPUESTA)
                 .filter(ServicioAgente::dijoAlgo)
                 .map(ServicioAgente::comoConsejo)
                 .map(List::of)
@@ -210,6 +223,100 @@ public class ServicioAgente {
     }
 
     /**
+     * Donde esta parada la persona, para que el modelo no la mande a buscar algo
+     * que no tiene en pantalla.
+     * <p>
+     * Nace de una respuesta equivocada de verdad: con dos proyectos y ningun
+     * diagrama, alguien pregunto "como lo creo" y el modelo contesto "con el
+     * boton Clase de la barra". El boton existe, pero vive en el lienzo, que esa
+     * persona no tenia abierto. El modelo no tenia forma de saberlo porque se le
+     * pasaba el catalogo y nada mas, y el catalogo describe la herramienta
+     * entera como si todas las pantallas estuvieran a la vez.
+     * <p>
+     * El mapa de que vive en cada pantalla va explicito por la misma razon: sin
+     * el, un modelo de 4B mezcla los botones de una pantalla con los de otra.
+     */
+    private String contextoDelEstado(Panorama panorama) {
+        Recorrido recorrido = Recorrido.de(panorama);
+        String siguiente = recorrido.loQueSigue()
+                .map(paso -> paso.titulo() + " (" + dondeSeHace(paso) + ")")
+                .orElse("nada: ya recorrió los " + recorrido.total() + " pasos");
+
+        String donde = panorama.enUnDiagrama()
+                ? "en el lienzo, con un diagrama abierto"
+                : "en la pantalla de proyectos, sin ningún diagrama abierto";
+
+        return System.lineSeparator()
+                + System.lineSeparator()
+                + "ESTADO DE QUIEN PREGUNTA, AHORA MISMO:" + System.lineSeparator()
+                + "- Proyectos que tiene: " + panorama.proyectos() + System.lineSeparator()
+                + "- Diagramas que tiene: " + panorama.diagramas() + System.lineSeparator()
+                + "- Dónde está: " + donde + System.lineSeparator()
+                + "- Lo que le falta hacer: " + siguiente + System.lineSeparator()
+                + "- Lleva " + recorrido.hechos() + " de " + recorrido.total()
+                + " pasos del recorrido" + System.lineSeparator()
+                + System.lineSeparator()
+                + "DÓNDE VIVE CADA COSA (no las mezcles):" + System.lineSeparator()
+                + "- Pantalla de proyectos: crear un proyecto, crear un diagrama dentro de"
+                + " un proyecto, e invitar gente. No hay ningún botón de modelado acá."
+                + System.lineSeparator()
+                + "- Lienzo, y sólo con un diagrama ABIERTO: los botones Clase, Relación,"
+                + " Borrar, Dictar, Pizarra, Generar backend e XMI. Si la persona todavía no"
+                + " abrió un diagrama, esos botones NO están en su pantalla y no los va a"
+                + " encontrar por más que los busque." + System.lineSeparator();
+    }
+
+    /**
+     * Que apretar para dar ese paso, con el nombre del control tal como se lee
+     * en pantalla.
+     * <p>
+     * Antes se devolvia "se hace en la pantalla de proyectos", que no alcanza:
+     * quien pregunta "y ahora que hago" vuelve a preguntar "si, pero como", y
+     * esa segunda pregunta caia en el modelo -que no sabe en que pantalla esta
+     * la persona- y contestaba nombrando botones de otra vista.
+     * <p>
+     * Los nombres estan escritos a mano y no salen de la interfaz: es el precio
+     * de que el agente hable de botones. Si alguno se renombra, hay que tocar
+     * esto; por eso son pocos y estan todos juntos.
+     */
+    private static String instruccionDe(Recorrido.Paso paso) {
+        return switch (paso.id()) {
+            case "proyecto" -> "En la pantalla de proyectos, escribí el nombre arriba a la "
+                    + "derecha y tocá «Crear proyecto»";
+            case "diagrama" -> "Elegí el proyecto en la lista de la izquierda, escribí el nombre "
+                    + "en «Nombre del diagrama nuevo» y tocá «Crear y abrir»";
+            case "modelar" -> "Con el diagrama abierto, tocá «Clase» en la barra de arriba, "
+                    + "ponele nombre, y uní dos clases con «Relación»";
+            case "dictar" -> "Con el diagrama abierto, tocá «Dictar» y escribí una frase como "
+                    + "«crear la clase Paciente»";
+            case "pizarra" -> "Con el diagrama abierto, tocá «Pizarra» y cargá una foto de un "
+                    + "diagrama hecho a mano";
+            case "generar" -> "Con el diagrama abierto, tocá «Generar backend» en la barra de "
+                    + "arriba";
+            case "intercambiar" -> "Con el diagrama abierto, tocá «XMI» y elegí exportar";
+            case "invitar" -> "En la pantalla de proyectos, elegí el proyecto y usá «Invitar a "
+                    + "colaborar» con el correo de una cuenta que ya exista";
+            default -> dondeSeHace(paso);
+        };
+    }
+
+    /**
+     * Si la pregunta es un "si, pero como" sobre el paso que se acaba de decir.
+     * <p>
+     * El cliente manda el identificador de la ultima respuesta, asi que se sabe
+     * de que se venia hablando. Lo tienen que contestar las reglas: son las que
+     * saben cual es el paso, y el modelo -que ve el catalogo entero- mezclaba
+     * pantallas.
+     */
+    private boolean esSeguimientoDelPaso(String texto, String sobre) {
+        if (!PROXIMO_PASO.equals(sobre) || texto == null) {
+            return false;
+        }
+        String limpio = texto.toLowerCase(Locale.ROOT).trim();
+        return SEGUIMIENTOS.stream().anyMatch(limpio::contains);
+    }
+
+    /**
      * Lo que sigue, segun lo que la persona de verdad hizo.
      * <p>
      * Los pasos se marcan con evidencia -la bitacora y el registro de uso-, no
@@ -224,7 +331,7 @@ public class ServicioAgente {
                         "Lo que sigue es: " + paso.titulo(),
                         "Llevás " + recorrido.hechos() + " de " + recorrido.total()
                                 + " pasos del recorrido. " + paso.comoSeHace(),
-                        dondeSeHace(paso)))
+                        instruccionDe(paso)))
                 .orElseGet(() -> Consejo.de(PROXIMO_PASO, Consejo.Categoria.DESCUBRIMIENTO, 95,
                         "Ya recorriste los " + recorrido.total() + " pasos",
                         "Modelaste por las tres vías, generaste el backend, intercambiaste con "
