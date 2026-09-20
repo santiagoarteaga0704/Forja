@@ -12,9 +12,11 @@ interface Props {
   clase?: ClaseVista
   relacion?: RelacionVista
   clases: ClaseVista[]
+  relaciones?: RelacionVista[]
   bloqueo?: BloqueoVista
   usuarioId: string
   alEnviar: (tipo: TipoOperacion, comando: Comando, descripcion: string) => Promise<boolean>
+  alSenalar?: (elementoId: string) => void
 }
 
 const VISIBILIDADES: Visibilidad[] = ['PRIVADO', 'PUBLICO', 'PROTEGIDO', 'PAQUETE']
@@ -34,9 +36,11 @@ export default function PanelClase({
   clase,
   relacion,
   clases,
+  relaciones = [],
   bloqueo,
   usuarioId,
   alEnviar,
+  alSenalar,
 }: Props) {
   if (relacion) {
     const origen = clases.find((c) => c.id === relacion.origenId)
@@ -66,11 +70,56 @@ export default function PanelClase({
     )
   }
 
+  /*
+   * Sin nada seleccionado, el panel muestra el INDICE del diagrama.
+   *
+   * Antes era un parrafo de ayuda en una columna de 380px que quedaba vacia
+   * casi todo el tiempo. El indice ocupa ese lugar con lo unico que ahi tiene
+   * sentido: que hay en el modelo y donde esta. Ademas resuelve un problema
+   * real -una clase arrastrada lejos del resto no se encuentra- porque cada
+   * nombre lleva a su caja.
+   */
   if (!clase) {
     return (
       <>
-        <h3>Nada seleccionado</h3>
-        <p className="vacio">
+        <h3>El diagrama</h3>
+
+        <div className="indice-cifras">
+          <span>
+            <b>{clases.length}</b>
+            {clases.length === 1 ? 'clase' : 'clases'}
+          </span>
+          <span>
+            <b>{relaciones.length}</b>
+            {relaciones.length === 1 ? 'relación' : 'relaciones'}
+          </span>
+        </div>
+
+        {clases.length === 0 ? (
+          <p className="vacio">
+            La hoja está en blanco. Creá una clase con el botón de arriba, dictala o sacale una
+            foto a la pizarra.
+          </p>
+        ) : (
+          <ul className="indice">
+            {[...clases]
+              .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+              .map((c) => (
+                <li key={c.id}>
+                  <button type="button" onClick={() => alSenalar?.(c.id)}>
+                    <span className={`indice-nombre${c.esAbstracta ? ' abstracta' : ''}`}>
+                      {c.nombre}
+                    </span>
+                    <span className="indice-cuenta">
+                      {c.atributos.length}a · {c.metodos.length}m
+                    </span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        )}
+
+        <p className="vacio indice-ayuda">
           Hacé clic en una clase para editarla, o arrastrala para moverla. Con la rueda se acerca y
           arrastrando el fondo se desplaza la hoja.
         </p>
@@ -282,7 +331,7 @@ function ContenidoDeClase({
         ))}
 
         {!ajeno && (
-          <form onSubmit={agregarAtributo} style={{ marginTop: 11 }}>
+          <form className="alta-embebida" onSubmit={agregarAtributo}>
             <div className="par">
               <input
                 placeholder="nombre"
@@ -295,7 +344,7 @@ function ContenidoDeClase({
                 onChange={(e) => setAtributo({ ...atributo, tipo: e.target.value })}
               />
             </div>
-            <div className="par" style={{ marginTop: 7 }}>
+            <div className="par">
               <select
                 value={atributo.visibilidad}
                 onChange={(e) =>
@@ -315,7 +364,7 @@ function ContenidoDeClase({
                 onChange={(e) => setAtributo({ ...atributo, longitud: e.target.value })}
               />
             </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+            <div className="casillas">
               <label className="casilla">
                 <input
                   type="checkbox"
@@ -343,7 +392,7 @@ function ContenidoDeClase({
                 unico
               </label>
             </div>
-            <button type="submit" style={{ marginTop: 9, width: '100%' }}>
+            <button type="submit">
               Agregar atributo
             </button>
           </form>
@@ -373,7 +422,7 @@ function ContenidoDeClase({
         ))}
 
         {!ajeno && (
-          <form onSubmit={agregarMetodo} style={{ marginTop: 11 }}>
+          <form className="alta-embebida" onSubmit={agregarMetodo}>
             <div className="par">
               <input
                 placeholder="nombre"
@@ -408,7 +457,7 @@ function ContenidoDeClase({
                 abstracta
               </label>
             </div>
-            <button type="submit" style={{ marginTop: 9, width: '100%' }}>
+            <button type="submit">
               Agregar operacion
             </button>
           </form>

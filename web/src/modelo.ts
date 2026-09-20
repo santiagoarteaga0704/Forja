@@ -214,3 +214,45 @@ export function altoDe(clase: ClaseVista) {
 }
 
 export const ANCHO_CLASE = 220
+
+/**
+ * La vista que hace entrar todo el diagrama en la pantalla.
+ *
+ * Existe por algo que se vio al abrir un diagrama hecho por el modelo: la
+ * cuadricula coloca las clases cada 380 unidades, asi que a partir de la cuarta
+ * quedan fuera del borde derecho. Quien abria el diagrama veia tres clases y
+ * ninguna senal de que hubiera una mas: parecia que el pedido se habia aplicado
+ * a medias.
+ *
+ * NO acerca mas alla de 1. Un diagrama de dos clases ocupando la pantalla
+ * entera se ve como un error, no como una comodidad: la escala natural del
+ * papel es la que tiene.
+ */
+export function vistaQueAbarca(
+  clases: ClaseVista[],
+  ancho: number,
+  alto: number,
+  margen = 56,
+): { x: number; y: number; k: number } {
+  if (clases.length === 0 || ancho <= 0 || alto <= 0) {
+    return { x: 40, y: 40, k: 1 }
+  }
+
+  const izquierda = Math.min(...clases.map((c) => c.posX))
+  const arriba = Math.min(...clases.map((c) => c.posY))
+  const derecha = Math.max(...clases.map((c) => c.posX + ANCHO_CLASE))
+  const abajo = Math.max(...clases.map((c) => c.posY + altoDe(c)))
+
+  const anchoUtil = Math.max(1, ancho - margen * 2)
+  const altoUtil = Math.max(1, alto - margen * 2)
+  const k = Math.max(
+    0.25,
+    Math.min(1, anchoUtil / (derecha - izquierda), altoUtil / (abajo - arriba)),
+  )
+
+  return {
+    k,
+    x: (ancho - (derecha - izquierda) * k) / 2 - izquierda * k,
+    y: (alto - (abajo - arriba) * k) / 2 - arriba * k,
+  }
+}

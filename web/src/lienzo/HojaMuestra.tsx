@@ -1,22 +1,26 @@
 /**
- * La hoja de muestra de la pantalla de entrada.
+ * La hoja de la pantalla de entrada: el producto construyendose solo.
  *
- * Es lo primero que se ve de FORJA, asi que muestra exactamente lo que FORJA
- * hace: un diagrama de clases sobre papel, con la notacion correcta -el rombo
- * lleno de la composicion, las multiplicidades, los simbolos de visibilidad-.
- * Se dibuja sola una vez al abrir, en el mismo orden en que la dibujaria una
- * persona: primero las cajas, despues los conectores, al final los rotulos.
+ * No es una ilustracion de un diagrama terminado. Es una DEMOSTRACION: el
+ * modelo se arma por etapas, y cada etapa es una de las tres vias de entrada
+ * que tiene FORJA -dibujar, dictar, fotografiar-. Quien abre la herramienta por
+ * primera vez ve lo que hace antes de leer una sola linea de texto, y la lista
+ * de la derecha se enciende en sincronia, asi que la explicacion escrita y la
+ * demostracion son el mismo objeto.
  *
- * Es el unico movimiento no pedido en toda la aplicacion. Un solo momento
- * ordenado se nota; media docena de apariciones sueltas por pantalla se leen
- * como relleno. Con `prefers-reduced-motion` aparece ya terminada.
+ * La geometria se CALCULA, con las mismas reglas que `LineaRelacion` del lienzo
+ * de verdad: donde la recta entre dos centros cruza el borde de la caja, el
+ * rombo apoyado sobre esa direccion, las multiplicidades corridas hacia afuera.
+ * Escribir las coordenadas a mano parecia mas corto y no lo es: sale un rombo
+ * torcido y un rotulo debajo de una caja, y hay que rehacerlo igual.
  *
- * La geometria se CALCULA, con las mismas reglas que `LineaRelacion`: donde la
- * recta entre dos centros cruza el borde de la caja, el rombo apoyado sobre esa
- * direccion, las multiplicidades corridas hacia afuera de la linea. Escribir
- * las coordenadas a mano parecia mas corto y no lo es: sale un rombo torcido y
- * un rotulo debajo de una caja, y hay que rehacerlo igual.
+ * Con `prefers-reduced-motion` el diagrama aparece entero y quieto: no hay
+ * ciclo, no hay trazado. La informacion es la misma.
  */
+
+export type Via = 'dibujo' | 'voz' | 'foto'
+
+export const VIAS: Via[] = ['dibujo', 'voz', 'foto']
 
 interface Caja {
   nombre: string
@@ -24,106 +28,168 @@ interface Caja {
   y: number
   ancho: number
   filas: string[]
+  via: Via
+  /** Segundos desde que empieza su etapa. */
+  retraso: number
 }
 
 const ALTO_CABECERA = 26
 const ALTO_FILA = 17
 const RELLENO_INFERIOR = 9
 
+/*
+ * Una clinica, en seis clases. Con tres el papel quedaba casi vacio y la
+ * muestra no sostenia media pantalla; con seis se lee un modelo de verdad, del
+ * tamano del que alguien construye en una clase.
+ */
+const HISTORIA: Caja = {
+  nombre: 'HistoriaClinica',
+  x: 24,
+  y: 36,
+  ancho: 168,
+  filas: ['+ abierta: fecha', '+ resumen: texto'],
+  via: 'dibujo',
+  retraso: 0,
+}
 const PACIENTE: Caja = {
   nombre: 'Paciente',
-  x: 26,
-  y: 92,
-  ancho: 158,
+  x: 24,
+  y: 196,
+  ancho: 168,
   filas: ['+ ci: texto  PK', '+ nombre: texto', '+ nacimiento: fecha'],
+  via: 'dibujo',
+  retraso: 0.45,
 }
 const CONSULTA: Caja = {
   nombre: 'Consulta',
-  x: 330,
-  y: 30,
-  ancho: 152,
-  filas: ['+ fecha: fecha', '+ motivo: texto'],
+  x: 272,
+  y: 116,
+  ancho: 160,
+  filas: ['+ fecha: fecha', '+ motivo: texto', '+ diagnostico: texto'],
+  via: 'voz',
+  retraso: 0.9,
 }
 const MEDICO: Caja = {
   nombre: 'Médico',
-  x: 330,
-  y: 198,
-  ancho: 152,
-  filas: ['+ matrícula: texto', '+ nombre: texto'],
+  x: 512,
+  y: 36,
+  ancho: 164,
+  filas: ['+ matrícula: texto', '+ nombre: texto', '+ especialidad: texto'],
+  via: 'voz',
+  retraso: 2.5,
+}
+const RECETA: Caja = {
+  nombre: 'Receta',
+  x: 272,
+  y: 352,
+  ancho: 160,
+  filas: ['+ codigo: texto', '+ emitida: fecha'],
+  via: 'foto',
+  retraso: 1.1,
+}
+const MEDICAMENTO: Caja = {
+  nombre: 'Medicamento',
+  x: 512,
+  y: 340,
+  ancho: 164,
+  filas: ['+ nombre: texto', '+ droga: texto', '+ stock: entero'],
+  via: 'foto',
+  retraso: 1.3,
 }
 
-const CAJAS = [PACIENTE, CONSULTA, MEDICO]
+const CAJAS = [HISTORIA, PACIENTE, CONSULTA, MEDICO, RECETA, MEDICAMENTO]
 
-export default function HojaMuestra() {
-  // Paciente compone a sus Consultas; con Medico solo se asocia.
-  const compone = conector(PACIENTE, CONSULTA, { rombo: true })
-  const atiende = conector(PACIENTE, MEDICO, {})
+interface Vinculo {
+  desde: Caja
+  hasta: Caja
+  rombo?: boolean
+  cerca: string
+  lejos: string
+  via: Via
+  retraso: number
+}
+
+const VINCULOS: Vinculo[] = [
+  { desde: PACIENTE, hasta: HISTORIA, rombo: true, cerca: '1', lejos: '1', via: 'dibujo', retraso: 1.1 },
+  { desde: PACIENTE, hasta: CONSULTA, rombo: true, cerca: '1', lejos: '0..*', via: 'voz', retraso: 1.7 },
+  { desde: MEDICO, hasta: CONSULTA, cerca: '1', lejos: '0..*', via: 'voz', retraso: 3.2 },
+  { desde: CONSULTA, hasta: RECETA, cerca: '1', lejos: '0..1', via: 'foto', retraso: 1.6 },
+  { desde: RECETA, hasta: MEDICAMENTO, cerca: '1', lejos: '1..*', via: 'foto', retraso: 1.8 },
+]
+
+/** Lo que se dicta en la etapa de voz, con el momento en que se muestra. */
+export const DICTADOS = [
+  { frase: 'Paciente tiene muchas Consultas', desde: 0.2 },
+  { frase: 'Médico atiende muchas Consultas', desde: 1.9 },
+]
+
+export default function HojaMuestra({ via, ciclo }: { via: Via; ciclo: number }) {
+  const hasta = VIAS.indexOf(via)
+  const seVe = (deElemento: Via) => VIAS.indexOf(deElemento) <= hasta
 
   return (
     <svg
       className="hoja-muestra"
-      viewBox="0 0 512 300"
+      viewBox="0 0 700 470"
       role="img"
-      aria-label="Diagrama de clases con Paciente, Consulta y Médico, en notación UML"
+      aria-label="Un diagrama de clases de una clínica construyéndose: historia clínica, paciente, consulta, médico, receta y medicamento"
     >
-      <defs>
-        <pattern id="muestra-reticula" width="60" height="60" patternUnits="userSpaceOnUse">
-          <path
-            d="M12 0v60M24 0v60M36 0v60M48 0v60M0 12h60M0 24h60M0 36h60M0 48h60"
-            fill="none"
-            stroke="var(--reticula)"
-            strokeWidth="1"
-          />
-          <path d="M60 0H0v60" fill="none" stroke="var(--reticula-mayor)" strokeWidth="1" />
-        </pattern>
-      </defs>
-
-      <rect width="512" height="300" fill="var(--papel)" />
-      <rect width="512" height="300" fill="url(#muestra-reticula)" />
+      {/*
+        El papel y su reticula NO se dibujan aca: los pinta el panel en CSS.
+        Asi la cuadricula llega a los cuatro bordes de la pantalla por mas que
+        el dibujo se escale, que es lo que hace que la hoja parezca seguir mas
+        alla del marco en vez de ser una lamina pegada en el medio.
+      */}
 
       {/* Los conectores van debajo de las cajas, como en el lienzo de verdad. */}
-      {[compone, atiende].map((c, indice) => (
-        <g key={indice} fill="none" stroke="var(--tinta-media)" strokeWidth="1.4">
-          <line
-            className="trazo"
-            style={retardo(0.7 + indice * 0.14)}
-            x1={c.inicio.x}
-            y1={c.inicio.y}
-            x2={c.fin.x}
-            y2={c.fin.y}
-          />
-          {c.rombo && (
-            <polygon
-              className="rotulo"
-              style={retardo(1.0)}
-              points={c.rombo}
-              fill="var(--tinta-media)"
+      {VINCULOS.filter((v) => seVe(v.via)).map((vinculo) => {
+        const c = conector(vinculo.desde, vinculo.hasta, { rombo: vinculo.rombo })
+        return (
+          <g
+            key={`${ciclo}-${vinculo.desde.nombre}-${vinculo.hasta.nombre}`}
+            fill="none"
+            stroke="var(--tinta-media)"
+            strokeWidth="1.4"
+          >
+            <line
+              className="trazo"
+              style={retardo(vinculo.retraso)}
+              x1={c.inicio.x}
+              y1={c.inicio.y}
+              x2={c.fin.x}
+              y2={c.fin.y}
             />
-          )}
-        </g>
-      ))}
+            {c.rombo && (
+              <polygon
+                className="rotulo"
+                style={retardo(vinculo.retraso + 0.3)}
+                points={c.rombo}
+                fill="var(--tinta-media)"
+              />
+            )}
+            <g
+              className="rotulo"
+              style={retardo(vinculo.retraso + 0.4)}
+              fontFamily="var(--mono)"
+              fontSize="10"
+              fill="var(--tinta-debil)"
+              textAnchor="middle"
+              stroke="none"
+            >
+              <text {...c.cerca}>{vinculo.cerca}</text>
+              <text {...c.lejos}>{vinculo.lejos}</text>
+            </g>
+          </g>
+        )
+      })}
 
-      <g
-        className="rotulo"
-        style={retardo(1.12)}
-        fontFamily="var(--mono)"
-        fontSize="9.5"
-        fill="var(--tinta-debil)"
-        textAnchor="middle"
-      >
-        <text {...compone.cerca}>1</text>
-        <text {...compone.lejos}>0..*</text>
-        <text {...atiende.cerca}>*</text>
-        <text {...atiende.lejos}>1</text>
-      </g>
-
-      {CAJAS.map((caja, indice) => {
+      {CAJAS.filter((caja) => seVe(caja.via)).map((caja) => {
         const alto = altoDe(caja)
         return (
-          <g key={caja.nombre}>
+          <g key={`${ciclo}-${caja.nombre}`}>
             <rect
               className="trazo"
-              style={retardo(indice * 0.16)}
+              style={retardo(caja.retraso)}
               x={caja.x}
               y={caja.y}
               width={caja.ancho}
@@ -134,45 +200,37 @@ export default function HojaMuestra() {
             />
             <rect
               className="rotulo"
-              style={retardo(indice * 0.16 + 0.3)}
+              style={retardo(caja.retraso + 0.12)}
               x={caja.x}
               y={caja.y}
               width={caja.ancho}
               height={ALTO_CABECERA}
               fill="var(--caja-cabecera)"
-            />
-            <line
-              className="rotulo"
-              style={retardo(indice * 0.16 + 0.3)}
-              x1={caja.x}
-              y1={caja.y + ALTO_CABECERA}
-              x2={caja.x + caja.ancho}
-              y2={caja.y + ALTO_CABECERA}
               stroke="var(--canto-caja)"
               strokeWidth="1.2"
             />
             <text
               className="rotulo"
-              style={retardo(indice * 0.16 + 0.42)}
+              style={retardo(caja.retraso + 0.18)}
               x={caja.x + caja.ancho / 2}
               y={caja.y + 17.5}
               textAnchor="middle"
               fontFamily="var(--sans)"
-              fontSize="12.5"
+              fontSize="12"
               fontWeight="600"
               fill="var(--tinta)"
             >
               {caja.nombre}
             </text>
-            {caja.filas.map((fila, fi) => (
+            {caja.filas.map((fila, indice) => (
               <text
                 key={fila}
                 className="rotulo"
-                style={retardo(indice * 0.16 + 0.5 + fi * 0.06)}
-                x={caja.x + 9}
-                y={caja.y + ALTO_CABECERA + 13 + fi * ALTO_FILA}
+                style={retardo(caja.retraso + 0.26 + indice * 0.06)}
+                x={caja.x + 10}
+                y={caja.y + ALTO_CABECERA + (indice + 1) * ALTO_FILA - 4}
                 fontFamily="var(--mono)"
-                fontSize="10"
+                fontSize="10.5"
                 fill="var(--tinta-media)"
               >
                 {fila}
@@ -181,6 +239,23 @@ export default function HojaMuestra() {
           </g>
         )
       })}
+
+      {/*
+        La barrida de la etapa de foto. Es lo que hace entendible que esas dos
+        clases no se dibujaron ni se dictaron: se leyeron de una imagen.
+      */}
+      {via === 'foto' && (
+        <rect
+          key={`barrido-${ciclo}`}
+          className="barrido"
+          x="0"
+          y="0"
+          width="700"
+          height="26"
+          fill="var(--fuego)"
+          opacity="0.22"
+        />
+      )}
     </svg>
   )
 }
@@ -239,8 +314,21 @@ function conector(desde: Caja, hasta: Caja, { rombo }: { rombo?: boolean }) {
   const b = borde(hasta, centroHasta, centroDesde)
 
   const n = perpendicular(a, b)
+
+  /*
+   * El corrimiento es PROPORCIONAL al largo de la linea, no fijo.
+   *
+   * Con 26 fijos, en un conector corto las dos multiplicidades caian casi en
+   * el mismo punto y se leian encimadas -"0..*" sobre "1" daba un "01.*" que
+   * no significa nada-. Un tercio del largo las deja siempre separadas, y el
+   * tope de 26 evita que en una linea larga se vayan al medio, donde ya no se
+   * sabe a que extremo pertenecen.
+   */
+  const largo = Math.hypot(b.x - a.x, b.y - a.y)
+  const corrimiento = Math.min(18, largo / 3)
+
   const rotulo = (base: Punto, hacia: Punto) => {
-    const p = avanzar(base, hacia, 26)
+    const p = avanzar(base, hacia, corrimiento)
     return { x: p.x - n.x * 9, y: p.y - n.y * 9 + 3 }
   }
 

@@ -21,7 +21,14 @@ import { useGuia } from '../guia'
 import { RELACIONES } from '../relaciones'
 import CajaClase from '../lienzo/CajaClase'
 import LineaRelacion from '../lienzo/LineaRelacion'
-import { ANCHO_CLASE, aplicar, bloqueoDe, conBloqueoLiberado, conBloqueoTomado } from '../modelo'
+import {
+  ANCHO_CLASE,
+  aplicar,
+  bloqueoDe,
+  conBloqueoLiberado,
+  conBloqueoTomado,
+  vistaQueAbarca,
+} from '../modelo'
 import { SESION_ID } from '../sesion'
 import PanelClase from './PanelClase'
 import Guia from './Guia'
@@ -173,6 +180,22 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
   // aceptada, propia o ajena.
   const version = modelo?.version
   const { guia, descartar } = useGuia(diagrama.id, version)
+
+  /*
+   * Al abrir, la vista se acomoda para que entre todo el diagrama.
+   *
+   * Una sola vez, y no en cada cambio: reencuadrar mientras alguien arrastra
+   * una clase le moveria el piso bajo los pies. Despues del primer encuadre la
+   * vista es de quien la maneja.
+   */
+  const yaSeAjustoLaVista = useRef(false)
+  useEffect(() => {
+    if (yaSeAjustoLaVista.current || !modelo || modelo.clases.length === 0) return
+    const caja = svgRef.current?.getBoundingClientRect()
+    if (!caja || caja.width === 0) return
+    yaSeAjustoLaVista.current = true
+    setVista(vistaQueAbarca(modelo.clases, caja.width, caja.height))
+  }, [modelo])
 
   // Un diagrama vacio abre la guia solo: es el momento en que la persona no
   // tiene nada mas que mirar en el panel y si necesita saber como empezar.
@@ -853,9 +876,11 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
                 : undefined
             }
             clases={modelo?.clases ?? []}
+            relaciones={modelo?.relaciones ?? []}
             bloqueo={claseSeleccionada ? bloqueoDe(modelo!, claseSeleccionada.id) : undefined}
             usuarioId={credencial.usuarioId}
             alEnviar={enviar}
+            alSenalar={senalar}
           />
         </aside>
       </div>

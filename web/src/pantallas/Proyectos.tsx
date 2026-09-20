@@ -13,6 +13,26 @@ interface Props {
 }
 
 /**
+ * Cuando se toco algo, en palabras.
+ *
+ * Una fila con solo un nombre no deja elegir: todas se ven igual. La fecha es
+ * el dato con el que de verdad se busca un proyecto -"el que estuve tocando
+ * ayer"- y en forma relativa se lee sin restar mentalmente.
+ */
+function desdeCuando(fecha: string): string {
+  const minutos = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000)
+  if (!Number.isFinite(minutos) || minutos < 0) return ''
+  if (minutos < 1) return 'recién'
+  if (minutos < 60) return `hace ${minutos} min`
+  const horas = Math.floor(minutos / 60)
+  if (horas < 24) return `hace ${horas} h`
+  const dias = Math.floor(horas / 24)
+  if (dias === 1) return 'ayer'
+  if (dias < 30) return `hace ${dias} días`
+  return new Date(fecha).toLocaleDateString('es', { day: 'numeric', month: 'short' })
+}
+
+/**
  * Eleccion del proyecto y del diagrama sobre el que se va a trabajar.
  *
  * Va en lista y no en rejilla de fichas: una rejilla promete que cada elemento
@@ -123,27 +143,52 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
           {error && <div className="mensaje error">{error}</div>}
           {aviso && <div className="mensaje bien">{aviso}</div>}
 
+          {/*
+            La cabecera lleva el titulo de la pantalla y su accion principal en
+            la misma linea. Antes el alta era un campo suelto flotando sobre la
+            lista, sin nada que lo agrupara, y eso -mas que ningun color- era lo
+            que hacia ver la pantalla sin terminar.
+          */}
+          <header className="pagina-cabecera">
+            <div>
+              <h1>Proyectos</h1>
+              <p className="pagina-bajada">
+                Un proyecto agrupa los diagramas de un mismo sistema y la gente que puede
+                editarlos.
+              </p>
+            </div>
+
+            <form className="alta-en-linea" onSubmit={crearProyecto}>
+              <input
+                aria-label="Nombre del proyecto nuevo"
+                placeholder="Nombre del proyecto nuevo"
+                value={nombreProyecto}
+                onChange={(e) => setNombreProyecto(e.target.value)}
+              />
+              <button className="principal" type="submit" disabled={!nombreProyecto.trim()}>
+                Crear proyecto
+              </button>
+            </form>
+          </header>
+
+          {/*
+            Maestro y detalle, en dos columnas. Antes los tres bloques
+            -proyectos, diagramas, invitaciones- se apilaban a lo largo de una
+            sola columna angosta: habia que bajar para ver lo que contenia lo
+            que se acababa de elegir, y la mitad derecha de la pantalla no se
+            usaba nunca. Elegir a la izquierda y ver a la derecha es como se
+            recorre una herramienta.
+          */}
+          <div className={`tablero${elegido ? '' : ' sin-eleccion'}`}>
           <section className="bloque">
             <div className="seccion-titulo">
-              <h2>Proyectos</h2>
+              <h2>Tus proyectos</h2>
               {proyectos.length > 0 && (
                 <span className="cuenta">
                   {proyectos.length === 1 ? '1 proyecto' : `${proyectos.length} proyectos`}
                 </span>
               )}
             </div>
-
-            <form className="formulario-linea" onSubmit={crearProyecto} style={{ marginBottom: 14 }}>
-              <input
-                placeholder="Nombre del proyecto nuevo"
-                value={nombreProyecto}
-                onChange={(e) => setNombreProyecto(e.target.value)}
-                style={{ maxWidth: 340 }}
-              />
-              <button className="principal" type="submit" disabled={!nombreProyecto.trim()}>
-                Crear proyecto
-              </button>
-            </form>
 
             {proyectos.length === 0 ? (
               <div className="vacio-bloque">
@@ -169,7 +214,12 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
                   >
                     <IconoCarpeta />
                     <span className="nombre">{proyecto.nombre}</span>
-                    <span className="detalle">
+                    <span className="fila-meta">{desdeCuando(proyecto.actualizadoEn)}</span>
+                    <span
+                      className={`etiqueta${
+                        proyecto.propietarioId === credencial.usuarioId ? ' propia' : ''
+                      }`}
+                    >
                       {proyecto.propietarioId === credencial.usuarioId
                         ? 'Tuyo'
                         : 'Compartido con vos'}
@@ -180,23 +230,31 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
             )}
           </section>
 
+          {!elegido && proyectos.length > 0 && (
+            <aside className="detalle-sin-elegir">
+              <IconoCarpeta tamano={26} />
+              <p>Elegí un proyecto de la lista para ver sus diagramas y a quién invitaste.</p>
+            </aside>
+          )}
+
           {elegido && (
-            <>
+            <div className="tablero-detalle">
               <section className="bloque">
                 <div className="seccion-titulo">
                   <h2>Diagramas de {elegido.nombre}</h2>
+                  {diagramas.length > 0 && (
+                    <span className="cuenta">
+                      {diagramas.length === 1 ? '1 diagrama' : `${diagramas.length} diagramas`}
+                    </span>
+                  )}
                 </div>
 
-                <form
-                  className="formulario-linea"
-                  onSubmit={crearDiagrama}
-                  style={{ marginBottom: 14 }}
-                >
+                <form className="alta-en-linea alta-bloque" onSubmit={crearDiagrama}>
                   <input
+                    aria-label="Nombre del diagrama nuevo"
                     placeholder="Nombre del diagrama nuevo"
                     value={nombreDiagrama}
                     onChange={(e) => setNombreDiagrama(e.target.value)}
-                    style={{ maxWidth: 340 }}
                   />
                   <button className="principal" type="submit" disabled={!nombreDiagrama.trim()}>
                     Crear y abrir
@@ -232,13 +290,13 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
                   <div className="seccion-titulo">
                     <h2>Invitar a colaborar</h2>
                   </div>
-                  <form className="formulario-linea" onSubmit={invitar}>
+                  <form className="alta-en-linea alta-bloque" onSubmit={invitar}>
                     <input
                       type="email"
+                      aria-label="Correo de una cuenta ya registrada"
                       placeholder="Correo de una cuenta ya registrada"
                       value={invitado}
                       onChange={(e) => setInvitado(e.target.value)}
-                      style={{ maxWidth: 340 }}
                     />
                     <button type="submit" disabled={!invitado.trim()}>
                       Invitar como editor
@@ -246,8 +304,9 @@ export default function Proyectos({ credencial, alAbrir, alSalir }: Props) {
                   </form>
                 </section>
               )}
-            </>
+            </div>
           )}
+          </div>
         </div>
       </div>
 
