@@ -52,7 +52,8 @@ public class ControladorPedido {
     public Pedido leer(@AuthenticationPrincipal Jwt token,
                        @PathVariable UUID diagramaId,
                        @Valid @RequestBody TextoDelPedido cuerpo) {
-        return pedidos.leer(diagramaId, UsuarioActual.id(token), cuerpo.pedido());
+        return pedidos.leer(diagramaId, UsuarioActual.id(token), cuerpo.pedido(),
+                cuerpo.tokenLectura());
     }
 
     /** Segundo paso: aplicar lo propuesto al diagrama. */

@@ -174,7 +174,8 @@ export default function Dictado({
     setError(null)
     setAviso(null)
     try {
-      const propuesta = await api.pedirLectura(diagramaId, texto, SESION_ID, control.signal)
+      const propuesta = await api.pedirLectura(
+        diagramaId, texto, SESION_ID, tokenLectura.current, control.signal)
       setPedido(propuesta)
       if (propuesta.frases.length === 0) {
         setAviso({

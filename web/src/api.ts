@@ -253,20 +253,27 @@ export const api = {
    * Lleva senal de cancelacion porque este es el unico pedido de la aplicacion
    * que puede tardar treinta segundos: del otro lado hay alguien esperando y
    * tiene que poder arrepentirse.
+   *
+   * El `tokenLectura` va desde aca y no solo al aplicar: es la etiqueta con la
+   * que el servidor guarda ESTA propuesta, para despues aplicar exactamente lo
+   * que se mostro. Sin el, el modelo se consultaria de nuevo y propondria otra
+   * cosa, porque no responde igual dos veces.
    */
-  pedirLectura: (diagramaId: string, pedido: string, sesionId: string, senal?: AbortSignal) =>
+  pedirLectura: (diagramaId: string, pedido: string, sesionId: string,
+                 tokenLectura: string, senal?: AbortSignal) =>
     pedir<Pedido>(`/api/diagramas/${diagramaId}/pedido/lectura`, {
       method: 'POST',
-      body: JSON.stringify({ pedido, sesionId }),
+      body: JSON.stringify({ pedido, sesionId, tokenLectura }),
       signal: senal,
     }),
 
   /**
    * Segundo paso: aplicar lo propuesto.
    *
-   * El `tokenLectura` es el de la propuesta que se reviso: si la respuesta se
-   * pierde y se reintenta, el servidor reconoce los comandos como reenvio en
-   * lugar de duplicar el diagrama entero.
+   * El `tokenLectura` es el de la propuesta que se reviso: con el, el servidor
+   * recupera lo que mostro y aplica eso. Si la respuesta se pierde y se
+   * reintenta, ademas reconoce los comandos como reenvio en lugar de duplicar
+   * el diagrama entero.
    */
   aplicarPedido: (diagramaId: string, pedido: string, sesionId: string, tokenLectura: string) =>
     pedir<ResultadoPedido>(`/api/diagramas/${diagramaId}/pedido`, {

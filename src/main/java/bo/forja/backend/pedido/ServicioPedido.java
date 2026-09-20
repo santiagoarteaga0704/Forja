@@ -43,44 +43,63 @@ public class ServicioPedido {
     private final ClaseUmlRepositorio clases;
     private final ParserVoz parser;
     private final Traductor traductor;
+    private final PropuestasEnRevision enRevision;
 
     public ServicioPedido(ServicioProyectos proyectos,
                           ServicioOperaciones operaciones,
                           ClaseUmlRepositorio clases,
                           ParserVoz parser,
-                          Traductor traductor) {
+                          Traductor traductor,
+                          PropuestasEnRevision enRevision) {
         this.proyectos = proyectos;
         this.operaciones = operaciones;
         this.clases = clases;
         this.parser = parser;
         this.traductor = traductor;
+        this.enRevision = enRevision;
     }
 
-    /** Primer paso: que se propuso, sin tocar el modelo. */
+    /**
+     * Primer paso: que se propuso, sin tocar el modelo.
+     * <p>
+     * Lo propuesto queda guardado bajo el token de esta lectura para que
+     * {@link #aplicar} entregue exactamente esto y no una segunda opinion del
+     * modelo. Ver {@link PropuestasEnRevision}.
+     */
     @Transactional(readOnly = true)
-    public Pedido leer(UUID diagramaId, UUID usuarioId, String pedido) {
+    public Pedido leer(UUID diagramaId, UUID usuarioId, String pedido, String tokenLectura) {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
-        return PedidoInterpretado.de(parser, traductor, pedido, contextoDe(diagramaId));
+        Pedido propuesto = PedidoInterpretado.de(parser, traductor, pedido, contextoDe(diagramaId));
+        enRevision.guardar(usuarioId, diagramaId, tokenLectura, propuesto);
+        return propuesto;
     }
 
     /**
      * Segundo paso: aplicar lo propuesto.
      * <p>
-     * Se vuelve a pedir la traduccion en vez de recibir los comandos del
-     * cliente, a proposito: el cliente no decide que entra al modelo. Con
-     * {@code temperature} en cero la propuesta es la misma, y si cambiara, lo
-     * que entra sigue pasando por la gramatica igual.
+     * Se aplica la propuesta que se reviso, recuperada por su token. El cliente
+     * sigue sin mandar comandos -no decide que entra al modelo-, pero tampoco se
+     * consulta al traductor de nuevo: se midio que el mismo pedido da
+     * propuestas distintas en cada corrida aun con {@code temperature} en cero,
+     * y con eso entraba al diagrama algo que nadie habia mirado. Lo que se
+     * recupera pasa por la gramatica igual, porque asi se guardo.
+     * <p>
+     * Si no hay nada guardado -vencio, el proceso se reinicio, o se aplica sin
+     * leer antes, como puede hacer el movil- se consulta al modelo, que es el
+     * comportamiento anterior y deja la funcion completa.
      *
-     * @param tokenLectura identificador de este envio; si el cliente lo repite
-     *                     tras un corte, los comandos se reconocen como ya
-     *                     registrados en lugar de duplicar el modelo
+     * @param tokenLectura identificador de esta propuesta; si el cliente lo
+     *                     repite tras un corte, se recupera la misma propuesta
+     *                     y los comandos se reconocen como ya registrados en
+     *                     lugar de duplicar el modelo
      */
     public ResultadoPedido aplicar(UUID diagramaId, UUID usuarioId, String sesionId,
                                    String pedido, String tokenLectura) {
 
         proyectos.diagramaAccesible(diagramaId, usuarioId);
         ContextoDelDiagrama contexto = contextoDe(diagramaId);
-        Pedido propuesto = PedidoInterpretado.de(parser, traductor, pedido, contexto);
+        Pedido propuesto = enRevision.recuperar(usuarioId, diagramaId, tokenLectura)
+                .orElseGet(() -> PedidoInterpretado.de(parser, traductor, pedido, contexto));
 
         if (!propuesto.seEntendioAlgo()) {
             log.debug("Pedido sin resultado en el diagrama {}: \"{}\"", diagramaId, pedido);
