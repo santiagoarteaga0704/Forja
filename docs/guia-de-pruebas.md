@@ -71,7 +71,7 @@ npm run dev                                           # cliente en 5173
 
 ## 2. Las pruebas automáticas
 
-### Backend — 284 pruebas
+### Backend — 289 pruebas
 
 ```powershell
 ./mvnw test
@@ -95,6 +95,7 @@ Lo que cubren, por si te lo preguntan:
 | `PropuestasEnRevisionTest`, `ServicioPedidoRevisionTest` | Que se aplique lo revisado y no una segunda opinión del modelo |
 | `PreguntasTest`, `PreguntasResistenciaTest` | Que el agente responda, y que ninguna entrada lo rompa |
 | `AgenteNoSeCaeTest` | Que conteste aunque no se pueda anotar el uso |
+| `AgenteHibridoTest` | Que una pregunta del catálogo **no** llegue al modelo, y que lo que las reglas no cubren sí |
 
 ### Cliente web
 
@@ -180,7 +181,12 @@ El OCR corre **en el navegador**, sin mandar la imagen a ningún lado.
 14. Preguntale **«cómo uso la aplicación»**. Tiene que contestar el camino
     proyecto → diagrama → modelo, no «esa no la sé contestar».
 15. Probá `¿por dónde empiezo?`, `¿qué genera el backend?`, `¿cómo lo abro en
-    Enterprise Architect?`.
+    Enterprise Architect?`. Son del catálogo: contestan en milisegundos y
+    siempre igual.
+16. Preguntale algo que **no** esté en el catálogo, por ejemplo «qué pasa si dos
+    editamos la misma clase a la vez». Tarda unos segundos y contesta el modelo
+    local, con la respuesta **etiquetada** como suya. Si Ollama está apagado,
+    vuelve a «esa no la sé contestar» sin romperse.
 
 ---
 
