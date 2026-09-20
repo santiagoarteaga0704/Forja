@@ -53,7 +53,9 @@ public class ServicioProyectos {
     @Transactional
     public Proyecto crear(UUID autorId, String nombre, String descripcion) {
         Usuario autor = usuarios.findById(autorId)
-                .orElseThrow(() -> new RecursoNoEncontrado("No existe el usuario " + autorId));
+                .orElseThrow(() -> new SesionSinDueno(
+                        "Tu sesión ya no es válida: la cuenta con la que entraste no existe. "
+                                + "Volvé a entrar."));
 
         Proyecto proyecto = new Proyecto();
         proyecto.setNombre(nombre.trim());

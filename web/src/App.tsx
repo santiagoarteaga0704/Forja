@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { cuandoCaduqueLaSesion } from './api'
 import Entrar from './pantallas/Entrar'
 import Lienzo from './pantallas/Lienzo'
 import Proyectos from './pantallas/Proyectos'
@@ -30,6 +31,18 @@ export default function App() {
     setCredencial(null)
     setAbierto(null)
   }
+
+  /*
+   * Si el servidor dice que la credencial ya no vale, se vuelve al login sin
+   * preguntar. El caso que lo motivo: la sesion no tiene estado y el token dura
+   * doce horas, asi que sobrevive a que la cuenta desaparezca de la base -lo
+   * que ocurre cada vez que se rehace-, y la persona quedaba apretando botones
+   * contra un error en rojo.
+   */
+  useEffect(() => {
+    cuandoCaduqueLaSesion(salir)
+    return () => cuandoCaduqueLaSesion(null)
+  })
 
   if (!credencial) return <Entrar alEntrar={entrar} />
 

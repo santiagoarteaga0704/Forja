@@ -5,6 +5,7 @@ import bo.forja.backend.seguridad.CredencialesInvalidas;
 import bo.forja.backend.seguridad.EmailYaRegistrado;
 import bo.forja.backend.servicio.AccesoDenegado;
 import bo.forja.backend.servicio.RecursoNoEncontrado;
+import bo.forja.backend.servicio.SesionSinDueno;
 import bo.forja.backend.xmi.XmiInvalido;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -46,6 +47,17 @@ public class ManejadorDeErrores {
     @ExceptionHandler(AccesoDenegado.class)
     ProblemDetail acceso(AccesoDenegado e) {
         return problema(HttpStatus.FORBIDDEN, "Acceso denegado", e.getMessage());
+    }
+
+    /**
+     * 401 y no 404: lo que falta no es el recurso pedido sino el dueno de la
+     * credencial. Es lo que le permite al cliente tirar la sesion y mandar al
+     * login, en vez de mostrar un identificador en rojo que no le dice nada a
+     * nadie.
+     */
+    @ExceptionHandler(SesionSinDueno.class)
+    ProblemDetail sesionSinDueno(SesionSinDueno e) {
+        return problema(HttpStatus.UNAUTHORIZED, "Sesión no válida", e.getMessage());
     }
 
     @ExceptionHandler(RecursoNoEncontrado.class)

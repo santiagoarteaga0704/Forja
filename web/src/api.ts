@@ -58,6 +58,20 @@ export function tokenActual() {
   return token
 }
 
+/*
+ * Que hacer cuando el servidor dice que la sesion ya no vale.
+ *
+ * Es una devolucion de llamada y no una importacion de `sesion.ts` porque ese
+ * modulo ya importa de este: cerrar el circulo dejaria dos modulos que no se
+ * pueden cargar por separado. Aca solo se avisa; quien decide que hacer es la
+ * raiz de la aplicacion, que es la unica que sabe de pantallas.
+ */
+let alCaducarLaSesion: (() => void) | null = null
+
+export function cuandoCaduqueLaSesion(avisar: (() => void) | null) {
+  alCaducarLaSesion = avisar
+}
+
 async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
   const cabeceras: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -68,6 +82,19 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
   const respuesta = await fetch(BASE + ruta, { ...opciones, headers: cabeceras })
 
   if (!respuesta.ok) {
+    /*
+     * 401 CON un token puesto significa que la credencial dejo de servir: o
+     * vencio, o la cuenta ya no existe -pasa al rehacer la base con el
+     * navegador abierto-. Se avisa para volver al login, que es la unica salida
+     * util; seguir mostrando errores en rojo deja a la persona trabada.
+     *
+     * Se exige que HAYA token: sin el, un 401 es el de entrar con la contrasena
+     * equivocada, y ahi no hay ninguna sesion que cerrar.
+     */
+    if (respuesta.status === 401 && token) {
+      alCaducarLaSesion?.()
+    }
+
     let problema: Problema | undefined
     let mensaje = `${respuesta.status} ${respuesta.statusText}`
     try {
