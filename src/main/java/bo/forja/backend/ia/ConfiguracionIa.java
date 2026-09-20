@@ -34,4 +34,25 @@ public class ConfiguracionIa {
         }
         return new TraductorOllama(new AjustesDeIa(true, url, modelo));
     }
+
+    /**
+     * Quien contesta cuando la base de reglas del agente no alcanza.
+     * <p>
+     * Va detras de la MISMA bandera que el traductor: el bloque de IA se prende
+     * y se apaga entero, y apagado la aplicacion es la de siempre. Son dos
+     * beans y no uno porque son dos capacidades distintas -traducir a
+     * instrucciones y redactar una explicacion- y cada una se puede recortar
+     * sin la otra.
+     */
+    @Bean
+    Respondedor respondedor(
+            @Value("${forja.ia.local.habilitada:false}") boolean habilitada,
+            @Value("${forja.ia.local.url:http://localhost:11434}") String url,
+            @Value("${forja.ia.local.modelo:gemma3:4b}") String modelo) {
+
+        if (!habilitada) {
+            return new RespondedorNulo();
+        }
+        return new RespondedorOllama(new AjustesDeIa(true, url, modelo));
+    }
 }

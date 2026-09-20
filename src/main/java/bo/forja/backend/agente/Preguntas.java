@@ -42,6 +42,13 @@ public class Preguntas {
     private static final int CUANTAS = 3;
 
     /**
+     * El identificador de "esa no la se contestar". Lo mira {@link ServicioAgente}
+     * para saber que el catalogo no engancho y que ahi si tiene sentido llegar
+     * hasta el modelo local.
+     */
+    public static final String SIN_COINCIDENCIA = "respuesta-sin-coincidencia";
+
+    /**
      * Lo que se mira de una pregunta larguisima.
      * <p>
      * Se RECORTA en vez de rechazarse. Rechazar seria devolver un error, y un
@@ -276,6 +283,26 @@ public class Preguntas {
      * vista las preguntas que si tienen respuesta convierte eso en un menu: se
      * toca una y anda, siempre.
      */
+    /**
+     * Todo el catalogo en texto plano, para usarlo como contexto del modelo.
+     * <p>
+     * Es lo que hace que la respuesta del modelo salga de lo que la herramienta
+     * de verdad documenta y no de lo que el modelo crea recordar: no conoce
+     * FORJA, y sin este texto la inventaria. Se arma del mismo catalogo que
+     * responde el sistema experto, asi que las dos vias dicen lo mismo y no hay
+     * una segunda fuente de verdad que mantener.
+     */
+    public String baseComoTexto() {
+        StringBuilder texto = new StringBuilder();
+        for (Entrada entrada : CATALOGO) {
+            texto.append("- ").append(entrada.pregunta()).append(System.lineSeparator())
+                    .append("  ").append(entrada.queEs()).append(". ")
+                    .append(entrada.porQue()).append(". ")
+                    .append(entrada.como()).append(System.lineSeparator());
+        }
+        return texto.toString();
+    }
+
     public List<Tema> temas() {
         return CATALOGO.stream()
                 .sorted(Comparator.comparingInt(Entrada::prioridad).reversed())
@@ -363,7 +390,7 @@ public class Preguntas {
      * persona exactamente donde estaba.
      */
     private Consejo noEntendi() {
-        return Consejo.de("respuesta-sin-coincidencia", Consejo.Categoria.DESCUBRIMIENTO, 0,
+        return Consejo.de(SIN_COINCIDENCIA, Consejo.Categoria.DESCUBRIMIENTO, 0,
                 "Esa no la sé contestar",
                 "Sé explicar cómo se usa FORJA -proyectos, invitaciones, dictado, foto de pizarra, "
                         + "generación del backend, intercambio con Enterprise Architect- y las dudas de "

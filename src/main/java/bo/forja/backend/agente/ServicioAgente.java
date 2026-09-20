@@ -2,6 +2,8 @@ package bo.forja.backend.agente;
 
 import bo.forja.backend.dominio.Diagrama;
 import bo.forja.backend.dominio.Herramienta;
+import bo.forja.backend.ia.Respondedor;
+import bo.forja.backend.ia.RespondedorOllama;
 import bo.forja.backend.dominio.OrigenOperacion;
 import bo.forja.backend.dominio.Proyecto;
 import bo.forja.backend.repositorio.ConteoPorOrigen;
@@ -21,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -67,6 +71,18 @@ public class ServicioAgente {
      */
     private static final int POR_REGLA = 2;
 
+    /** Identificador de una respuesta que redacto el modelo y no el catalogo. */
+    public static final String RESPUESTA_DEL_MODELO = "respuesta-del-modelo";
+
+    /**
+     * Cuanto se espera al modelo por una pregunta escrita.
+     * <p>
+     * Menos que el pedido de un diagrama -que tiene 90 s- porque aca del otro
+     * lado hay alguien esperando una frase, no un modelo entero. Al vencer se
+     * devuelve lo que el agente habria dicho igual.
+     */
+    private static final Duration PRESUPUESTO_DE_RESPUESTA = Duration.ofSeconds(25);
+
     private final ServicioProyectos proyectos;
     private final ServicioModelo modelo;
     private final RelacionUmlRepositorio relaciones;
@@ -78,6 +94,7 @@ public class ServicioAgente {
     private final ProyectoRepositorio proyectoRepositorio;
     private final DiagramaRepositorio diagramas;
     private final ServicioUso uso;
+    private final Respondedor respondedor;
 
     public ServicioAgente(ServicioProyectos proyectos,
                           ServicioModelo modelo,
@@ -89,7 +106,8 @@ public class ServicioAgente {
                           Preguntas preguntas,
                           ProyectoRepositorio proyectoRepositorio,
                           DiagramaRepositorio diagramas,
-                          ServicioUso uso) {
+                          ServicioUso uso,
+                          Respondedor respondedor) {
         this.proyectos = proyectos;
         this.modelo = modelo;
         this.relaciones = relaciones;
@@ -101,6 +119,7 @@ public class ServicioAgente {
         this.proyectoRepositorio = proyectoRepositorio;
         this.diagramas = diagramas;
         this.uso = uso;
+        this.respondedor = respondedor;
     }
 
     /**
@@ -150,7 +169,50 @@ public class ServicioAgente {
      */
     public List<Consejo> responder(UUID usuarioId, String texto, String sobre) {
         uso.anotar(usuarioId, Herramienta.AGENTE_CONSULTADO);
-        return preguntas.responder(texto, sobre);
+
+        List<Consejo> delCatalogo = preguntas.responder(texto, sobre);
+        if (!soloDijoQueNoSabe(delCatalogo) || !respondedor.disponible()) {
+            return delCatalogo;
+        }
+
+        // Aca, y solo aca, se llega al modelo: el catalogo no engancho, asi que
+        // lo unico que se puede perder es un "no la se contestar".
+        return respondedor.responder(texto, preguntas.baseComoTexto(), PRESUPUESTO_DE_RESPUESTA)
+                .filter(ServicioAgente::dijoAlgo)
+                .map(ServicioAgente::comoConsejo)
+                .map(List::of)
+                .orElse(delCatalogo);
+    }
+
+    /**
+     * El modelo tiene permitido decir que la respuesta no esta en el contexto,
+     * y conviene que lo diga: es como se evita que invente. Pero ese centinela
+     * es para el codigo, no para la persona, asi que se trata como un "no
+     * contesto" y gana la respuesta escrita.
+     */
+    private static boolean dijoAlgo(String respuesta) {
+        return !respuesta.toUpperCase(Locale.ROOT).contains(RespondedorOllama.NO_SABE);
+    }
+
+    private boolean soloDijoQueNoSabe(List<Consejo> consejos) {
+        return consejos.size() == 1 && Preguntas.SIN_COINCIDENCIA.equals(consejos.getFirst().id());
+    }
+
+    /**
+     * La respuesta del modelo, envuelta y ETIQUETADA como tal.
+     * <p>
+     * Se distingue a proposito de las escritas. Una respuesta redactada por un
+     * modelo de 4B puede equivocarse, y quien la lee tiene derecho a saber de
+     * donde salio: ocultarlo seria vender como conocimiento de la herramienta
+     * algo que no lo es. Ademas deja abierta la salida buena -preguntar de nuevo
+     * con las palabras del catalogo- que si da una respuesta exacta.
+     */
+    private static Consejo comoConsejo(String respuesta) {
+        return Consejo.de(RESPUESTA_DEL_MODELO, Consejo.Categoria.DESCUBRIMIENTO, 0,
+                respuesta,
+                "La redactó el modelo local a partir de la documentación de FORJA. No sale de la "
+                        + "base de respuestas escritas, así que puede equivocarse",
+                "Si necesitás una respuesta exacta, probá con una de las preguntas de acá abajo");
     }
 
     /** Las preguntas que si tienen respuesta, para ofrecerlas antes de fallar. */

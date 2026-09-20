@@ -10,27 +10,40 @@ Código en `src/main/java/bo/forja/backend/agente/`.
 
 ## 1. Lo primero que hay que poder decir
 
-> **Es un agente simbólico —un sistema experto de reglas—, no un modelo de
-> lenguaje. Y es una decisión, no una limitación.**
+> **Es un agente híbrido con las reglas al mando: primero un sistema experto, y
+> el modelo de lenguaje sólo donde las reglas no llegan. El orden es la decisión.**
 
 El argumento: para saber que *una clase marcada como interfaz no puede tener
 atributos* no hace falta inferir nada, hace falta **saber la regla**. Un modelo
 de lenguaje lo diría a veces y a veces diría otra cosa. Un sistema de reglas lo
 dice siempre, se puede auditar y se puede probar.
 
-Y tiene una consecuencia comprobable, que es el argumento fuerte: **la misma
-pregunta da siempre la misma respuesta**. Eso se verifica en una prueba. Con un
-LLM no se podría.
+Y tiene una consecuencia comprobable, que es el argumento fuerte: **las preguntas
+del catálogo dan siempre la misma respuesta**. Eso se verifica en una prueba. Con
+un LLM al frente no se podría.
+
+El modelo entra **sólo cuando el catálogo no engancha** — es decir, exactamente
+donde antes el agente decía «esa no la sé contestar». Es el único lugar donde no
+puede empeorar nada: lo peor que puede pasar es volver a esa misma respuesta. Y
+no contesta de lo que el modelo sepa: se le pasa **la misma base de conocimiento
+escrita como contexto**, con la orden de no salir de ahí. No conoce FORJA; sin
+ese contexto la inventaría.
 
 **En el proyecto conviven los dos paradigmas de IA, cada uno donde sirve:**
 
 | Paradigma | Dónde | Para qué |
 |---|---|---|
-| Simbólico (reglas) | El agente guía | Razonar sobre el modelo y enseñar la herramienta |
-| Generativo (LLM) | El pedido por IA y el dictado libre | Entender lenguaje natural |
+| Simbólico (reglas) | El agente guía: 24 reglas y 17 respuestas escritas | Razonar sobre el modelo y enseñar la herramienta |
+| Generativo (Gemma) | El pedido de diagrama, el respaldo del dictado, y el agente cuando sus reglas no llegan | Entender y redactar lenguaje natural |
 
 Si te preguntan «¿dónde está la IA?», la respuesta no es una sola: son dos, y
 están separadas a propósito.
+
+**Y dos cosas que NO son IA**, que conviene no llamar así porque no resisten la
+repregunta: el **generador de Spring Boot** es un traductor determinista con
+reglas de mapeo —por eso el código compila siempre y es reproducible—, y el
+**reconocimiento de voz** (voz→texto) lo hace el navegador o Android, no FORJA.
+Lo que sí es de la herramienta es texto→comando.
 
 ---
 
@@ -40,7 +53,7 @@ están separadas a propósito.
 |---|---|---|
 | **Consejos** | Qué conviene hacer ahora, mirando el estado real | `GET /api/guia` |
 | **Recorrido** | Dónde estás parado dentro de la herramienta completa | va en la misma respuesta |
-| **Preguntas** | Le preguntás algo y responde | `POST /api/guia/pregunta` |
+| **Preguntas** | Le preguntás algo y responde: catálogo primero, modelo después | `POST /api/guia/pregunta` |
 
 Los temas que sabe responder se ofrecen en `GET /api/guia/temas`, y hay un
 `GET /api/diagramas/{id}/agente` para los consejos de un diagrama puntual.
@@ -180,6 +193,24 @@ palabras clave, una prioridad y la respuesta en los tres campos.
    clave de varias palabras vale más**: quien escribe «rombo lleno» está siendo
    más preciso que quien escribe «rombo». La prioridad solo desempata.
 4. Devuelve las **3 mejores**.
+5. **Si ninguna enganchó**, y solo entonces, se le pregunta al modelo local con
+   el catálogo entero como contexto. Presupuesto de 25 s.
+
+### Las tres salidas posibles, medidas
+
+| Pregunta | Camino | Tiempo real |
+|---|---|---|
+| «cómo exporto a Enterprise Architect» | catálogo | 0,05 s |
+| «qué pasa si dos editamos la misma clase a la vez» | modelo, con el catálogo de contexto | 6,0 s |
+| «hay atajos de teclado» | el modelo dice que no está → vuelve la respuesta escrita | 2,0 s |
+
+La respuesta del modelo **va etiquetada como tal** (`respuesta-del-modelo`) y
+avisa que puede equivocarse. Ocultar de dónde salió sería vender como
+conocimiento de la herramienta algo que no lo es.
+
+El prompt le permite contestar `NO ESTA EN LA DOCUMENTACION`, y lo usa. Ese
+centinela **nunca se muestra**: se trata como «no contestó» y gana la respuesta
+escrita, que además ofrece los temas que sí están.
 
 ### Nunca falla
 
@@ -211,9 +242,14 @@ frase: el consejo «nunca dictaste» desaparece y el paso del recorrido se marca
 generar una tabla de una sola columna. Marcala como `interface` y ponele un
 atributo → avisa que una interfaz no puede tenerlos.
 
-**Que es determinista:** hacé la misma pregunta dos veces. Palabra por palabra,
-la misma respuesta. Decí que con un modelo de lenguaje eso no se puede
-garantizar.
+**Que es determinista donde importa:** hacé una pregunta del catálogo dos veces.
+Palabra por palabra, la misma respuesta, y en milisegundos. Decí que con un
+modelo de lenguaje al frente eso no se puede garantizar.
+
+**Que el modelo recoge lo que las reglas no cubren:** preguntale «qué pasa si
+dos editamos la misma clase a la vez». No está en el catálogo, tarda unos
+segundos, y contesta bien — porque la respuesta sí está en la documentación que
+se le pasó de contexto.
 
 **Que no se rompe:** mandale una pregunta vacía, o basura, o 400 caracteres de
 texto sin sentido. Siempre contesta.
@@ -231,13 +267,18 @@ texto sin sentido. Siempre contesta.
 | `BaseDeConocimiento.java` | Las 14 reglas del modelo |
 | `BaseDeLaHerramienta.java` | Las 10 reglas de la herramienta |
 | `Recorrido.java` | Los 8 pasos y cómo se marcan |
-| `Preguntas.java` | Las 17 preguntas y el emparejamiento |
+| `Preguntas.java` | Las 17 preguntas, el emparejamiento y la base como texto |
+| `ia/Respondedor.java` | El contrato de «contestar con palabras» |
+| `ia/RespondedorOllama.java` | La implementación con Gemma, y el prompt que le prohíbe salir del contexto |
+| `ia/RespondedorNulo.java` | Sin IA: el agente es el sistema experto de siempre |
 | `Consejo.java` | Qué noté / por qué importa / cómo se hace |
 | `ServicioUso.java` + `AnotadorDeUso.java` | El registro de qué funciones probó cada persona |
 
 Pruebas en `src/test/java/bo/forja/backend/agente/`:
 `BaseDeConocimientoTest`, `BaseDeLaHerramientaTest`, `PreguntasTest`,
-`PreguntasResistenciaTest` (entradas hostiles) y `AgenteNoSeCaeTest`.
+`PreguntasResistenciaTest` (entradas hostiles), `AgenteNoSeCaeTest` y
+`AgenteHibridoTest`, que fija el ORDEN: una pregunta del catálogo **no puede**
+llegar al modelo.
 
 ---
 
@@ -246,7 +287,13 @@ Pruebas en `src/test/java/bo/forja/backend/agente/`:
 Conviene adelantarlos en la defensa en vez de que te los encuentren:
 
 - **No aprende.** Las reglas están escritas; no se ajustan solas con el uso.
-- **No entiende sinónimos.** El emparejamiento es por subcadena.
+- **El catálogo empareja por subcadena**, y eso produce falsos positivos: la
+  clave `id` matchea dentro de «serv**id**or». Cuando el catálogo se equivoca
+  así, el modelo ni se entera, porque solo entra si el catálogo no enganchó nada.
+- **Sin Ollama, el modelo no está** y el agente vuelve a ser exactamente el
+  sistema experto de antes. La versión desplegada en AWS corre así.
+- **La respuesta del modelo no es reproducible.** Por eso está etiquetada y por
+  eso las preguntas que importan están en el catálogo.
 - **No razona fuera de lo que se le programó.** No va a descubrir un problema de
   diseño que no esté escrito como regla.
 - **El registro de uso es por persona, no por equipo.** Si tu compañero generó
