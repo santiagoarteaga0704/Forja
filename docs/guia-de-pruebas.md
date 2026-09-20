@@ -229,6 +229,17 @@ solo en `localhost`.
 
 Checklist del día, en orden.
 
+- [ ] **Cerrar los servidores de desarrollo de los OTROS proyectos.** Es el
+      gemelo en RAM de la regla de la GPU, y muerde igual: el 20 de septiembre
+      el sistema mató el backend y Vite por falta de memoria, con la máquina al
+      14% libre. FORJA usaba 23 MB; **TDS y sus pruebas se llevaban ~2,7 GB** y
+      Gemma otros 1,9. Se revisa así:
+
+      ```powershell
+      Get-Process node,java | Sort-Object WorkingSet64 -Descending |
+        Select-Object -First 8 @{n='MB';e={[math]::Round($_.WorkingSet64/1MB)}}, ProcessName, Id
+      ```
+
 - [ ] `docker ps` — que `erp_postgres` **no** esté ocupando el 5433.
 - [ ] **Cerrar el navegador y Wallpaper Engine** antes de arrancar el backend.
       La GPU tiene 4 GB y `gemma3:4b` ocupa 3,5: si no entra entero, Ollama lo
@@ -266,5 +277,6 @@ tres vueltas con tiempos y cuántas relaciones salieron.
 | `Bind for 0.0.0.0:5433 failed` | `erp_postgres`. Paralo. |
 | `Could not resolve placeholder` | Quedó un `application.yml` en `target/test-classes/`. Borralo o corré `mvnw clean`. |
 | El botón `Pedir` no aparece | `FORJA_IA_HABILITADA` no llegó al proceso. |
+| El backend o Vite mueren solos | Falta de RAM. Cerrá los otros proyectos (sección 6). |
 | El pedido tarda 45 s | El modelo no entró entero en la GPU. `ollama ps`. |
 | El agente responde «no la sé contestar» | Reformulá; si es una pregunta razonable que no cubre, es una clave que falta en `Preguntas.java`. |
