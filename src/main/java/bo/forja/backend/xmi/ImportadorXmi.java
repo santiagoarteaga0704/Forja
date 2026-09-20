@@ -64,6 +64,10 @@ public class ImportadorXmi {
     public List<ComandoOperacion> interpretar(String xmi) {
         Document documento = leer(xmi);
 
+        // La vista de EA vive aparte de las clases y se referencia por id, asi
+        // que se censa una vez y se consulta al crear cada clase.
+        Map<String, Geometria> vistaEa = vistaDeEnterpriseArchitect(documento);
+
         Map<String, String> nombresDeTipos = new HashMap<>();
         Map<String, UUID> equivalencias = new LinkedHashMap<>();
         List<Element> clasificadores = new ArrayList<>();
@@ -109,7 +113,7 @@ public class ImportadorXmi {
             String idXmi = atributoXmi(clasificador, "id");
             UUID claseId = equivalencias.get(idXmi);
 
-            altas.add(crearClase(clasificador, claseId, indice++));
+            altas.add(crearClase(clasificador, claseId, indice++, vistaEa));
             contenidos.addAll(atributosDe(clasificador, claseId, nombresDeTipos, extremos, idXmi));
             contenidos.addAll(operacionesDe(clasificador, claseId, nombresDeTipos));
             relaciones.addAll(herenciasDe(clasificador, claseId, equivalencias));
@@ -144,7 +148,8 @@ public class ImportadorXmi {
 
     // ---------- Clases ------------------------------------------------------
 
-    private ComandoOperacion crearClase(Element clasificador, UUID claseId, int indice) {
+    private ComandoOperacion crearClase(Element clasificador, UUID claseId, int indice,
+                                        Map<String, Geometria> vistaEa) {
         String nombre = clasificador.getAttribute("name");
         if (nombre.isBlank()) {
             nombre = "ClaseSinNombre" + (indice + 1);
@@ -157,7 +162,7 @@ public class ImportadorXmi {
                 ? "interface"
                 : estereotipoDeLaExtension(clasificador);
 
-        Geometria geometria = geometriaDe(clasificador, indice);
+        Geometria geometria = geometriaDe(clasificador, indice, vistaEa);
         return new ComandoOperacion.CrearClase(claseId, nombre, estereotipo, abstracta,
                 geometria.x(), geometria.y());
     }
@@ -175,7 +180,8 @@ public class ImportadorXmi {
      * exporto FORJA- se respeta; si viene de otra herramienta se distribuyen
      * en una cuadricula, que es preferible a apilarlas todas en el origen.
      */
-    private Geometria geometriaDe(Element clasificador, int indice) {
+    private Geometria geometriaDe(Element clasificador, int indice,
+                                  Map<String, Geometria> vistaEa) {
         for (Element geometria : hijos(clasificador, "geometria")) {
             try {
                 return new Geometria(
@@ -185,6 +191,16 @@ public class ImportadorXmi {
                 break;
             }
         }
+        // Un documento de Enterprise Architect no trae la etiqueta de arriba:
+        // su geometria vive en el bloque de la vista, referenciada por id.
+        String id = atributoXmi(clasificador, "id");
+        if (id != null) {
+            Geometria deLaVista = vistaEa.get(id);
+            if (deLaVista != null) {
+                return deLaVista;
+            }
+        }
+
         return new Geometria((indice % POR_FILA) * PASO_X, (indice / POR_FILA) * PASO_Y);
     }
 
@@ -696,6 +712,68 @@ public class ImportadorXmi {
     }
 
     // ---------- Estructuras internas ----------------------------------------
+
+    /**
+     * La posicion de cada clase segun la vista de Enterprise Architect.
+     * <p>
+     * EA no escribe la geometria dentro de la clase: la escribe aparte, en
+     * {@code xmi:Extension/diagrams/diagram/elements}, como
+     * {@code <element geometry="Left=137;Top=411;Right=337;Bottom=531;"
+     * subject="EAID_..."/>}, donde {@code subject} referencia el identificador
+     * del clasificador.
+     * <p>
+     * Sin esto, un modelo hecho en EA entraba con las clases acomodadas en una
+     * fila y habia que ordenarlo a mano -justo lo que el intercambio viene a
+     * evitar-. Se comprobo exportando desde FORJA, quitandole su propia
+     * extension y volviendo a importar: las clases perdian su lugar.
+     */
+    private Map<String, Geometria> vistaDeEnterpriseArchitect(Document documento) {
+        Map<String, Geometria> porSujeto = new HashMap<>();
+
+        for (Element elemento : elementos(documento, "element")) {
+            String sujeto = elemento.getAttribute("subject");
+            String geometria = elemento.getAttribute("geometry");
+            if (sujeto.isBlank() || geometria.isBlank()) {
+                continue;
+            }
+            posicionDe(geometria).ifPresent(punto -> porSujeto.put(sujeto, punto));
+        }
+        return porSujeto;
+    }
+
+    /**
+     * Lee "Left=137;Top=411;Right=337;Bottom=531;".
+     * <p>
+     * Solo interesan Left y Top: el ancho y el alto de la caja los decide el
+     * lienzo a partir de cuantos atributos y operaciones tiene la clase, asi
+     * que respetar los de EA daria cajas que no coinciden con su contenido.
+     */
+    private Optional<Geometria> posicionDe(String geometria) {
+        Double izquierda = null;
+        Double arriba = null;
+
+        for (String parte : geometria.split(";")) {
+            String[] clave = parte.split("=", 2);
+            if (clave.length != 2) {
+                continue;
+            }
+            try {
+                double valor = Double.parseDouble(clave[1].trim());
+                if ("Left".equalsIgnoreCase(clave[0].trim())) {
+                    izquierda = valor;
+                } else if ("Top".equalsIgnoreCase(clave[0].trim())) {
+                    arriba = valor;
+                }
+            } catch (NumberFormatException e) {
+                // Una coordenada ilegible no invalida el documento: se cae al
+                // acomodo por omision, que es peor pero sigue siendo utilizable.
+                return Optional.empty();
+            }
+        }
+        return izquierda == null || arriba == null
+                ? Optional.empty()
+                : Optional.of(new Geometria(izquierda, arriba));
+    }
 
     private record Geometria(double x, double y) {
     }

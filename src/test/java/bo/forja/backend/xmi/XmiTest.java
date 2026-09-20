@@ -209,6 +209,47 @@ class XmiTest {
                 .contains("<packagedElement xmi:type=\"uml:Realization\"");
     }
 
+    /**
+     * Un documento hecho en Enterprise Architect NO trae la etiqueta propia de
+     * FORJA: trae la geometria solo en el bloque de la vista, como
+     * {@code geometry="Left=..;Top=.."}. Si no se lee de ahi, un modelo hecho en
+     * EA entra desarmado -todas las clases en una fila- y hay que acomodarlo a
+     * mano, que es justo lo que el intercambio viene a evitar.
+     * <p>
+     * Se simula quitandole al propio export la extension de FORJA, con lo que
+     * queda exactamente lo que escribe EA.
+     */
+    @Test
+    @DisplayName("un documento de Enterprise Architect conserva la posicion de cada clase")
+    void laVistaDeEnterpriseArchitectSeLee() {
+        String documento = xmi.exportar(original.getId(), autor.getId())
+                .replaceAll("<geometria[^/]*/>", "");
+
+        assertThat(documento)
+                .as("queda solo la forma que escribe Enterprise Architect")
+                .doesNotContain("<geometria")
+                .contains("geometry=\"Left=");
+
+        xmi.importar(vacio.getId(), autor.getId(), "sesion-ea", documento, "tk-ea");
+
+        List<ClaseUml> importadas = clases.findByDiagramaId(vacio.getId());
+        List<ClaseUml> originales = clases.findByDiagramaId(original.getId());
+
+        for (ClaseUml esperada : originales) {
+            ClaseUml traida = importadas.stream()
+                    .filter(c -> c.getNombre().equals(esperada.getNombre()))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("no llego " + esperada.getNombre()));
+
+            assertThat(traida.getPosX())
+                    .as("x de " + esperada.getNombre())
+                    .isEqualTo(esperada.getPosX());
+            assertThat(traida.getPosY())
+                    .as("y de " + esperada.getNombre())
+                    .isEqualTo(esperada.getPosY());
+        }
+    }
+
     @Test
     @DisplayName("lo importado queda en la bitacora con origen IMPORTACION")
     void laImportacionQuedaTrazada() {
