@@ -193,8 +193,26 @@ Paciente tiene muchas Consultas
 Cada frase se aplica al instante, sin modelo de lenguaje: es la gramática
 determinista.
 
-**Fotografiar.** Botón `Pizarra`. Cargá una foto de un diagrama en una pizarra.
-El OCR corre **en el navegador**, sin mandar la imagen a ningún lado.
+**Fotografiar.** Botón `Pizarra`. Cargá la foto de un diagrama — dibujado en una
+pizarra, en papel, o una captura de Enterprise Architect. **La imagen se manda
+al servidor**, que la lee con un modelo de visión y devuelve el texto; el
+diagrama no se toca hasta que vos aceptes.
+
+Necesita que el backend arranque con la clave:
+
+```powershell
+$env:FORJA_VISION_HABILITADA = "true"
+$env:FORJA_VISION_CLAVE = "<la clave de Gemini>"
+```
+
+Sin eso el botón de la cámara responde que la función no está configurada y te
+deja escribir el texto a mano, que es el camino que no depende de nadie.
+
+Medido el 21 de septiembre de 2026 sobre un diagrama de Enterprise Architect de
+nueve clases, de punta a punta: **5 segundos, 44 operaciones aplicadas, las 9
+clases con sus atributos exactos, 10 relaciones, 0 líneas sin entender.** Se
+equivocó en un extremo: colgó `contiene` de `Docente` en vez de `Materia`. Por
+eso existe el paso de revisión.
 
 ### 3.4 El pedido por IA (necesita Ollama)
 

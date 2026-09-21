@@ -249,6 +249,37 @@ export const api = {
 
   // ---------- Foto de pizarra ----------------------------------------------
 
+  /**
+   * Si el servidor puede leer una foto.
+   *
+   * Se pregunta antes de ofrecer el boton, igual que con el traductor: sin
+   * clave configurada la respuesta seria siempre un error, y un boton que no
+   * hace nada es peor que no tenerlo.
+   */
+  hayLectorDeFotos: (diagramaId: string) =>
+    pedir<Disponibilidad>(`/api/diagramas/${diagramaId}/foto/disponible`),
+
+  /**
+   * De la imagen al texto. No toca el diagrama.
+   *
+   * Va por multipart y no por JSON porque lo que viaja es un archivo: en base
+   * 64 crece un tercio y hay que sostenerlo entero en memoria dos veces.
+   */
+  transcribirFoto: async (diagramaId: string, archivo: File) => {
+    const formulario = new FormData()
+    formulario.append('imagen', archivo)
+    const respuesta = await fetch(`${BASE}/api/diagramas/${diagramaId}/foto/transcripcion`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formulario,
+    })
+    if (!respuesta.ok) {
+      const detalle = await respuesta.json().catch(() => null)
+      throw new ErrorApi(respuesta.status, detalle?.detail ?? 'No se pudo leer la imagen')
+    }
+    return (await respuesta.json()) as { texto: string }
+  },
+
   /** Primer paso: que se entendio del texto, sin tocar el modelo. */
   leerPizarra: (diagramaId: string, texto: string, sesionId: string) =>
     pedir<Lectura>(`/api/diagramas/${diagramaId}/foto/lectura`, {

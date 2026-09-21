@@ -8,14 +8,24 @@ import type { Lectura } from '../tipos'
  * Construir el diagrama desde la foto de una pizarra.
  *
  * El flujo tiene tres pasos y el del medio es el que hace que esto funcione:
- * se elige la imagen, **se revisa el texto reconocido**, y solo entonces se
- * aplica. El reconocimiento sobre letra manuscrita nunca es exacto; poder
- * corregir dos caracteres antes de tocar el modelo es la diferencia entre una
- * funcion que se puede demostrar y una que depende de la suerte.
+ * se elige la imagen, **se revisa el texto leido**, y solo entonces se aplica.
+ * Ninguna lectura de una foto es exacta; poder corregir antes de tocar el
+ * modelo es la diferencia entre una funcion que se puede demostrar y una que
+ * depende de la suerte.
  *
- * El reconocimiento ocurre aqui, en el navegador, con el motor y los datos de
- * idioma servidos desde la propia aplicacion. No se sube la imagen: el servidor
- * no necesita la foto, necesita el texto, y hacerlo asi funciona sin conexion.
+ * **La lee un modelo de vision, en el servidor.** Antes la leia un motor de
+ * reconocimiento de caracteres aqui mismo, sin conexion, y eso tenia una
+ * virtud: la imagen no salia de la maquina. Lo que no podia era leer un
+ * diagrama DIBUJADO, y es el que la gente fotografia. El reconocimiento lee
+ * texto, y en un diagrama las relaciones son flechas: medido el 21 de
+ * septiembre de 2026 sobre un diagrama de nueve clases, devolvia renglones que
+ * cruzaban tres cajas y ni una relacion. El modelo de vision devolvio las nueve
+ * clases con sus veintiun atributos y ocho de sus diez relaciones, en 3,2 s.
+ *
+ * El precio esta escrito en la pantalla: por esta via **la imagen sale de la
+ * maquina**, y sin conexion la lectura no esta. Por eso el cuadro de texto
+ * sigue ahi y se puede escribir o pegar a mano, que es el camino que nunca
+ * depende de nadie.
  */
 export default function Foto({
   diagramaId,
@@ -51,44 +61,29 @@ export default function Foto({
     setImagen(URL.createObjectURL(archivo))
     setLectura(null)
     setAviso(null)
-    setProgreso('Preparando el reconocimiento…')
+    setProgreso('Leyendo la imagen…')
 
     try {
-      const { createWorker } = await import('tesseract.js')
-      const trabajador = await createWorker(['spa', 'eng'], 1, {
-        // Todo servido por la propia aplicacion: sin esto el motor lo buscaria
-        // en internet y la funcion dependeria de la red del aula.
-        workerPath: '/ocr/worker.min.js',
-        corePath: '/ocr',
-        langPath: '/ocr',
-        gzip: false,
-        logger: (mensaje: { status?: string; progress?: number }) => {
-          if (mensaje.status) {
-            const porcentaje = Math.round((mensaje.progress ?? 0) * 100)
-            setProgreso(`${traducir(mensaje.status)} ${porcentaje}%`)
-          }
-        },
-      })
-
-      const { data } = await trabajador.recognize(archivo)
-      await trabajador.terminate()
-
-      setTexto(data.text.trim())
+      const { texto: leido } = await api.transcribirFoto(diagramaId, archivo)
       setProgreso(null)
+      setTexto(leido)
       areaDeTexto.current?.focus()
-      if (!data.text.trim()) {
+      if (!leido.trim()) {
         setAviso({
           clase: 'informacion',
-          texto: 'No se reconoció texto en la imagen. Probá con más luz y más de frente, '
-            + 'o escribí el contenido a mano en el cuadro.',
+          texto: 'No se reconoció nada en la imagen. Probá con más luz y más de frente, '
+            + 'o escribí el contenido en el cuadro.',
         })
       }
     } catch (error) {
       setProgreso(null)
       setAviso({
         clase: 'error',
-        texto: 'No se pudo iniciar el reconocimiento. Podés escribir el contenido de la '
-          + 'pizarra en el cuadro y seguir igual. (' + String(error) + ')',
+        texto: error instanceof ErrorApi && error.estado === 503
+          ? 'La lectura de imágenes no está configurada en este servidor. Podés escribir '
+            + 'el contenido de la pizarra en el cuadro y seguir igual.'
+          : 'No se pudo leer la imagen. Podés escribir el contenido en el cuadro y seguir '
+            + 'igual. (' + (error instanceof ErrorApi ? error.message : String(error)) + ')',
       })
     }
   }
@@ -140,8 +135,8 @@ export default function Foto({
       <div className="dialogo foto" onClick={(e) => e.stopPropagation()}>
         <h2>Leer una pizarra</h2>
         <p className="bajada">
-          El reconocimiento ocurre en esta pantalla: la foto no sale de tu computadora, al servidor
-          va el texto.
+          La imagen se manda al servidor, que la lee con un modelo de visión. Revisá el texto
+          antes de aplicarlo: lo que entra al diagrama lo decidís vos.
         </p>
 
         {/*
@@ -188,8 +183,8 @@ export default function Foto({
 
         <label htmlFor="texto-pizarra">Revisar el texto</label>
         <p className="sutil" style={{ margin: '0 0 6px' }}>
-          Corregí lo que el reconocimiento haya entendido mal antes de aplicarlo. También podés
-          escribirlo a mano.
+          Corregí lo que la lectura haya entendido mal antes de aplicarlo. También podés
+          escribirlo a mano, que es el camino que funciona siempre.
         </p>
         <textarea
           id="texto-pizarra"
@@ -271,23 +266,6 @@ function ResumenDeLectura({ lectura }: { lectura: Lectura }) {
       )}
     </div>
   )
-}
-
-function traducir(estado: string) {
-  switch (estado) {
-    case 'loading tesseract core':
-    case 'loading core':
-      return 'Cargando el motor'
-    case 'initializing tesseract':
-    case 'initializing api':
-      return 'Iniciando'
-    case 'loading language traineddata':
-      return 'Cargando el idioma'
-    case 'recognizing text':
-      return 'Leyendo la pizarra'
-    default:
-      return estado
-  }
 }
 
 const EJEMPLO = `Paciente

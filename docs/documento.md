@@ -268,11 +268,11 @@ distinguir las dos cosas.
 | Flyway | Versionado reproducible del esquema de la base |
 | PostgreSQL 17 | Persistencia y arbitraje de la concurrencia |
 | React 19 + Vite | Cliente web |
-| Tesseract.js | Reconocimiento óptico, ejecutado en el navegador |
+| Gemini (modelo de visión) | Lectura de la fotografía de un diagrama |
 | Flutter | Cliente móvil Android |
 | Ollama + Gemma 3 | Ejecución local del modelo de lenguaje |
 
-La criptografía, el mapeo objeto-relacional y el reconocimiento óptico no se
+La criptografía, el mapeo objeto-relacional y la lectura de imágenes no se
 implementaron: son problemas resueltos, y reescribirlos habría consumido el
 tiempo que el proyecto necesitaba para lo que sí es propio.
 
@@ -749,7 +749,7 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Actores** | Modelador |
 | **Actor Iniciador** | Modelador |
 | **Precondición** | Diagrama abierto y una fotografía disponible. |
-| **Flujo Principal** | 1. Elegir la imagen. 2. El reconocimiento óptico se ejecuta dentro del navegador. 3. Se muestra lo que se entendió, para revisión. 4. Al aceptar, el sistema aplica las operaciones con origen FOTO. |
+| **Flujo Principal** | 1. Elegir la imagen. 2. El servidor la transcribe con un modelo de visión. 3. Se muestra lo que se entendió, para revisión. 4. Al aceptar, el sistema aplica las operaciones con origen FOTO. |
 | **Post Condición** | Las clases reconocidas se incorporan al modelo. |
 | **Excepción** | Imagen ilegible: no se aplica nada y se informa. |
 
@@ -1358,9 +1358,32 @@ produce comandos. Los casos de la gramática viven en un **corpus compartido**
 implementación Dart del cliente móvil: una única fuente de verdad verificada en
 los dos lenguajes.
 
-**Fotografía.** El reconocimiento óptico se ejecuta en el navegador mediante
-Tesseract.js, con el motor y los datos de idioma empaquetados con la aplicación.
-La imagen no abandona el equipo, y la función opera sin conexión a internet.
+**Fotografía.** La imagen la lee un modelo de visión, invocado desde el
+servidor. La decisión se tomó midiendo. La implementación anterior ejecutaba
+reconocimiento óptico de caracteres dentro del navegador, sin que la imagen
+abandonara el equipo y sin conexión a internet; leía correctamente una pizarra
+**escrita como texto**, pero no un diagrama **dibujado**, que es el que se
+fotografía en la práctica. La razón es estructural y no se corrige ajustando
+parámetros: el reconocimiento óptico lee texto, y en un diagrama de clases las
+relaciones son flechas. Sobre un diagrama de nueve clases devolvía renglones que
+atravesaban tres recuadros y ninguna relación.
+
+Se evaluaron dos modelos de visión sobre esa misma imagen. Uno local —Gemma 3 de
+cuatro mil millones de parámetros, ejecutado con Ollama— transcribió las clases
+con errores e inventó una interfaz, y de doce relaciones propuestas no acertó
+ninguna. El servicio remoto devolvió las nueve clases con sus veintiún atributos
+y sus cuatro operaciones exactos, y diez relaciones de las cuales acertó ocho,
+incluidas las dos herencias y la realización. El recorrido completo —elegir la
+imagen, leerla, revisarla y aplicarla— tomó cinco segundos y registró cuarenta y
+cuatro operaciones.
+
+El precio está asumido y declarado en la propia pantalla: por esta vía **la
+imagen sale del equipo** y la función **requiere conexión**. Se mitiga de dos
+maneras. La primera es que el modelo únicamente **transcribe** a la misma
+notación que ya interpretaba el analizador determinista: no emite comandos, no
+toca el modelo, y el paso de revisión sigue siendo obligatorio. La segunda es
+que el cuadro de texto admite escritura manual, de modo que la ausencia de
+conexión degrada la función en lugar de eliminarla.
 
 **Modelo de lenguaje.** El traductor convierte un pedido libre en frases del
 idioma controlado, que luego **pasan por la misma gramática determinista**. El
