@@ -221,6 +221,26 @@
       ]
     },
     {
+      "id": "el-reconocedor-escucha-ha-donde-dice-a",
+      "_por-que": "Medido dictando el 21 de septiembre de 2026 en Edge: se dijo \"a Pedido anadir el atributo id\" y el reconocedor transcribio \"Ha pedido anadir el atributo id.\". En castellano \"a Pedido\" y \"ha pedido\" suenan igual, y \"ha pedido\" es una frase muchisimo mas frecuente, asi que el reconocedor se equivoca casi siempre. Como \"a Clase agregale...\" es la forma mas usada del dictado, la gramatica tolera la hache.",
+      "contexto": "clinica",
+      "frases": [
+        "ha Paciente agregale el atributo codigo de tipo texto",
+        "Ha paciente anadi el atributo codigo de tipo texto"
+      ],
+      "entendida": true,
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "codigo",
+            "tipo": "String"
+          }
+        }
+      ]
+    },
+    {
       "id": "atributo-con-el-destino-al-final",
       "contexto": "clinica",
       "frases": [

@@ -99,7 +99,7 @@ class ParserVoz {
   // ---------- Atributos y metodos -----------------------------------------
 
   static final _atributoDestinoPrimero = regla(
-      r'(?:a|en|para)\s+'
+      r'(?:a|ha|en|para)\s+'
       '(?:$articulo'
       r'clase\s+)?'
       '$nom'
@@ -127,7 +127,7 @@ class ParserVoz {
       r'\s+(?:tiene|posee|lleva)\s+(?:(?:un|una|el|la)\s+)?(.+\s+tipo\s+.+)');
 
   static final _metodoDestinoPrimero = regla(
-      r'(?:a|en|para)\s+'
+      r'(?:a|ha|en|para)\s+'
       '(?:$articulo'
       r'clase\s+)?'
       '$nom'

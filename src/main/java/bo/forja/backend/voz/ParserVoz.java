@@ -80,8 +80,15 @@ public class ParserVoz {
     private static final Pattern MARCAR_INTERFAZ =
             regla("(?:(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?clase\\s+)?" + NOM + "\\s+es\\s+una\\s+(?:interfaz|interface)");
 
+    /*
+     * La hache de "ha" es a proposito. Dictando, "a Pedido" y "ha pedido"
+     * suenan igual, y "ha pedido" es una frase muchisimo mas frecuente, asi
+     * que el reconocedor de voz elige esa casi siempre. Como "a Clase
+     * agregale..." es la forma mas usada del dictado, la gramatica se la banca
+     * en lugar de mandar la frase al respaldo, que es donde se hacia dano.
+     */
     private static final Pattern ATRIBUTO_DESTINO_PRIMERO =
-            regla("(?:a|en|para)\\s+(?:(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?clase\\s+)?" + NOM + "\\s+" + AGREGAR
+            regla("(?:a|ha|en|para)\\s+(?:(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?clase\\s+)?" + NOM + "\\s+" + AGREGAR
                     + "\\s+(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?atributo\\s+(.+)");
     private static final Pattern ATRIBUTO_DESTINO_ULTIMO =
             regla(AGREGAR + "\\s+(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?atributo\\s+(.+?)"
@@ -101,7 +108,7 @@ public class ParserVoz {
                     + "\\s+(?:tiene|posee|lleva)\\s+(?:(?:un|una|el|la)\\s+)?(.+\\s+tipo\\s+.+)");
 
     private static final Pattern METODO_DESTINO_PRIMERO =
-            regla("(?:a|en|para)\\s+(?:(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?clase\\s+)?" + NOM + "\\s+" + AGREGAR
+            regla("(?:a|ha|en|para)\\s+(?:(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?clase\\s+)?" + NOM + "\\s+" + AGREGAR
                     + "\\s+(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?(?:metodo|operacion)\\s+(.+)");
     private static final Pattern METODO_DESTINO_ULTIMO =
             regla(AGREGAR + "\\s+(?:(?:el|la|los|las|un|una|unos|unas)\\s+)?(?:metodo|operacion)\\s+(.+?)"
