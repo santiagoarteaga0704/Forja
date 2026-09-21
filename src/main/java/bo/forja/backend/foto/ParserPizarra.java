@@ -132,15 +132,31 @@ public class ParserPizarra {
 
         EnConstruccion actual = null;
         String estereotipoPendiente = null;
+        boolean huboLineaEnBlanco = false;
 
         for (Linea linea : lineas) {
             String texto1 = linea.texto();
 
             // Una linea en blanco cierra el recuadro: es como se separan las
-            // clases en una pizarra.
+            // clases en una pizarra. Pero no se cierra aqui, sino al ver que
+            // viene despues: el reconocimiento intercala lineas vacias dentro
+            // de un mismo recuadro -parte en parrafos lo que estaba junto- y
+            // cerrando de inmediato cada atributo quedaba huerfano.
             if (texto1.isBlank()) {
-                actual = null;
+                huboLineaEnBlanco = true;
                 continue;
+            }
+            if (huboLineaEnBlanco) {
+                huboLineaEnBlanco = false;
+                // Solo lo que se declara miembro sin ambiguedad continua el
+                // recuadro. La convencion de que una palabra en minuscula es
+                // un atributo no alcanza aqui: un nombre de clase que el
+                // reconocimiento dejo en minuscula se tragaria como atributo
+                // de la clase anterior, y en silencio. Preferimos que esa
+                // linea se informe.
+                if (!declaraSerMiembro(texto1)) {
+                    actual = null;
+                }
             }
             // Los separadores entre compartimientos no aportan informacion: lo
             // que distingue un atributo de una operacion es su propia forma.
@@ -211,6 +227,18 @@ public class ParserPizarra {
     }
 
     /** Una linea es miembro si declara un tipo, una firma o una visibilidad. */
+    /**
+     * Si la linea se declara miembro por su forma, sin apoyarse en ninguna
+     * convencion: lleva marca de visibilidad, declara un tipo o es una
+     * operacion. Es la version estricta de {@link #esMiembro(String)} y se usa
+     * para decidir si una linea en blanco del reconocimiento separa de verdad.
+     */
+    private boolean declaraSerMiembro(String texto) {
+        return VISIBILIDAD.matcher(texto).matches()
+                || texto.contains(":")
+                || texto.contains("(");
+    }
+
     private boolean esMiembro(String texto) {
         if (texto.contains("(") || texto.contains(":")) {
             return true;

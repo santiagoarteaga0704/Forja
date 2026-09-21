@@ -338,6 +338,89 @@ class ParserPizarraTest {
             assertThat(lectura.ignoradas()).singleElement()
                     .satisfies(i -> assertThat(i).startsWith("3:"));
         }
+
+        @Test
+        @DisplayName("una linea en blanco de mas no separa al atributo de su clase")
+        void lineasEnBlancoDentroDelRecuadro() {
+            // El reconocimiento intercala lineas vacias entre renglones del
+            // mismo recuadro: parte en parrafos lo que en la pizarra era un
+            // bloque. Medido sobre una foto nitida, asi salen los atributos.
+            Lectura lectura = parser.interpretar("""
+                    Persona
+
+                    + nombre: String
+
+                    + ci: String
+                    """, vacio);
+
+            assertThat(lectura.ignoradas()).isEmpty();
+            assertThat(de(lectura, ComandoOperacion.AgregarAtributo.class))
+                    .extracting(ComandoOperacion.AgregarAtributo::nombre)
+                    .containsExactly("nombre", "ci");
+        }
+
+        @Test
+        @DisplayName("una linea en blanco sigue separando dos clases")
+        void lineasEnBlancoEntreRecuadros() {
+            // El limite de la tolerancia: si lo que sigue empieza una clase, la
+            // linea en blanco significa lo que siempre significo. Sin esto, la
+            // segunda clase se leeria como un atributo de la primera.
+            Lectura lectura = parser.interpretar("""
+                    Persona
+                    + nombre: String
+
+                    Medico
+                    + matricula: String
+                    """, vacio);
+
+            assertThat(lectura.clases()).extracting(Lectura.ClaseLeida::nombre)
+                    .containsExactly("Persona", "Medico");
+            assertThat(lectura.clases()).extracting(Lectura.ClaseLeida::atributos)
+                    .containsExactly(1, 1);
+        }
+
+        @Test
+        @DisplayName("lee el texto tal como lo devolvio el reconocimiento")
+        void loQueDevolvioElReconocimiento() {
+            // Copiado del reconocimiento de verdad, sin retocar una coma: es el
+            // unico texto que esta funcion va a recibir alguna vez.
+            Lectura lectura = parser.interpretar("""
+                    Persona
+
+                    + nombre: String
+
+                    + ci: String
+
+                    Paciente
+
+                    + historiaClinica: String
+                    + alergias: String
+
+                    + calcularEdad(): int
+                    Medico
+
+                    + especialidad: String
+
+                    + matricula: String
+                    Consulta
+
+                    + fecha: String
+
+                    + motivo: String
+
+                    Paciente --|> Persona
+                    Medico --|> Persona
+                    Paciente 1 *-- 0..* Consulta
+                    Medico 1 -- 0..* Consulta
+                    """, vacio);
+
+            assertThat(lectura.ignoradas()).isEmpty();
+            assertThat(lectura.clases()).extracting(Lectura.ClaseLeida::nombre)
+                    .containsExactly("Persona", "Paciente", "Medico", "Consulta");
+            assertThat(de(lectura, ComandoOperacion.AgregarAtributo.class)).hasSize(8);
+            assertThat(de(lectura, ComandoOperacion.AgregarMetodo.class)).hasSize(1);
+            assertThat(de(lectura, ComandoOperacion.CrearRelacion.class)).hasSize(4);
+        }
     }
 
     // ---------- Contra un diagrama que ya tiene clases -----------------------
