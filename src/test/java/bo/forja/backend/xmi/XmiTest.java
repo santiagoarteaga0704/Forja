@@ -383,6 +383,35 @@ class XmiTest {
                 .hasMessageContaining("XML");
     }
 
+    /**
+     * Enterprise Architect exporta XMI 1.1 sobre UML 1.3 POR OMISION: el tipo 0
+     * de su exportador, que es el que sale si nadie elige otra cosa en el
+     * dialogo. Ese dialecto usa <UML:Class> en vez de <packagedElement> y FORJA
+     * no lo lee.
+     * <p>
+     * Decirle "no contiene ninguna clase" a alguien cuyo documento SI tiene tres
+     * es mandarlo a buscar el problema donde no esta. El mensaje tiene que
+     * nombrar la causa y la salida, porque la salida existe y es un desplegable.
+     */
+    @Test
+    @DisplayName("un XMI 1.1 de Enterprise Architect dice que hay que exportar como 2.1")
+    void elDialectoViejoSeExplica() {
+        String viejo = """
+                <?xml version="1.0" encoding="windows-1252"?>
+                <XMI xmi.version="1.1" xmlns:UML="omg.org/UML1.3">
+                  <XMI.content>
+                    <UML:Model name="EA Model">
+                      <UML:Class name="Paciente" xmi.id="EAID_1"/>
+                    </UML:Model>
+                  </XMI.content>
+                </XMI>
+                """;
+
+        assertThatThrownBy(() -> xmi.importar(vacio.getId(), autor.getId(), "s", viejo, "tk"))
+                .isInstanceOf(XmiInvalido.class)
+                .hasMessageContaining("2.1");
+    }
+
     @Test
     @DisplayName("un XMI sin clases se rechaza en lugar de importar nada")
     void elDocumentoSinClasesSeRechaza() {

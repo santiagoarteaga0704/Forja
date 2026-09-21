@@ -100,6 +100,12 @@ public class ImportadorXmi {
         }
 
         if (clasificadores.isEmpty()) {
+            if (esDialectoViejo(documento)) {
+                throw new XmiInvalido(
+                        "Este documento está en XMI 1.x sobre UML 1.3, el formato viejo, y es "
+                                + "el que Enterprise Architect exporta por omisión. Volvé a "
+                                + "exportarlo eligiendo XMI 2.1 en el desplegable de formato");
+            }
             throw new XmiInvalido("El documento no contiene ninguna clase que importar");
         }
 
@@ -727,6 +733,31 @@ public class ImportadorXmi {
      * evitar-. Se comprobo exportando desde FORJA, quitandole su propia
      * extension y volviendo a importar: las clases perdian su lugar.
      */
+    /**
+     * Si el documento es XMI 1.x sobre UML 1.3.
+     * <p>
+     * Es el formato que Enterprise Architect exporta POR OMISION -el tipo 0 de
+     * su exportador- y usa {@code <UML:Class>} en vez de
+     * {@code <packagedElement>}, asi que aca no entra ni una clase. Sin
+     * distinguirlo, el mensaje decia "no contiene ninguna clase" a quien tenia
+     * un documento con tres, y lo mandaba a buscar el problema donde no estaba.
+     * <p>
+     * No se intenta LEER ese dialecto: son dos metamodelos distintos y
+     * soportarlo seria un importador entero. Lo que hace falta es decir cual es
+     * la salida, y la salida es un desplegable en el dialogo de exportacion.
+     */
+    private boolean esDialectoViejo(Document documento) {
+        Element raiz = documento.getDocumentElement();
+        if (raiz == null) {
+            return false;
+        }
+        // Alcanza con el atributo de la raiz, y conviene que alcance: el viejo
+        // lo escribe con PUNTO -xmi.version- y el moderno con dos puntos
+        // -xmi:version-. Intentar deducirlo de que no haya clases marcaba como
+        // dialecto viejo a cualquier documento moderno que viniera vacio.
+        return raiz.hasAttribute("xmi.version");
+    }
+
     private Map<String, Geometria> vistaDeEnterpriseArchitect(Document documento) {
         Map<String, Geometria> porSujeto = new HashMap<>();
 
