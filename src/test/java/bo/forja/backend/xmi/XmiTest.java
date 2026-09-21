@@ -250,6 +250,55 @@ class XmiTest {
         }
     }
 
+    /**
+     * Encontrado el 21 de septiembre de 2026 importando un modelo grande hecho
+     * por Enterprise Architect: de las diez relaciones dibujadas llegaron
+     * nueve. La que faltaba era la realizacion -Docente implementa Auditable-.
+     * <p>
+     * No es que EA no la exporte: la exporta, pero a su manera. El estandar
+     * UML 2.1 la pone DENTRO del clasificador, como
+     * {@code <interfaceRealization>}, y eso FORJA ya lo leia. EA la escribe
+     * como un elemento HERMANO de las clases:
+     * <pre>
+     *   &lt;ownedElement xmi:type="uml:Realization" client="..." supplier="..."/&gt;
+     * </pre>
+     * Es la misma clase de trampa que la del XMI 1.x: el documento es valido y
+     * dice lo mismo, escrito de otra forma. Y una realizacion perdida no se
+     * nota al mirar -el diagrama se ve casi igual- pero cambia lo que el
+     * generador produce, porque una interfaz realizada obliga a implementar sus
+     * operaciones.
+     */
+    @Test
+    @DisplayName("se lee la realizacion como la escribe Enterprise Architect, fuera de la clase")
+    void laRealizacionDeEnterpriseArchitectSeLee() {
+        String documento = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmi:XMI xmi:version="2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1"
+                         xmlns:uml="http://schema.omg.org/spec/UML/2.0">
+                  <uml:Model xmi:type="uml:Model" name="EA_Model">
+                    <ownedMember xmi:type="uml:Package" xmi:id="PK1" name="Universidad">
+                      <ownedElement xmi:type="uml:Realization" xmi:id="R1"
+                                    client="C_DOCENTE" supplier="C_AUDITABLE"/>
+                      <ownedMember xmi:type="uml:Class" xmi:id="C_AUDITABLE" name="Auditable"/>
+                      <ownedMember xmi:type="uml:Class" xmi:id="C_DOCENTE" name="Docente"/>
+                    </ownedMember>
+                  </uml:Model>
+                </xmi:XMI>
+                """;
+
+        xmi.importar(vacio.getId(), autor.getId(), "sesion-real", documento, "tk-real");
+
+        List<RelacionUml> traidas = relaciones.buscarConExtremos(vacio.getId());
+        assertThat(traidas)
+                .as("la realizacion tiene que llegar")
+                .hasSize(1);
+        assertThat(traidas.get(0).getTipo()).isEqualTo(TipoRelacion.REALIZACION);
+        assertThat(traidas.get(0).getOrigen().getNombre())
+                .as("la flecha va de quien implementa hacia la interfaz")
+                .isEqualTo("Docente");
+        assertThat(traidas.get(0).getDestino().getNombre()).isEqualTo("Auditable");
+    }
+
     @Test
     @DisplayName("lo importado queda en la bitacora con origen IMPORTACION")
     void laImportacionQuedaTrazada() {

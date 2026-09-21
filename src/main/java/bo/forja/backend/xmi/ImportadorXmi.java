@@ -23,8 +23,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Interpreta un documento XMI y lo convierte en comandos.
@@ -73,10 +75,17 @@ public class ImportadorXmi {
         List<Element> clasificadores = new ArrayList<>();
         List<Element> asociaciones = new ArrayList<>();
         List<Element> dependencias = new ArrayList<>();
+        // Enterprise Architect escribe la realizacion como un elemento hermano
+        // de las clases, en vez de ponerla DENTRO del clasificador como hace el
+        // estandar. Las dos formas dicen lo mismo; esta lista recoge la suya.
+        List<Element> realizaciones = new ArrayList<>();
 
         // Primera pasada: censar que hay y con que identificador, para poder
         // resolver despues las referencias entre elementos.
-        for (Element elemento : elementos(documento, "packagedElement", "ownedMember")) {
+        // "ownedElement" es donde Enterprise Architect deja sus conectores. Lo
+        // que no se reconozca cae en el default y se ignora sin ruido.
+        for (Element elemento : elementos(documento, "packagedElement", "ownedMember",
+                "ownedElement")) {
             String tipo = tipoXmi(elemento);
             String id = atributoXmi(elemento, "id");
             if (id == null) {
@@ -90,6 +99,8 @@ public class ImportadorXmi {
                 }
                 case "uml:Association" -> asociaciones.add(elemento);
                 case "uml:Dependency", "uml:Usage" -> dependencias.add(elemento);
+                case "uml:Realization", "uml:InterfaceRealization" ->
+                        realizaciones.add(elemento);
                 case "uml:DataType", "uml:PrimitiveType", "uml:Enumeration" ->
                         nombresDeTipos.put(id, elemento.getAttribute("name"));
                 default -> {
@@ -138,6 +149,31 @@ public class ImportadorXmi {
             UUID proveedor = equivalencias.get(referenciaDeExtremo(dependencia, "supplier"));
             if (cliente != null && proveedor != null && !cliente.equals(proveedor)) {
                 relaciones.add(relacion(cliente, proveedor, TipoRelacion.DEPENDENCIA, "1", "1"));
+            }
+        }
+
+        // Las que YA entraron por la forma del estandar, para no contarlas dos
+        // veces: el propio exportador de FORJA escribe la realizacion de las
+        // dos maneras -porque EA no mira la del estandar- y sin esto un viaje
+        // de ida y vuelta duplicaria cada una.
+        Set<String> yaEstan = relaciones.stream()
+                .filter(c -> c instanceof ComandoOperacion.CrearRelacion r
+                        && r.tipo() == TipoRelacion.REALIZACION)
+                .map(c -> {
+                    ComandoOperacion.CrearRelacion r = (ComandoOperacion.CrearRelacion) c;
+                    return r.origenId() + "->" + r.destinoId();
+                })
+                .collect(Collectors.toSet());
+
+        for (Element realizacion : realizaciones) {
+            // El cliente es quien implementa y el proveedor la interfaz, igual
+            // que en una dependencia. La flecha de UML va de lo concreto a lo
+            // abstracto, asi que el origen es el cliente.
+            UUID cliente = equivalencias.get(referenciaDeExtremo(realizacion, "client"));
+            UUID proveedor = equivalencias.get(referenciaDeExtremo(realizacion, "supplier"));
+            if (cliente != null && proveedor != null && !cliente.equals(proveedor)
+                    && yaEstan.add(cliente + "->" + proveedor)) {
+                relaciones.add(relacion(cliente, proveedor, TipoRelacion.REALIZACION, "1", "1"));
             }
         }
 
