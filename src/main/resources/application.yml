@@ -15,6 +15,12 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  servlet:
+    multipart:
+      # La foto de una pizarra sacada con un telefono pesa varios megas. El
+      # limite por omision es uno y rechazaria casi cualquier foto real.
+      max-file-size: 15MB
+      max-request-size: 15MB
 
 forja:
   jwt:
@@ -39,6 +45,15 @@ forja:
       # valor por omision. Spring parte en el PRIMERO, asi que el resto
       # -incluidos sus dos puntos- es el valor por omision y esto funciona.
       modelo: ${FORJA_IA_MODELO:gemma3:4b}
+    vision:
+      # Lectura de la foto de un diagrama dibujado. Bandera aparte de la del
+      # bloque local a proposito: esa corre en esta maquina y es gratis, y esta
+      # manda la imagen a un servicio de pago fuera de ella. Sin clave no se
+      # registra aunque la bandera este prendida.
+      habilitada: ${FORJA_VISION_HABILITADA:false}
+      url: ${FORJA_VISION_URL:https://generativelanguage.googleapis.com}
+      modelo: ${FORJA_VISION_MODELO:gemini-3.1-flash-lite}
+      clave: ${FORJA_VISION_CLAVE:}
 
 server:
   port: 8080

@@ -1,6 +1,7 @@
 package bo.forja.backend.foto;
 
 import bo.forja.backend.dominio.OrigenOperacion;
+import bo.forja.backend.ia.LectorVisual;
 import bo.forja.backend.operacion.ComandoInvalido;
 import bo.forja.backend.operacion.ComandoOperacion;
 import bo.forja.backend.operacion.ContextoDelDiagrama;
@@ -47,22 +48,56 @@ public class ServicioFoto {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioFoto.class);
 
+    /**
+     * Medido el 21 de septiembre de 2026: el modelo chico contesta en 3,2 s y el
+     * grande entre 35 s y 212 s cuando el servicio esta cargado. Sesenta
+     * segundos deja pasar al chico con holgura y corta antes de que quien mira
+     * la pantalla crea que se colgo.
+     */
+    private static final java.time.Duration PRESUPUESTO_DE_LECTURA = java.time.Duration.ofSeconds(60);
+
     private final ServicioProyectos proyectos;
     private final ServicioOperaciones operaciones;
     private final ClaseUmlRepositorio clases;
     private final RelacionUmlRepositorio relaciones;
     private final ParserPizarra parser;
+    private final LectorVisual lector;
 
     public ServicioFoto(ServicioProyectos proyectos,
                         ServicioOperaciones operaciones,
                         ClaseUmlRepositorio clases,
                         RelacionUmlRepositorio relaciones,
-                        ParserPizarra parser) {
+                        ParserPizarra parser,
+                        LectorVisual lector) {
         this.proyectos = proyectos;
         this.operaciones = operaciones;
         this.clases = clases;
         this.relaciones = relaciones;
         this.parser = parser;
+        this.lector = lector;
+    }
+
+    /**
+     * Transcribe la foto de un diagrama dibujado a la notacion de pizarra.
+     * <p>
+     * No toca el modelo y no decide nada: devuelve texto para que la persona lo
+     * revise y despues siga por {@link #leer} y {@link #aplicar}, igual que si
+     * lo hubiera escrito a mano. El interprete sigue siendo uno solo.
+     * <p>
+     * Se comprueba el acceso al diagrama antes de llamar: del otro lado hay una
+     * clave de pago, y sin esta puerta cualquier cuenta registrada podria
+     * gastarla.
+     */
+    public String transcribir(UUID diagramaId, UUID usuarioId, byte[] imagen, String tipoMime) {
+        proyectos.diagramaAccesible(diagramaId, usuarioId);
+        String texto = lector.aNotacionDePizarra(imagen, tipoMime, PRESUPUESTO_DE_LECTURA);
+        log.debug("Transcripcion de foto en el diagrama {}: {} caracteres", diagramaId, texto.length());
+        return texto;
+    }
+
+    /** Si se puede ofrecer la lectura por IA, para no mostrar un boton que no contesta. */
+    public boolean lecturaPorIaDisponible() {
+        return lector.disponible();
     }
 
     /** Interpreta el texto sin tocar el modelo, para poder revisarlo antes. */

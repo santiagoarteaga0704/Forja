@@ -23,6 +23,10 @@ public class ConfiguracionIa {
     public record AjustesDeIa(boolean habilitada, String url, String modelo) {
     }
 
+    /** Lo mismo para la lectura de una foto, que es un servicio de pago y fuera de la maquina. */
+    public record AjustesDeVision(boolean habilitada, String url, String modelo, String clave) {
+    }
+
     @Bean
     Traductor traductor(
             @Value("${forja.ia.local.habilitada:false}") boolean habilitada,
@@ -54,5 +58,31 @@ public class ConfiguracionIa {
             return new RespondedorNulo();
         }
         return new RespondedorOllama(new AjustesDeIa(true, url, modelo));
+    }
+
+    /**
+     * Quien lee la foto de un diagrama dibujado.
+     * <p>
+     * Va detras de su PROPIA bandera y no de la del bloque local, porque no es
+     * la misma decision: el traductor y el respondedor corren en esta maquina y
+     * son gratis, y este manda la imagen a un servicio de pago fuera de ella.
+     * Prender uno no puede prender el otro sin que alguien lo haya pedido.
+     * <p>
+     * Sin clave no se registra el de Gemini aunque la bandera este prendida: una
+     * bandera prendida y una clave vacia es un error de configuracion, y es
+     * mejor que la pantalla diga que la funcion no esta a que cada intento
+     * termine en un rechazo del servicio.
+     */
+    @Bean
+    LectorVisual lectorVisual(
+            @Value("${forja.ia.vision.habilitada:false}") boolean habilitada,
+            @Value("${forja.ia.vision.url:https://generativelanguage.googleapis.com}") String url,
+            @Value("${forja.ia.vision.modelo:gemini-3.1-flash-lite}") String modelo,
+            @Value("${forja.ia.vision.clave:}") String clave) {
+
+        if (!habilitada || clave == null || clave.isBlank()) {
+            return new LectorVisualNulo();
+        }
+        return new LectorVisualGemini(new AjustesDeVision(true, url, modelo, clave));
     }
 }
