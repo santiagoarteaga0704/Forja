@@ -44,7 +44,7 @@
       ]
     },
     {
-      "_por_que": "Dictando no se puede pronunciar la mayuscula intermedia.",
+      "_por_que": "Dictando no se puede pronunciar la mayuscula intermedia. Y el nombre de una clase empieza en MAYUSCULA: antes salia 'historiaClinica' porque la funcion que arma el nombre se usaba igual para clases y para atributos, donde la minuscula inicial si corresponde.",
       "id": "nombre-de-varias-palabras-en-camello",
       "contexto": "clinica",
       "frases": [
@@ -55,7 +55,25 @@
         {
           "tipo": "CLASE_CREAR",
           "comando": {
-            "nombre": "historiaClinica"
+            "nombre": "HistoriaClinica"
+          }
+        }
+      ]
+    },
+    {
+      "id": "el-nombre-de-clase-siempre-empieza-en-mayuscula",
+      "_por-que": "El reconocedor de voz devuelve lo que le parece, y muchas veces todo en minuscula. Una clase llamada 'consulta' en un diagrama UML esta mal, y el documento lo dice: los nombres de clase van en singular y con la primera letra en mayuscula.",
+      "contexto": "vacio",
+      "frases": [
+        "crea la clase factura",
+        "nueva clase factura"
+      ],
+      "entendida": true,
+      "pasos": [
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "nombre": "Factura"
           }
         }
       ]

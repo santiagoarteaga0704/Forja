@@ -41,7 +41,14 @@ void main() {
 
   test('un nombre de varias palabras se junta en camello', () {
     final resultado = parser.interpretar('crea la clase historia clinica', contexto);
-    expect(resultado.pasos.single.comando['nombre'], 'historiaClinica');
+    expect(resultado.pasos.single.comando['nombre'], 'HistoriaClinica');
+  });
+
+  test('el nombre de una clase siempre empieza en mayuscula', () {
+    // El reconocedor de voz devuelve en minuscula lo que le parece, y una
+    // clase llamada "factura" en un diagrama UML esta mal.
+    final resultado = parser.interpretar('crea la clase factura', contexto);
+    expect(resultado.pasos.single.comando['nombre'], 'Factura');
   });
 
   test('aguanta los acentos y la puntuacion del reconocedor', () {

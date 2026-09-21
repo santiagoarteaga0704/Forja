@@ -49,10 +49,14 @@ String limpiar(String frase) => sinAcentos(frase)
     .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
 
-/// Nombre listo para el modelo: sin espacios y en mayuscula inicial por
-/// palabra, salvo la primera, que conserva su caja para no estropear un nombre
-/// que el cliente ya escribio bien. Dictando no se puede pronunciar el camello,
-/// asi que "historia clinica" tiene que llegar como historiaClinica.
+/// Nombre de un MIEMBRO -atributo, metodo, parametro- listo para el modelo:
+/// sin espacios y en mayuscula inicial por palabra salvo la primera, que
+/// conserva su caja. Dictando no se puede pronunciar el camello, asi que
+/// "fecha de nacimiento" tiene que llegar como fechaNacimiento.
+///
+/// Para el nombre de una CLASE va [limpiarNombreDeClase]: ahi la primera letra
+/// tiene que ir en mayuscula, y usar esta funcion para las dos cosas dejaba
+/// clases llamadas "historiaClinica" y, dictando, "factura".
 String limpiarNombre(String? bruto) {
   if (bruto == null) return '';
 
@@ -70,6 +74,16 @@ String limpiarNombre(String? bruto) {
     }
   }
   return salida.toString();
+}
+
+/// Nombre de una clase: como el de un miembro, pero empezando en mayuscula.
+///
+/// No se toca el resto para no estropear uno que ya venia bien escrito:
+/// "XMLParser" sigue siendo "XMLParser".
+String limpiarNombreDeClase(String? bruto) {
+  final nombre = limpiarNombre(bruto);
+  if (nombre.isEmpty) return nombre;
+  return nombre[0].toUpperCase() + nombre.substring(1);
 }
 
 /// Separa "a, b y c" en sus partes.

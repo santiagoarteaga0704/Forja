@@ -177,17 +177,17 @@ public class ParserVoz {
 
         if ((m = CREAR_INTERFAZ.matcher(frase)).matches()) {
             UUID id = UUID.randomUUID();
-            String nombre = limpiarNombre(m.group(1));
+            String nombre = limpiarNombreDeClase(m.group(1));
             return uno(frase, "Cree la interfaz " + nombre, TipoOperacion.CLASE_CREAR,
                     new ComandoOperacion.CrearClase(id, nombre, "interface", false, 0, 0));
         }
 
         if ((m = CREAR_CLASE_CON_ATRIBUTOS.matcher(frase)).matches()) {
-            return crearClaseConAtributos(frase, limpiarNombre(m.group(1)), m.group(2));
+            return crearClaseConAtributos(frase, limpiarNombreDeClase(m.group(1)), m.group(2));
         }
 
         if ((m = CREAR_CLASE.matcher(frase)).matches()) {
-            String nombre = limpiarNombre(m.group(1));
+            String nombre = limpiarNombreDeClase(m.group(1));
             return uno(frase, "Cree la clase " + nombre, TipoOperacion.CLASE_CREAR,
                     new ComandoOperacion.CrearClase(UUID.randomUUID(), nombre, null, false, 0, 0));
         }
@@ -197,7 +197,7 @@ public class ParserVoz {
             if (clase.isEmpty()) {
                 return noConozco(frase, m.group(1), contexto);
             }
-            String nuevo = limpiarNombre(m.group(2));
+            String nuevo = limpiarNombreDeClase(m.group(2));
             return uno(frase, "Renombre " + clase.get().nombre() + " a " + nuevo,
                     TipoOperacion.CLASE_RENOMBRAR,
                     new ComandoOperacion.RenombrarClase(clase.get().id(), nuevo));
@@ -452,7 +452,7 @@ public class ParserVoz {
         if (!contexto.nombres().isEmpty()) {
             pistas.add("Las que hay son: " + String.join(", ", contexto.nombres()));
         }
-        pistas.add("Proba primero: crea la clase " + limpiarNombre(nombre));
+        pistas.add("Proba primero: crea la clase " + limpiarNombreDeClase(nombre));
         return Optional.of(Interpretacion.noEntendida(frase, pistas));
     }
 
@@ -481,9 +481,15 @@ public class ParserVoz {
     }
 
     /**
-     * Nombre listo para el modelo: sin espacios y en mayuscula inicial por
-     * palabra. Dictando no se puede pronunciar el camello, asi que "historia
-     * clinica" tiene que llegar como HistoriaClinica.
+     * Nombre de un MIEMBRO -atributo, metodo, parametro- listo para el modelo:
+     * sin espacios y en mayuscula inicial por palabra salvo la primera, que
+     * conserva su caja. Dictando no se puede pronunciar el camello, asi que
+     * "fecha de nacimiento" tiene que llegar como fechaNacimiento.
+     * <p>
+     * Para el nombre de una CLASE va {@link #limpiarNombreDeClase}: ahi la
+     * primera letra tiene que ir en mayuscula, y usar esta funcion para las dos
+     * cosas dejaba clases llamadas "historiaClinica" y, dictando en voz alta,
+     * "factura" -porque el reconocedor devuelve en minuscula lo que le parece-.
      */
     private String limpiarNombre(String bruto) {
         if (bruto == null) {
@@ -505,6 +511,20 @@ public class ParserVoz {
             }
         }
         return salida.toString();
+    }
+
+    /**
+     * Nombre de una clase: como el de un miembro, pero empezando en mayuscula.
+     * <p>
+     * No se toca el resto del nombre para no estropear uno que ya venia bien
+     * escrito: "XMLParser" sigue siendo "XMLParser".
+     */
+    private String limpiarNombreDeClase(String bruto) {
+        String nombre = limpiarNombre(bruto);
+        if (nombre.isEmpty()) {
+            return nombre;
+        }
+        return Character.toUpperCase(nombre.charAt(0)) + nombre.substring(1);
     }
 
     /** Separa "a, b y c" en sus partes. */

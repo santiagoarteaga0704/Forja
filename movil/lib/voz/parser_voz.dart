@@ -184,19 +184,19 @@ class ParserVoz {
   Interpretacion? _primeraQueEncaje(String frase, ContextoDelDiagrama contexto) {
     var m = _crearInterfaz.firstMatch(frase);
     if (m != null) {
-      final nombre = limpiarNombre(m.group(1));
+      final nombre = limpiarNombreDeClase(m.group(1));
       return _uno(frase, 'Cree la interfaz $nombre', 'CLASE_CREAR',
           _crearClaseCarga(nombre, estereotipo: 'interface'));
     }
 
     m = _crearClaseConAtributos.firstMatch(frase);
     if (m != null) {
-      return _crearClaseConSusAtributos(frase, limpiarNombre(m.group(1)), m.group(2)!);
+      return _crearClaseConSusAtributos(frase, limpiarNombreDeClase(m.group(1)), m.group(2)!);
     }
 
     m = _crearClase.firstMatch(frase);
     if (m != null) {
-      final nombre = limpiarNombre(m.group(1));
+      final nombre = limpiarNombreDeClase(m.group(1));
       return _uno(frase, 'Cree la clase $nombre', 'CLASE_CREAR',
           _crearClaseCarga(nombre));
     }
@@ -205,7 +205,7 @@ class ParserVoz {
     if (m != null) {
       final clase = contexto.resolver(m.group(1));
       if (clase == null) return _noConozco(frase, m.group(1)!, contexto);
-      final nuevo = limpiarNombre(m.group(2));
+      final nuevo = limpiarNombreDeClase(m.group(2));
       return _uno(frase, 'Renombre ${clase.nombre} a $nuevo', 'CLASE_RENOMBRAR',
           {'claseId': clase.id, 'nombre': nuevo});
     }
@@ -483,7 +483,7 @@ class ParserVoz {
     if (contexto.nombres().isNotEmpty) {
       pistas.add('Las que hay son: ${contexto.nombres().join(', ')}');
     }
-    pistas.add('Proba primero: crea la clase ${limpiarNombre(nombre)}');
+    pistas.add('Proba primero: crea la clase ${limpiarNombreDeClase(nombre)}');
     return Interpretacion.noEntendida(frase, pistas);
   }
 
