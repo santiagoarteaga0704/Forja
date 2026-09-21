@@ -1,0 +1,4 @@
+# Enterprise Architect deja aqui las imagenes de sus diagramas al exportar.
+# No hacen falta para el intercambio: el XMI se lee sin ellas.
+Images/
+*.feap

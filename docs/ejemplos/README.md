@@ -37,6 +37,34 @@ lo exporta y borra el `.feap` intermedio, que pesa 11 MB y no va al repositorio.
 
 ---
 
+## `universidad-desde-ea.xmi`
+
+También lo generó Enterprise Architect, pero este no está para comprobar que la
+importación *funciona* sino para ver si **aguanta un modelo de verdad**. Trae las
+construcciones que un diagrama de una materia tiene y el de tres clases no.
+
+Nueve clases: `Persona` (abstracta), `Auditable` (interfaz), `Estudiante`,
+`Docente`, `Carrera`, `Materia`, `Grupo`, `Inscripcion` y `Pago`. Diez
+relaciones: dos herencias, una realización y siete asociaciones, con
+multiplicidades `1 → 0..*` y una `1..* ↔ 1..*`. Y tipos que no son todos texto:
+`String`, `int`, `decimal`, `Date` y `DateTime`.
+
+Al importarlo tienen que entrar **las nueve clases en sus posiciones** y **las
+diez relaciones**. Si llegan nueve relaciones, la que falta es la realización:
+ver el commit que la agregó, porque EA la escribe fuera del clasificador y esa
+forma no se leía.
+
+Sirve además para probar la generación del backend con algo grande: produce
+ocho entidades con sus cuatro capas.
+
+Para regenerarlo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File herramientas\crear-ejemplo-ea-grande.ps1
+```
+
+---
+
 ## La trampa del formato, que cuesta una demostración
 
 **Enterprise Architect exporta XMI 1.1 sobre UML 1.3 por omisión.** Es el tipo 0
