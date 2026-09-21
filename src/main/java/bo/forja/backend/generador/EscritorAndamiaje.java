@@ -178,6 +178,14 @@ public class EscritorAndamiaje {
                 - **La API expone las entidades directamente**, sin objetos de
                   transferencia. Es el punto de partida de un CRUD; en cuanto la API
                   deba dejar de reflejar el modelo interno, corresponde interponerlos.
+                - **Las asociaciones hacia el padre son ansiosas** (`FetchType.EAGER`) y
+                  **las colecciones no se serializan** (`@JsonIgnore`). Las dos cosas
+                  salen de lo mismo: `open-in-view` esta en `false` -que es lo correcto-
+                  y los controladores devuelven la entidad, asi que al escribir el JSON
+                  la transaccion ya cerro y una asociacion perezosa falla. Y serializar
+                  las dos puntas de una relacion no termina nunca. El precio es que
+                  traer una fila trae tambien sus padres; con objetos de transferencia
+                  se puede volver a `LAZY` y elegir que viaja.
                 - **Los metodos declarados en el diagrama estan sin implementar**: se
                   genero su firma y lanzan `UnsupportedOperationException`. El diagrama
                   declara que operaciones existen, no que hacen.

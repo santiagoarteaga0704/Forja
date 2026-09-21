@@ -131,12 +131,33 @@ public class EscritorEntidad {
         }
     }
 
+    /**
+     * Marca el campo para que Jackson no lo escriba.
+     * <p>
+     * Se usa en las colecciones, que son siempre el lado inverso: el padre
+     * lleva a sus hijos y cada hijo lleva a su padre, de modo que serializar
+     * las dos puntas no termina nunca.
+     */
+    private void anotarSinSerializar(Fuente fuente) {
+        fuente.importar("com.fasterxml.jackson.annotation.JsonIgnore");
+        fuente.linea("    @JsonIgnore");
+    }
+
     private void muchosAUno(Fuente fuente, Plan.Asociacion asociacion) {
         fuente.importar("jakarta.persistence.ManyToOne", "jakarta.persistence.FetchType",
                 "jakarta.persistence.JoinColumn");
-        // Perezosa por omision: una asociacion ansiosa hacia el lado "uno"
-        // arrastra la otra entidad en cada consulta, incluso cuando no se usa.
-        fuente.linea("    @ManyToOne(fetch = FetchType.LAZY"
+        // Ansiosa, y NO perezosa como parecia lo correcto. El proyecto generado
+        // trae open-in-view en false -que si es lo correcto- y sus
+        // controladores devuelven la entidad, asi que cuando Jackson la
+        // serializa la transaccion ya cerro y una asociacion perezosa revienta
+        // con "no session". Se comprobo arrancando el proyecto: las cuatro
+        // rutas de lectura devolvian 500.
+        //
+        // Ademas es lo que se espera de un CRUD: pedir una consulta y que
+        // venga con su paciente y su medico adentro. El costo es el de
+        // siempre con EAGER -trae la otra entidad aunque no se use-, y esta
+        // dicho en el README que acompana al proyecto.
+        fuente.linea("    @ManyToOne(fetch = FetchType.EAGER"
                 + (asociacion.requerido() ? ", optional = false" : "") + ")");
         fuente.linea("    @JoinColumn(name = \"" + asociacion.columnaClaveAjena() + "\""
                 + (asociacion.requerido() ? ", nullable = false" : "") + ")");
@@ -153,6 +174,11 @@ public class EscritorEntidad {
         if (asociacion.cascadaTotal()) {
             fuente.importar("jakarta.persistence.CascadeType");
         }
+        // La coleccion no se serializa: el padre lleva sus hijos y cada hijo
+        // lleva su padre, asi que salir a escribir JSON por los dos lados es
+        // una recursion infinita. Quien quiera los hijos pide la ruta del
+        // hijo, que es como se navega un CRUD.
+        anotarSinSerializar(fuente);
         fuente.linea("    @OneToMany(mappedBy = \"" + asociacion.mapeadoPor() + "\"" + extras + ")");
         fuente.linea("    private List<" + asociacion.tipoDestino() + "> "
                 + asociacion.nombreCampo() + " = new ArrayList<>();");
@@ -160,6 +186,7 @@ public class EscritorEntidad {
 
     private void muchosAMuchos(Fuente fuente, Plan.Clase clase, Plan.Asociacion asociacion) {
         fuente.importar("jakarta.persistence.ManyToMany", "java.util.List", "java.util.ArrayList");
+        anotarSinSerializar(fuente);
         if (asociacion.propietario()) {
             fuente.importar("jakarta.persistence.JoinTable", "jakarta.persistence.JoinColumn");
             fuente.linea("    @ManyToMany");
@@ -179,14 +206,14 @@ public class EscritorEntidad {
         fuente.importar("jakarta.persistence.OneToOne", "jakarta.persistence.FetchType");
         if (asociacion.propietario()) {
             fuente.importar("jakarta.persistence.JoinColumn");
-            fuente.linea("    @OneToOne(fetch = FetchType.LAZY"
+            fuente.linea("    @OneToOne(fetch = FetchType.EAGER"
                     + (asociacion.requerido() ? ", optional = false" : "") + ")");
             fuente.linea("    @JoinColumn(name = \"" + asociacion.columnaClaveAjena()
                     + "\", unique = true"
                     + (asociacion.requerido() ? ", nullable = false" : "") + ")");
         } else {
             fuente.linea("    @OneToOne(mappedBy = \"" + asociacion.mapeadoPor()
-                    + "\", fetch = FetchType.LAZY)");
+                    + "\", fetch = FetchType.EAGER)");
         }
         fuente.linea("    private " + asociacion.tipoDestino() + " "
                 + asociacion.nombreCampo() + ";");
