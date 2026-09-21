@@ -149,6 +149,10 @@ class GeneradorTest {
         // --- Muchos a muchos ------------------------------------------------
         ClaseUml especialidad = clase("Especialidad", null, false);
         atributo(especialidad, "nombre", "String", 80, true, true, false);
+        // Un atributo cuyo tipo es OTRA CLASE del diagrama. Se dibuja asi mas
+        // seguido de lo que uno quisiera -y el modelo de lenguaje lo propone
+        // solo-, asi que el generador tiene que resolverlo.
+        atributo(especialidad, "responsable", "Medico", null, false, false, false);
         clases.save(especialidad);
 
         // --- Uno a uno --------------------------------------------------------
@@ -315,6 +319,32 @@ class GeneradorTest {
                 .contains("private BigDecimal importe;")
                 .contains("import java.math.BigDecimal;")
                 .contains("import java.time.LocalDateTime;");
+    }
+
+    /**
+     * Encontrado el 21 de septiembre de 2026 generando un consultorio pedido
+     * por IA. El diagrama traia {@code Consulta.medico : Medico} y salia
+     * {@code @Column(name = "medico") private Medico medico;}. Eso COMPILA y
+     * despues no arranca: Hibernate no tiene con que llevar una entidad a una
+     * columna. El proyecto generado se veia bien y estaba roto.
+     * <p>
+     * No es un problema de la IA: le pasa igual a quien dibuje a mano un
+     * atributo de tipo Medico, que es una forma comun de anotar una relacion
+     * antes de trazarla.
+     */
+    @Test
+    @DisplayName("un atributo cuyo tipo es otra clase se vuelve relacion, no @Column")
+    void atributoConTipoDeOtraClase() {
+        String especialidad = generar().get(ruta("dominio/Especialidad.java"));
+
+        assertThat(especialidad)
+                .as("@Column sobre una entidad compila pero no arranca")
+                .doesNotContain("@Column(name = \"responsable\")");
+        assertThat(especialidad)
+                .as("lo que se quiso decir es una relacion a Medico")
+                .contains("@ManyToOne")
+                .contains("private Medico responsable;")
+                .contains("@JoinColumn(name = \"responsable_id\"");
     }
 
     @Test

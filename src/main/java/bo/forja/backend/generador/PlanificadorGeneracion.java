@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Interpreta el diagrama y decide como se traduce a un proyecto Spring Boot.
@@ -83,13 +84,20 @@ public class PlanificadorGeneracion {
             }
         }
 
+        // Los nombres de clase del diagrama, para reconocer un atributo que en
+        // realidad nombra a otra clase. Ver planificarClase.
+        Set<String> nombresDeClase = clases.stream()
+                .map(c -> Nombres.clase(c.getNombre()))
+                .collect(Collectors.toSet());
+
         List<Plan.Clase> planificadas = new ArrayList<>();
         for (ClaseUml clase : clases) {
             planificadas.add(planificarClase(clase,
                     padres.get(clase.getId()),
                     interfaces.getOrDefault(clase.getId(), List.of()),
                     conHijos.contains(clase.getId()) && !padres.containsKey(clase.getId()),
-                    asociaciones.getOrDefault(clase.getId(), List.of())));
+                    asociaciones.getOrDefault(clase.getId(), List.of()),
+                    nombresDeClase));
         }
 
         return new Plan.Proyecto(paqueteBase, artefacto, nombreAplicacion,
@@ -153,11 +161,16 @@ public class PlanificadorGeneracion {
 
     // ---------- Clases ----------------------------------------------------
 
+    /**
+     * @param nombresDeClase clases del diagrama, para distinguir un atributo de
+     *                       verdad de uno que nombra a otra clase
+     */
     private Plan.Clase planificarClase(ClaseUml clase,
                                        String padre,
                                        List<String> interfaces,
                                        boolean esRaiz,
-                                       List<Plan.Asociacion> asociaciones) {
+                                       List<Plan.Asociacion> asociaciones,
+                                       Set<String> nombresDeClase) {
 
         boolean esInterfaz = clase.getEstereotipo() != null
                 && ESTEREOTIPOS_DE_INTERFAZ.contains(clase.getEstereotipo().trim().toLowerCase());
@@ -175,10 +188,33 @@ public class PlanificadorGeneracion {
             identificador = marcado != null ? campoDe(marcado, false) : identificadorGenerado();
         }
 
-        List<Plan.Campo> campos = clase.getAtributos().stream()
-                .filter(a -> a != marcado)
+        // Un atributo cuyo tipo es otra clase del diagrama -"responsable de
+        // tipo Medico"- NO es una columna: es una relacion escrita en el unico
+        // lugar donde quien modela sabia escribirla. Tratarlo como columna
+        // produce @Column sobre una entidad, que compila y despues no arranca
+        // porque Hibernate no tiene con que llevar una fila a una columna.
+        List<AtributoUml> propios = new ArrayList<>();
+        List<Plan.Asociacion> porAtributo = new ArrayList<>();
+        for (AtributoUml atributo : clase.getAtributos()) {
+            if (atributo == marcado) {
+                continue;
+            }
+            if (esInterfaz || !nombresDeClase.contains(TipoJava.de(atributo.getTipo()))) {
+                propios.add(atributo);
+            } else {
+                porAtributo.add(asociacionDe(atributo));
+            }
+        }
+
+        List<Plan.Campo> campos = propios.stream()
                 .map(a -> campoDe(a, false))
                 .toList();
+
+        List<Plan.Asociacion> todasLasAsociaciones = asociaciones;
+        if (!porAtributo.isEmpty()) {
+            todasLasAsociaciones = new ArrayList<>(asociaciones);
+            todasLasAsociaciones.addAll(porAtributo);
+        }
 
         List<Plan.Operacion> operaciones = clase.getMetodos().stream()
                 .map(this::operacionDe)
@@ -195,8 +231,8 @@ public class PlanificadorGeneracion {
                 interfaces,
                 esRaiz,
                 identificador,
-                sinRepetirNombres(campos, asociaciones),
-                asociaciones,
+                sinRepetirNombres(campos, todasLasAsociaciones),
+                todasLasAsociaciones,
                 operaciones);
     }
 
@@ -207,6 +243,29 @@ public class PlanificadorGeneracion {
      */
     private Plan.Campo identificadorGenerado() {
         return new Plan.Campo("id", "Long", "id", true, true, null, true);
+    }
+
+    /**
+     * La relacion que se quiso decir con un atributo de tipo clase.
+     * <p>
+     * Es muchos a uno y del lado propietario: el atributo apunta a una sola
+     * instancia de la otra clase, y la clave ajena vive aca. No se le pone
+     * contraparte en la otra clase -la relacion se dibujo en un solo lado- ni
+     * cascada, que es una decision que el diagrama no expreso.
+     */
+    private Plan.Asociacion asociacionDe(AtributoUml atributo) {
+        String campo = Nombres.campo(atributo.getNombre());
+        return new Plan.Asociacion(
+                Plan.Cardinalidad.MUCHOS_A_UNO,
+                campo,
+                TipoJava.de(atributo.getTipo()),
+                false,
+                true,
+                atributo.isEsRequerido(),
+                Nombres.columna(atributo.getNombre()) + "_id",
+                null,
+                null,
+                false);
     }
 
     private Plan.Campo campoDe(AtributoUml atributo, boolean generado) {
