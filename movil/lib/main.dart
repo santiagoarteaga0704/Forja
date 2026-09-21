@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'almacen.dart';
 import 'api.dart';
+import 'pantalla_rota.dart';
 import 'pantallas/diagramas.dart';
 import 'pantallas/entrar.dart';
 import 'sincronizador.dart';
 import 'tipos.dart';
 
 void main() {
+  // Antes de dibujar nada: si algo se rompe despues, lo que se ve es un cartel
+  // que explica y del que se puede salir, y no el recuadro gris sin
+  // informacion que Flutter muestra en una compilacion de release.
+  instalarPantallaRota();
   runApp(const AplicacionForja());
 }
 
