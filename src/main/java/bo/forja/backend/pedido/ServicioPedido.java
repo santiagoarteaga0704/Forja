@@ -69,7 +69,11 @@ public class ServicioPedido {
     @Transactional(readOnly = true)
     public Pedido leer(UUID diagramaId, UUID usuarioId, String pedido, String tokenLectura) {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
-        Pedido propuesto = PedidoInterpretado.de(parser, traductor, pedido, contextoDe(diagramaId));
+        // Se acota ACA y no al aplicar: lo que se muestra para revisar tiene que
+        // ser exactamente lo que va a entrar al diagrama.
+        Pedido propuesto = PedidoInterpretado
+                .de(parser, traductor, pedido, contextoDe(diagramaId))
+                .acotado();
         enRevision.guardar(usuarioId, diagramaId, tokenLectura, propuesto);
         return propuesto;
     }
@@ -99,7 +103,9 @@ public class ServicioPedido {
         proyectos.diagramaAccesible(diagramaId, usuarioId);
         ContextoDelDiagrama contexto = contextoDe(diagramaId);
         Pedido propuesto = enRevision.recuperar(usuarioId, diagramaId, tokenLectura)
-                .orElseGet(() -> PedidoInterpretado.de(parser, traductor, pedido, contexto));
+                .orElseGet(() -> PedidoInterpretado
+                        .de(parser, traductor, pedido, contexto)
+                        .acotado());
 
         if (!propuesto.seEntendioAlgo()) {
             log.debug("Pedido sin resultado en el diagrama {}: \"{}\"", diagramaId, pedido);

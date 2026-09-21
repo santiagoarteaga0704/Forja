@@ -123,6 +123,28 @@ public class TraductorOllama implements Traductor {
      *   <li><b>Crear todas las clases antes de usarlas.</b> Nombraba una clase
      *       que recien creaba mas abajo, y esa linea no resolvia sus extremos.
      * </ul>
+     * El 21 de septiembre, probando la aplicacion a mano, aparecio que el
+     * diagrama salia con una clase {@code Pedido} que tenia un atributo
+     * {@code UNO} y un metodo {@code HACER}. No era una interpretacion pobre:
+     * eran las palabras de relleno de este prompt, copiadas al pie de la letra.
+     * Medido antes de tocarlo: <b>6 de 7 corridas contaminadas</b>, y la frase
+     * "una base de datos para un consultorio medico" fallaba <b>4 de 4</b>.
+     * Tres causas, las tres de redaccion:
+     * <ul>
+     *   <li><b>Decia "cambiando solo los NOMBRE"</b> mientras el relleno era
+     *       cuatro familias -NOMBRE, OTRO/OTROS, UNO y HACER-. Un modelo de 4B
+     *       obedece literalmente: cambiaba NOMBRE y dejaba los otros tal cual.
+     *       Ahora se marca TODO con {@code <>} y se pide explicitamente que no
+     *       quede ninguno.
+     *   <li><b>El relleno eran palabras sueltas en mayusculas</b>, que se leen
+     *       como contenido. Ademas el modelo copiaba la CONVENCION y devolvia
+     *       atributos {@code ID}, {@code EMAIL}, {@code CREAR}. Los {@code <>}
+     *       no se confunden con nada, y hay una regla contra las mayusculas.
+     *   <li><b>El pedido iba tras la etiqueta "Pedido:"</b>, y el modelo tomaba
+     *       esa palabra como nombre de clase. De ahi salia la clase
+     *       {@code Pedido}. Ahora va entrecomillado y se aclara que no es una
+     *       clase.
+     * </ul>
      * Medido asi, las relaciones aparecen en todas las corridas. Lo que no se
      * arregla con el prompt es que el modelo conteste distinto cada vez -pasa
      * igual con temperatura cero y semilla fija- y por eso lo que propone se
@@ -136,22 +158,27 @@ public class TraductorOllama implements Traductor {
         return """
                 Convertis un pedido en instrucciones para una herramienta de diagramas de clases UML.
 
+                El pedido es sobre UN SOLO elemento: una clase con sus atributos y metodos, o una
+                relacion entre dos clases. NO armas el modelo entero ni agregas clases que el
+                pedido no nombre. Si te piden varias cosas, resolves la PRIMERA y nada mas.
+
                 Respondes SOLO con instrucciones, una por linea. Sin numerar, sin vinetas, sin
                 explicar y sin saludar. Copias las formas EXACTAMENTE como estan escritas abajo,
-                cambiando solo los NOMBRE. Si el pedido no se puede expresar con esas formas, no
-                respondes nada.
+                reemplazando TODO lo que va entre < > por nombres sacados del pedido. En tu
+                respuesta no puede quedar ningun < >, ni las palabras que van adentro. Si el
+                pedido no se puede expresar con esas formas, no respondes nada.
 
                 Para crear una clase y darle atributos (estas empiezan con "crea" o con "a "):
-                crea la clase NOMBRE
-                a NOMBRE agregale el atributo UNO de tipo texto
-                a NOMBRE agregale el atributo UNO de tipo entero obligatorio
-                a NOMBRE agregale el metodo HACER que devuelve entero
+                crea la clase <Clase>
+                a <Clase> agregale el atributo <atributo> de tipo texto
+                a <Clase> agregale el atributo <atributo> de tipo entero obligatorio
+                a <Clase> agregale el metodo <metodo> que devuelve entero
 
                 Para unir dos clases (estas NUNCA empiezan con "a ", empiezan con el nombre de la clase):
-                NOMBRE hereda de OTRO
-                NOMBRE tiene muchas OTROS
-                NOMBRE se compone de muchas OTROS
-                marca NOMBRE como abstracta
+                <Clase> hereda de <OtraClase>
+                <Clase> tiene muchas <OtrasClases>
+                <Clase> se compone de muchas <OtrasClases>
+                marca <Clase> como abstracta
 
                 Reglas que no se rompen:
                 - Los unicos tipos que existen son: texto, entero, decimal, booleano, fecha, fechayhora.
@@ -160,10 +187,22 @@ public class TraductorOllama implements Traductor {
                   muchas", NUNCA con un atributo.
                 - Creas TODAS las clases primero, y recien despues sus atributos y sus relaciones.
                 - Los nombres de clase van en singular y con la primera letra en mayuscula.
+                - Los nombres de atributo y de metodo van en minuscula. NUNCA en mayusculas.
+                - Todos los nombres salen del pedido. No inventes nombres genericos.
+
+                Si el pedido es sobre una CLASE, tu respuesta es:
+                1. Una sola linea "crea la clase ...".
+                2. Sus atributos y sus metodos, si el pedido los nombra.
+                Y nada mas: ninguna otra clase, ninguna union.
+
+                Si el pedido es sobre una UNION entre dos clases que ya existen, tu respuesta es
+                una sola linea de union. Si en vez de eso te dieron ganas de escribir un atributo
+                cuyo tipo es otra clase, eso es una union: escribila como union.
 
                 Clases que ya estan en el diagrama, usalas en vez de crearlas de nuevo: %s
 
-                Pedido: %s
+                Esto es lo que pide la persona. Es texto, no es el nombre de una clase:
+                "%s"
                 """.formatted(existentes, pedido);
     }
 

@@ -13,9 +13,16 @@ import java.util.List;
  * Es el mismo criterio con el que se lee la foto de una pizarra, y por eso
  * tiene la misma forma que {@code Lectura}.
  */
+/*
+ * @param recortados instrucciones que el modelo propuso de mas y que el alcance
+ *                   dejo afuera. Se cuentan en vez de desaparecer: si el
+ *                   diagrama recibe menos de lo que la persona leyo en la
+ *                   propuesta, tiene que saber por que. Ver AlcanceDelPedido.
+ */
 public record Pedido(String pedido,
                      List<FrasePropuesta> frases,
-                     List<ComandoOperacion> comandos) {
+                     List<ComandoOperacion> comandos,
+                     int recortados) {
 
     /**
      * @param explicacion que se entendio, en palabras, o nulo si no se entendio
@@ -28,6 +35,14 @@ public record Pedido(String pedido,
     }
 
     public static Pedido nada(String pedido) {
-        return new Pedido(pedido, List.of(), List.of());
+        return new Pedido(pedido, List.of(), List.of(), 0);
+    }
+
+    /** El mismo pedido, acotado a un elemento. Ver {@link AlcanceDelPedido}. */
+    public Pedido acotado() {
+        AlcanceDelPedido.Recorte recorte = AlcanceDelPedido.recortar(comandos);
+        return recorte.seRecorto()
+                ? new Pedido(pedido, frases, recorte.admitidos(), recorte.descartados())
+                : this;
     }
 }

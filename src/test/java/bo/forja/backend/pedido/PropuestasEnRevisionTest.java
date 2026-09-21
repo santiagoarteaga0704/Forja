@@ -63,7 +63,7 @@ class PropuestasEnRevisionTest {
                 UUID.randomUUID(), nombreDeClase, null, false, 0, 0);
         return new Pedido("da igual el texto",
                 List.of(new Pedido.FrasePropuesta("crea la clase " + nombreDeClase, true, "Cree " + nombreDeClase)),
-                List.of(crear));
+                List.of(crear), 0);
     }
 
     @Test

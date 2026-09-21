@@ -91,6 +91,6 @@ public final class PedidoInterpretado {
             }
         }
 
-        return new Pedido(pedido, frases, comandos);
+        return new Pedido(pedido, frases, comandos, 0);
     }
 }
