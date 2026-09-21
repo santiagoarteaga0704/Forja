@@ -63,6 +63,21 @@ SANTA CRUZ - BOLIVIA
 
 **Anexo**
 
+**Índice de figuras**
+
+| # | Figura | Sección |
+|---|---|---|
+| 1 | Casos de uso del Ciclo #1 | 2.1.5 |
+| 2 | Casos de uso del Ciclo #2 | 2.1.5 |
+| 3 | Vista de paquetes | 2.2.3 |
+| 4 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
+| 5 | Comunicación — CU13, pedir un diagrama en lenguaje libre | 2.2.4 |
+| 6 | Modelo de despliegue | 2.3.1.1 |
+| 7 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
+
+Las siete figuras se construyeron en **Enterprise Architect 17.2** mediante
+automatización COM; el guion que las genera queda en el repositorio.
+
 ---
 
 # 1) Perfil
@@ -809,12 +824,29 @@ El modelo se organiza en dos ciclos: el Ciclo #1 agrupa los casos que construyen
 la arquitectura ejecutable y contienen el riesgo mayor, y el Ciclo #2 agrupa las
 vías alternativas de entrada al modelo y las salidas hacia la implementación.
 
+![Casos de uso del Ciclo #1](diagramas/casos-de-uso-ciclo1.png)
+
+*Figura 1. Casos de uso del Ciclo #1: la arquitectura ejecutable.*
+
+![Casos de uso del Ciclo #2](diagramas/casos-de-uso-ciclo2.png)
+
+*Figura 2. Casos de uso del Ciclo #2: las vías alternativas de entrada y las salidas hacia la implementación. Enterprise Architect y el modelo de lenguaje local participan como actores secundarios.*
+
+Los dos diagramas se construyeron en Enterprise Architect. Se presentan
+separados y no en uno solo porque, con los dieciocho casos juntos, el actor
+Modelador se conecta con diecisiete de ellos y el dibujo deja de poder leerse;
+la separación coincide además con la priorización en ciclos.
+
 La relación `«include»` más significativa del modelo es que **CU11, CU12, CU13,
 CU17 y CU18 incluyen a CU7, CU8 y CU9**: dictar, fotografiar, pedir al modelo,
 importar y sincronizar no son caminos paralelos, sino formas distintas de
 producir las mismas operaciones sobre el modelo. Esa inclusión no es un detalle
 de notación: es la decisión arquitectónica central del sistema, y explica por qué
-existe un único punto donde se valida, se aplica y se registra todo cambio.
+existe un único punto donde se valida, se aplica y se registra todo cambio. Esa
+inclusión no está dibujada en las figuras 1 y 2 —trazar cinco líneas hacia un
+mismo destino volvía ilegible el diagrama—, pero se ve realizada en los dos
+diagramas de comunicación de 2.2.4, donde toda vía termina en
+`ServicioOperaciones`.
 
 ## 2.2) Flujo de Trabajo: Análisis
 
@@ -881,25 +913,10 @@ es el único camino por el que el modelo se modifica. Los paquetes de entrada
 
 Las dependencias entre paquetes forman un grafo dirigido sin ciclos:
 
-```
-   P1 Seguridad
-        │
-        ▼
-   P2 Gestión de Proyectos ──────────┐
-        │                            │
-        ▼                            ▼
-   P4 Operaciones ◄────── P6 Vías de Entrada
-        │     ▲                      │
-        │     └──────────────────────┘
-        ▼
-   P3 Modelo UML ◄────── P7 Agente ──┐
-        ▲                            │
-        └────────────── P8 Salidas ──┘
-                             │
-                             ▼
-                        (produce comandos hacia P4
-                         solo en la importación)
-```
+![Vista de paquetes](diagramas/paquetes.png)
+
+*Figura 3. Vista de paquetes. Las dependencias forman un grafo dirigido sin ciclos.*
+
 
 Dos propiedades de esta vista merecen señalarse:
 
@@ -917,30 +934,27 @@ lo tanto entra por la misma puerta que todo lo demás.
 
 Es el caso de uso de mayor riesgo del sistema y el que define su arquitectura.
 
-```
- :Colaborador
-      │ 1: editar(elemento)
-      ▼
- :ControladorDiagramas
-      │ 2: registrar(comando, sesión)
-      ▼
- :ServicioOperaciones
-      │ 3: pedirBloqueo(elemento, usuario)
-      ▼
- :ServicioBloqueo ──── 4: INSERT ... ON CONFLICT DO NOTHING ────► :PostgreSQL
-      │                                                               │
-      │ ◄──────────── 5: concedido / rechazado ───────────────────────┘
-      ▼
- :ServicioOperaciones
-      │ 6: aplicar(comando)        [solo si fue concedido]
-      ▼
- :AplicadorComando
-      │ 7: registrar en bitácora con secuencia
-      ▼
- :RegistroDeSesiones ── 8: difundir a los demás ──► :OtrosClientes
-```
+![Diagrama de comunicación de CU10](diagramas/comunicacion-cu10.png)
 
-El punto crítico es el paso 4. La exclusión mutua **no se implementa en Java**:
+*Figura 4. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11.*
+
+
+| # | De | A | Mensaje |
+|---|---|---|---|
+| 1 | Cliente web (A) | ControladorDiagramas | `aplicar(comando, sesionId, tokenCliente)` |
+| 2 | ControladorDiagramas | ServicioOperaciones | `registrar(comando, sesionId, tokenCliente)` |
+| 3 | ServicioOperaciones | PostgreSQL | `buscarParaActualizar(diagramaId)` — bloqueo de fila que serializa la secuencia |
+| 4 | ServicioOperaciones | ServicioBloqueo | `adquirir(elemento, usuarioId, sesionId)` |
+| 5 | ServicioBloqueo | PostgreSQL | `INSERT ... ON CONFLICT DO NOTHING` — 1 fila: concedido; 0 filas: lo retiene otra sesión |
+| 6 | ServicioOperaciones | AplicadorComando | `aplicar(diagrama, comando)`, solo si el bloqueo se concedió |
+| 7 | ServicioOperaciones | PostgreSQL | Guardar la operación con `secuencia = version + 1` |
+| 8 | ControladorDiagramas | RegistroDeSesiones | `difundir(evento, sesionOrigen)` |
+| 9 | RegistroDeSesiones | Cliente web (B) | El evento de la operación, por WebSocket |
+| 10 | Cliente web (B) | ControladorDiagramas | `aplicar(...)` sobre **el mismo elemento**, con `sesionB` |
+| 11 | ControladorDiagramas | Cliente web (B) | Rechazo por bloqueo: el elemento lo retiene la persona A |
+
+El punto crítico son los pasos 4 y 5. La exclusión mutua **no se implementa en
+Java**:
 se delega a una restricción de unicidad de la base de datos, insertada con
 `ON CONFLICT DO NOTHING`. Dos peticiones simultáneas por el mismo elemento son
 resueltas por PostgreSQL, que es quien puede hacerlo correctamente aunque haya
@@ -950,35 +964,25 @@ pierde la disputa continúa normalmente informando que el elemento está tomado.
 
 #### Diagrama de comunicación — CU13: Pedir un diagrama en lenguaje libre
 
-```
- :Modelador
-      │ 1: pedir("armá un diagrama de una veterinaria")
-      ▼
- :ControladorPedido
-      │ 2: leer(pedido, tokenLectura)
-      ▼
- :ServicioPedido
-      │ 3: aFrasesCanónicas(pedido, contexto)
-      ▼
- :TraductorOllama ──── 4: HTTP ────► :Gemma 3 (local)
-      │ ◄─── 5: frases del idioma controlado ───┘
-      ▼
- :ParserVoz
-      │ 6: interpretar cada frase → comandos
-      ▼
- :PropuestasEnRevisión  7: guardar la propuesta bajo su token
-      │
-      ▼
- :Modelador   8: REVISA la propuesta
-      │ 9: aplicar(tokenLectura)
-      ▼
- :ServicioPedido
-      │ 10: recuperar la propuesta guardada  ◄── NO se vuelve a consultar al modelo
-      ▼
- :ServicioOperaciones (el mismo camino que CU7)
-```
+![Diagrama de comunicación de CU13](diagramas/comunicacion-cu13.png)
 
-El paso 10 es la corrección más significativa del sistema. La versión original
+*Figura 5. CU13, pedir un diagrama en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando.*
+
+
+| # | De | A | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorPedido | `pedir("un sistema para una clínica")` |
+| 2 | ControladorPedido | ServicioPedido | `leer(pedido, tokenLectura)` |
+| 3 | ServicioPedido | TraductorOllama | `aFrasesCanonicas(pedido, contexto)` |
+| 4 | TraductorOllama | Gemma 3 4B | HTTP local; devuelve frases del idioma controlado |
+| 5 | ServicioPedido | ParserVoz | `interpretar(frase)` → comando, o la frase se descarta |
+| 6 | ServicioPedido | PropuestasEnRevision | Guardar la propuesta bajo su token |
+| 7 | ControladorPedido | Modelador | La propuesta, para revisarla |
+| 8 | Modelador | ControladorPedido | `aplicar(tokenLectura)` |
+| 9 | ServicioPedido | PropuestasEnRevision | Recuperar la propuesta guardada — **no se vuelve a consultar al modelo** |
+| 10 | ServicioPedido | ServicioOperaciones | `registrar(cada comando)`, el mismo camino que CU7 |
+
+El paso 9 es la corrección más significativa del sistema. La versión original
 volvía a consultar al modelo al aplicar, bajo el supuesto de que con temperatura
 cero la respuesta sería idéntica. La medición demostró lo contrario, de modo que
 lo aplicado no era lo revisado. Ahora el servidor recupera su propia propuesta:
@@ -1031,40 +1035,10 @@ se replique.
 
 #### 2.3.1.1 Diseño físico — Modelo de despliegue
 
-```
-┌──────────────────────┐      ┌──────────────────────┐
-│  Navegador           │      │  Dispositivo Android │
-│  ┌────────────────┐  │      │  ┌────────────────┐  │
-│  │ Cliente web    │  │      │  │ Cliente Flutter│  │
-│  │ React + Vite   │  │      │  │ + base local   │  │
-│  │ + OCR local    │  │      │  └────────────────┘  │
-│  └────────────────┘  │      └──────────┬───────────┘
-└──────────┬───────────┘                 │
-           │ HTTPS / WSS                 │ HTTPS
-           └──────────────┬──────────────┘
-                          ▼
-        ┌─────────────────────────────────────┐
-        │  Servidor  (instancia EC2)          │
-        │  ┌───────────────────────────────┐  │
-        │  │ forja-backend                 │  │
-        │  │ Spring Boot 4.1.1 / Java 21   │  │
-        │  │ puerto 8080                   │  │
-        │  └───────────────┬───────────────┘  │
-        │                  │ JDBC             │
-        │  ┌───────────────▼───────────────┐  │
-        │  │ PostgreSQL 17  (contenedor)   │  │
-        │  │ puerto 5433                   │  │
-        │  └───────────────────────────────┘  │
-        └─────────────────────────────────────┘
+![Modelo de despliegue](diagramas/despliegue.png)
 
-        ┌─────────────────────────────────────┐
-        │  Equipo de desarrollo / demostración│
-        │  ┌───────────────────────────────┐  │
-        │  │ Ollama + Gemma 3 4B           │  │
-        │  │ puerto 11434                  │  │
-        │  └───────────────────────────────┘  │
-        └─────────────────────────────────────┘
-```
+*Figura 6. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
+
 
 **Nota sobre el despliegue del modelo de lenguaje.** Gemma 3 4B requiere
 aproximadamente 3,5 GB de memoria de vídeo, lo que excede las instancias
@@ -1088,6 +1062,10 @@ El esquema tiene doce tablas, agrupadas en cuatro conjuntos:
 | Modelo UML | `diagrama`, `clase_uml`, `atributo_uml`, `metodo_uml`, `parametro_uml`, `relacion_uml` |
 | Colaboración | `bloqueo_elemento`, `operacion` |
 | Agente | `uso_herramienta` |
+
+![Diagrama de clases del modelo de datos](diagramas/modelo-de-datos.png)
+
+*Figura 7. Modelo de datos. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
 
 **Mapeo del modelo a la base de datos**
 
