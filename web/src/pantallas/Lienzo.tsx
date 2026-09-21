@@ -296,11 +296,19 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
 
   useEffect(() => {
     const mover = (evento: MouseEvent) => {
-      if (desplazando.current) {
+      // El desplazamiento se lee en una constante ANTES de setVista, igual que
+      // el arrastre de una clase mas abajo. La funcion que recibe setVista no
+      // corre en el acto: React la guarda y la ejecuta al renderizar, y para
+      // entonces soltar() ya puso desplazando.current en null. Leyendo el ref
+      // adentro, el "!" mentia y la pantalla quedaba en NEGRO -el componente
+      // entero se desmontaba, porque no hay error boundary-. Pasaba al soltar
+      // el boton mientras la vista todavia se estaba moviendo.
+      const moviendo = desplazando.current
+      if (moviendo) {
         setVista((v) => ({
           ...v,
-          x: desplazando.current!.vista.x + (evento.clientX - desplazando.current!.x),
-          y: desplazando.current!.vista.y + (evento.clientY - desplazando.current!.y),
+          x: moviendo.vista.x + (evento.clientX - moviendo.x),
+          y: moviendo.vista.y + (evento.clientY - moviendo.y),
         }))
         return
       }
