@@ -157,6 +157,10 @@ class GeneradorTest {
 
         // --- Uno a uno --------------------------------------------------------
         ClaseUml direccion = clase("Direccion", null, false);
+        // Un atributo llamado "id" sin marcar como identificador. Es la forma
+        // en que casi todo el mundo dibuja una clave, y chocaba con la que el
+        // generador agrega solo.
+        atributo(direccion, "id", "entero", null, false, true, false);
         atributo(direccion, "calle", "String", 150, true, false, false);
         clases.save(direccion);
 
@@ -274,7 +278,7 @@ class GeneradorTest {
         String consulta = generar().get(ruta("dominio/Consulta.java"));
         assertThat(consulta)
                 .as("la clave ajena vive en el lado muchos")
-                .contains("@ManyToOne(fetch = FetchType.LAZY, optional = false)")
+                .contains("@ManyToOne(fetch = FetchType.EAGER, optional = false)")
                 .contains("@JoinColumn(name = \"paciente_id\", nullable = false)");
     }
 
@@ -347,6 +351,76 @@ class GeneradorTest {
                 .contains("@JoinColumn(name = \"responsable_id\"");
     }
 
+    /**
+     * Encontrado el 21 de septiembre de 2026 generando el backend de un
+     * diagrama dibujado a mano. La clase tenia un atributo llamado {@code id}
+     * -que es como se dibuja una clave la mayor parte de las veces- y el
+     * generador le agregaba ADEMAS su propia clave, tambien llamada
+     * {@code id}. El proyecto salia con dos campos y dos getters con el mismo
+     * nombre, y NO COMPILABA.
+     * <p>
+     * Quien dibuja un atributo llamado "id" esta dibujando la clave, asi que
+     * se la toma como tal en vez de inventar otra.
+     */
+    @Test
+    @DisplayName("un atributo llamado id es la clave, y no se duplica con la generada")
+    void unAtributoLlamadoIdEsLaClave() {
+        String direccion = generar().get(ruta("dominio/Direccion.java"));
+
+        assertThat(contar(direccion, "private Integer id;"))
+                .as("un solo campo id")
+                .isEqualTo(1);
+        assertThat(direccion)
+                .as("no queda ademas la clave generada de tipo Long")
+                .doesNotContain("private Long id;");
+        assertThat(direccion)
+                .contains("@Id")
+                .contains("private Integer id;");
+        assertThat(contar(direccion, "public Integer getId()"))
+                .as("un solo getId")
+                .isEqualTo(1);
+    }
+
+    /**
+     * Encontrado el 21 de septiembre de 2026 ARRANCANDO el proyecto generado,
+     * que hasta entonces solo se sabia que compilaba. Las cuatro rutas de
+     * lectura devolvian 500:
+     * <pre>
+     *   Cannot lazily initialize collection of role 'Paciente.consultas' (no session)
+     * </pre>
+     * El proyecto trae {@code open-in-view: false}, que es lo correcto, y los
+     * controladores devuelven la entidad. Cuando Jackson la serializa la
+     * transaccion ya cerro, y cualquier asociacion perezosa revienta. Le
+     * pasaba a toda clase que participara de una relacion, o sea a todas.
+     * <p>
+     * Se resuelve en las dos puntas. Hacia el lado "uno" la asociacion pasa a
+     * ansiosa: una consulta que se devuelve con su paciente y su medico
+     * adentro es, ademas, lo que se espera de un CRUD. Hacia el lado "muchos"
+     * la coleccion no se serializa: mostrar las consultas dentro del paciente
+     * y el paciente dentro de cada consulta es una recursion infinita.
+     */
+    @Test
+    @DisplayName("las entidades se pueden serializar: sin perezosas hacia el padre ni ciclos")
+    void lasEntidadesSeSerializan() {
+        Map<String, String> archivos = generar();
+        String consulta = archivos.get(ruta("dominio/Consulta.java"));
+        String paciente = archivos.get(ruta("dominio/Paciente.java"));
+
+        assertThat(consulta)
+                .as("hacia el padre, ansiosa: si no, al serializar no hay sesion")
+                .contains("@ManyToOne(fetch = FetchType.EAGER")
+                .doesNotContain("@ManyToOne(fetch = FetchType.LAZY");
+
+        assertThat(paciente)
+                .as("la coleccion del lado uno no se serializa, o es recursion infinita")
+                .contains("@JsonIgnore")
+                .contains("import com.fasterxml.jackson.annotation.JsonIgnore;");
+
+        assertThat(archivos.get(ruta("dominio/Direccion.java")))
+                .as("el uno a uno tiene el mismo problema")
+                .doesNotContain("@OneToOne(fetch = FetchType.LAZY");
+    }
+
     @Test
     @DisplayName("el plan resuelve la cardinalidad de cada asociacion")
     void elPlanResuelveCardinalidades() {
@@ -406,6 +480,9 @@ class GeneradorTest {
     private List<Path> rutaDeClases() {
         return Stream.of(
                         jakarta.persistence.Entity.class,
+                        // Las entidades llevan @JsonIgnore en las colecciones,
+                        // asi que el compilador tiene que poder resolverlo.
+                        com.fasterxml.jackson.annotation.JsonIgnore.class,
                         org.springframework.stereotype.Service.class,
                         org.springframework.transaction.annotation.Transactional.class,
                         org.springframework.data.jpa.repository.JpaRepository.class,
@@ -520,6 +597,17 @@ class GeneradorTest {
         relacion.setRolOrigen(rolOrigen);
         relacion.setRolDestino(rolDestino);
         relaciones.save(relacion);
+    }
+
+    /** Cuantas veces aparece un texto, sin pasar por expresiones regulares. */
+    private int contar(String donde, String que) {
+        int veces = 0;
+        int desde = donde.indexOf(que);
+        while (desde >= 0) {
+            veces++;
+            desde = donde.indexOf(que, desde + que.length());
+        }
+        return veces;
     }
 
     private void limpiar() {

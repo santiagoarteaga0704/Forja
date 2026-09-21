@@ -180,12 +180,27 @@ public class PlanificadorGeneracion {
                 .findFirst()
                 .orElse(null);
 
+        // Un atributo llamado "id" que nadie marco es, igual, la clave. Es como
+        // se dibuja una clave la mayor parte de las veces, y antes de tomarlo
+        // asi el generador le agregaba ADEMAS la suya, tambien llamada "id":
+        // salian dos campos y dos getters con el mismo nombre y el proyecto
+        // generado no compilaba.
+        AtributoUml comoClave = marcado == null ? atributoLlamadoId(clase) : null;
+
         // Una clase que hereda no lleva clave propia: la comparte con la raiz
         // de su jerarquia. Declararla de nuevo produciria dos claves para la
         // misma fila.
         Plan.Campo identificador = null;
         if (!esInterfaz && padre == null) {
-            identificador = marcado != null ? campoDe(marcado, false) : identificadorGenerado();
+            if (marcado != null) {
+                identificador = campoDe(marcado, false);
+            } else if (comoClave != null) {
+                // Generada: quien dibujo "id" sin decir mas espera que la
+                // asigne la base, no tener que inventar el numero a mano.
+                identificador = campoDe(comoClave, true);
+            } else {
+                identificador = identificadorGenerado();
+            }
         }
 
         // Un atributo cuyo tipo es otra clase del diagrama -"responsable de
@@ -196,7 +211,7 @@ public class PlanificadorGeneracion {
         List<AtributoUml> propios = new ArrayList<>();
         List<Plan.Asociacion> porAtributo = new ArrayList<>();
         for (AtributoUml atributo : clase.getAtributos()) {
-            if (atributo == marcado) {
+            if (atributo == marcado || atributo == comoClave) {
                 continue;
             }
             if (esInterfaz || !nombresDeClase.contains(TipoJava.de(atributo.getTipo()))) {
@@ -231,7 +246,7 @@ public class PlanificadorGeneracion {
                 interfaces,
                 esRaiz,
                 identificador,
-                sinRepetirNombres(campos, todasLasAsociaciones),
+                sinRepetirNombres(identificador, campos, todasLasAsociaciones),
                 todasLasAsociaciones,
                 operaciones);
     }
@@ -241,6 +256,23 @@ public class PlanificadorGeneracion {
      * autoincremental y no UUID porque el proyecto generado es un CRUD que se
      * prueba a mano, y una clave corta y legible se escribe sin copiar y pegar.
      */
+    /**
+     * El atributo que hace de clave sin que nadie lo haya marcado.
+     * <p>
+     * Solo cuenta si ademas su tipo puede ser una clave: un {@code id} de tipo
+     * booleano no lo es, y en ese caso conviene dejar la clave generada y
+     * renombrar el atributo, que es lo que hace {@code sinRepetirNombres}.
+     */
+    private AtributoUml atributoLlamadoId(ClaseUml clase) {
+        for (AtributoUml atributo : clase.getAtributos()) {
+            if ("id".equalsIgnoreCase(Nombres.campo(atributo.getNombre()))
+                    && TipoJava.sirveDeIdentificador(TipoJava.de(atributo.getTipo()))) {
+                return atributo;
+            }
+        }
+        return null;
+    }
+
     private Plan.Campo identificadorGenerado() {
         return new Plan.Campo("id", "Long", "id", true, true, null, true);
     }
@@ -304,9 +336,22 @@ public class PlanificadorGeneracion {
      * de la asociacion, porque el atributo lo escribio la persona
      * explicitamente y la asociacion se nombro por deduccion.
      */
-    private List<Plan.Campo> sinRepetirNombres(List<Plan.Campo> campos,
+    /**
+     * @param identificador la clave, que participa del reparto de nombres
+     *                      aunque no este en la lista de campos. Sin esto, un
+     *                      atributo llamado "id" chocaba con la clave generada
+     *                      -tambien "id"- y el proyecto no compilaba. El caso
+     *                      normal lo resuelve antes {@code atributoLlamadoId},
+     *                      tomando ese atributo COMO la clave; esto queda para
+     *                      cuando no puede serlo, por ejemplo un "id" booleano.
+     */
+    private List<Plan.Campo> sinRepetirNombres(Plan.Campo identificador,
+                                               List<Plan.Campo> campos,
                                                List<Plan.Asociacion> asociaciones) {
         Set<String> usados = new HashSet<>();
+        if (identificador != null) {
+            usados.add(identificador.nombre());
+        }
         List<Plan.Campo> resultado = new ArrayList<>();
         for (Plan.Campo campo : campos) {
             String nombre = campo.nombre();
