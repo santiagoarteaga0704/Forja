@@ -1757,6 +1757,68 @@ pre.codigo {
   overflow-y: auto;
 }
 
+/* ---------- La pantalla que reemplaza al negro ---------------------------
+   Va sobre la mesa y no sobre la hoja: lo que fallo es la herramienta, no el
+   modelo, y conviene que se lea como tal. */
+.pantalla-rota {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--mesa);
+}
+
+.pantalla-rota-caja {
+  max-width: 560px;
+  background: var(--instrumento);
+  border: 1px solid var(--canto);
+  border-top: 3px solid var(--fuego);
+  border-radius: var(--radio);
+  padding: 24px 26px;
+  box-shadow: var(--sombra);
+}
+
+.pantalla-rota-caja h1 {
+  margin: 0 0 10px;
+  font-size: 19px;
+  color: var(--tiza);
+}
+
+.pantalla-rota-caja p {
+  margin: 0 0 10px;
+  color: var(--acero);
+  line-height: 1.55;
+}
+
+.pantalla-rota-caja .tranquilo {
+  color: var(--tiza);
+}
+
+/* El texto del error, en monoespaciada y contenido: puede ser largo y no
+   tiene que empujar los botones fuera de la vista. */
+.pantalla-rota-detalle {
+  margin: 14px 0 18px;
+  padding: 10px 12px;
+  max-height: 160px;
+  overflow: auto;
+  background: var(--mesa);
+  border: 1px solid var(--canto-suave);
+  border-radius: var(--radio-chico);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--acero);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pantalla-rota-botones {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 /* El aviso de que la ayuda se acoto a un elemento. No es un error -la
    herramienta esta haciendo lo que debe- asi que no va en el rojo de peligro:
    va con el fuego, que es el color con el que esta interfaz dice "esto es lo

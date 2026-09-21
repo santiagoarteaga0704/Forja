@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cuandoCaduqueLaSesion } from './api'
+import LimiteDeError from './LimiteDeError'
 import Entrar from './pantallas/Entrar'
 import Lienzo from './pantallas/Lienzo'
 import Proyectos from './pantallas/Proyectos'
@@ -47,13 +48,25 @@ export default function App() {
   if (!credencial) return <Entrar alEntrar={entrar} />
 
   if (abierto) {
+    /*
+     * El lienzo va envuelto y las otras dos pantallas no, a proposito: es
+     * donde vive casi toda la complejidad -arrastre, zoom, canal en vivo,
+     * bloqueos- y por lo tanto donde puede romperse algo. Si se rompe, se
+     * vuelve a los proyectos sin perder la sesion, que es mejor que recargar.
+     *
+     * La clave es el identificador del diagrama: sin ella, al abrir otro
+     * diagrama despues de un error el limite seguiria mostrando el cartel,
+     * porque su estado no se reinicia solo.
+     */
     return (
-      <Lienzo
-        credencial={credencial}
-        proyecto={abierto.proyecto}
-        diagrama={abierto.diagrama}
-        alVolver={() => setAbierto(null)}
-      />
+      <LimiteDeError key={abierto.diagrama.id} alVolver={() => setAbierto(null)}>
+        <Lienzo
+          credencial={credencial}
+          proyecto={abierto.proyecto}
+          diagrama={abierto.diagrama}
+          alVolver={() => setAbierto(null)}
+        />
+      </LimiteDeError>
     )
   }
 
