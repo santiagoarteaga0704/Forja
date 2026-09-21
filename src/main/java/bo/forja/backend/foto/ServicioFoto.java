@@ -26,12 +26,14 @@ import java.util.stream.Collectors;
 /**
  * Construccion del modelo a partir de la foto de una pizarra.
  * <p>
- * El servicio recibe el <b>texto</b> reconocido, no la imagen. El
- * reconocimiento de caracteres ocurre en el cliente: en el navegador con las
- * herramientas del navegador, y en el telefono con el reconocedor del sistema,
- * que funciona sin conexion. Subir la imagen al servidor obligaria a montar un
- * reconocedor propio con sus dependencias nativas, y a tener conexion para algo
- * que el enunciado pide que funcione sin ella.
+ * El camino tiene dos entradas y una sola interpretacion. Por texto -escrito o
+ * pegado a mano- entra directo. Por imagen entra antes por
+ * {@link #transcribir}, que la manda al modelo de vision y devuelve texto.
+ * <p>
+ * <b>Esto es del cliente web.</b> El cliente movil no tiene foto: no lleva
+ * camara ni reconocedor, y lo que hace sin conexion es el diagrama y el
+ * dictado. Un comentario anterior aqui decia que el telefono reconocia con el
+ * reconocedor del sistema; nunca fue cierto.
  * <p>
  * Lo que no se delega es la interpretacion. El texto se convierte en comandos
  * aqui, en un solo lugar, y se aplica por el registro de operaciones: queda en
