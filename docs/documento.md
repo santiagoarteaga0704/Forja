@@ -71,7 +71,7 @@ SANTA CRUZ - BOLIVIA
 | 2 | Casos de uso del Ciclo #2 | 2.1.5 |
 | 3 | Vista de paquetes | 2.2.3 |
 | 4 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
-| 5 | Comunicación — CU13, pedir un diagrama en lenguaje libre | 2.2.4 |
+| 5 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
 | 6 | Modelo de despliegue | 2.3.1.1 |
 | 7 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
 
@@ -130,8 +130,9 @@ intercambiar el modelo con Enterprise Architect a través de XMI 2.5.1.
   castellano que convierta frases en operaciones del modelo.
 - Integrar el reconocimiento de fotografías de pizarra para incorporar al modelo
   un diagrama dibujado a mano.
-- Incorporar un modelo de lenguaje local que traduzca pedidos en lenguaje libre a
-  operaciones válidas del modelo, con revisión previa antes de aplicarlas.
+- Incorporar un modelo de lenguaje local que traduzca a operaciones válidas un
+  pedido dicho de cualquier manera, acotado a un elemento por vez y con revisión
+  previa antes de aplicarlo.
 - Desarrollar un agente guía basado en reglas que observe el modelo y el uso de
   la herramienta para enseñar a usarla y advertir problemas de diseño.
 - Generar automáticamente, a partir del modelo, un proyecto Spring Boot de cuatro
@@ -190,8 +191,9 @@ conexión en el cliente móvil.
 diagrama dibujado a mano, ejecutado en el propio navegador.
 
 **Módulo de Inteligencia Artificial Generativa.** Modelo de lenguaje local que
-traduce un pedido en lenguaje libre a operaciones del modelo, con revisión previa
-obligatoria antes de aplicarlas.
+traduce a operaciones del modelo un pedido dicho de cualquier manera. Su alcance
+está limitado a un elemento por vez y su propuesta pasa por una revisión previa
+obligatoria antes de aplicarse.
 
 **Módulo de Agente Guía.** Sistema experto de reglas que observa el modelo y el
 uso de la herramienta, enseña a usarla y advierte problemas de diseño.
@@ -350,6 +352,17 @@ de ingreso en vez de mostrar un mensaje técnico.
 de tamaño reducido se equivoca, de modo que su propuesta se muestra y una persona
 decide. Esta decisión es a la vez de experiencia de usuario y de arquitectura.
 
+**La herramienta asiste al modelado; no modela.** El pedido en lenguaje libre está
+limitado a un elemento por vez —una clase con sus miembros, o una relación—, de
+modo que la decisión de qué contiene el modelo siga siendo de quien modela. Lo que
+el modelo de lenguaje aporta no es capacidad de diseño sino tolerancia a cómo se
+diga la instrucción, que es exactamente lo que una gramática determinista no puede
+dar. **El límite se implementa en el código y no en el texto que se le envía al
+modelo**, porque se midió que el modelo desobedece sus instrucciones en la mayoría
+de las ejecuciones: una restricción que solo vive en el prompt no es una
+restricción, y el recorte se aplica antes de mostrar la propuesta para que lo
+revisado coincida con lo que se aplica.
+
 **Nada se marca como hecho sin evidencia.** El recorrido de aprendizaje que
 presenta el agente no avanza por haber visitado una pantalla, sino por haber
 realizado la acción, verificada contra la bitácora.
@@ -375,7 +388,7 @@ bien.**
 | Paradigma | Dónde | Para qué |
 |---|---|---|
 | Simbólico | Agente guía: 24 reglas y 17 respuestas escritas | Razonar sobre el modelo y enseñar la herramienta |
-| Generativo | Traducción de lenguaje libre a operaciones | Entender lo que una persona escribe o dice |
+| Generativo | Traducción de lenguaje libre a operaciones, de a un elemento | Entender lo que una persona escribe o dice |
 
 El criterio que ordena la separación es que **las reglas mandan, y el modelo
 generativo interviene únicamente donde las reglas no llegan.** Para saber que una
@@ -536,7 +549,7 @@ ausencia no impide operar el sistema.
 | CU10 | Editar en forma concurrente |
 | CU11 | Dictar cambios por voz |
 | CU12 | Leer el diagrama desde una fotografía de pizarra |
-| CU13 | Pedir un diagrama en lenguaje libre |
+| CU13 | Pedir un elemento en lenguaje libre |
 | CU14 | Consultar al agente guía |
 | CU15 | Generar el backend Spring Boot |
 | CU16 | Exportar el modelo a XMI |
@@ -571,7 +584,7 @@ allí no se corrige localmente, obliga a rediseñar.
 |---|---|---|---|---|---|
 | CU11 | Dictar cambios por voz | Aprobado | Alta | Medio | Modelador |
 | CU12 | Leer el diagrama desde una fotografía | Aprobado | Normal | Alto | Modelador |
-| CU13 | Pedir un diagrama en lenguaje libre | Aprobado | Normal | **Alto** | Modelador |
+| CU13 | Pedir un elemento en lenguaje libre | Aprobado | Normal | **Alto** | Modelador |
 | CU14 | Consultar al agente guía | Aprobado | Alta | Medio | Modelador |
 | CU15 | Generar el backend Spring Boot | Aprobado | Alta | Medio | Modelador |
 | CU16 | Exportar el modelo a XMI | Aprobado | Alta | Medio | Modelador |
@@ -740,18 +753,18 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | Las clases reconocidas se incorporan al modelo. |
 | **Excepción** | Imagen ilegible: no se aplica nada y se informa. |
 
-**CU13. Pedir un diagrama en lenguaje libre**
+**CU13. Pedir un elemento en lenguaje libre**
 
 | | |
 |---|---|
-| **Nombre de Caso de Uso** | CU13 Pedir un diagrama en lenguaje libre |
-| **Propósito** | Obtener una propuesta de modelo a partir de una descripción en prosa. |
+| **Nombre de Caso de Uso** | CU13 Pedir un elemento en lenguaje libre |
+| **Propósito** | Obtener la propuesta de **un** elemento del modelo —una clase con sus miembros, o una relación entre dos clases— a partir de una frase dicha de cualquier manera. |
 | **Actores** | Modelador, Modelo de lenguaje local |
 | **Actor Iniciador** | Modelador |
 | **Precondición** | Diagrama abierto y modelo de lenguaje disponible. |
-| **Flujo Principal** | 1. Escribir el pedido, por ejemplo «armá un diagrama de una veterinaria». 2. El modelo traduce el pedido a frases del idioma controlado. 3. La gramática determinista las valida y arma la propuesta. 4. Se muestra la propuesta para revisión. 5. Al aceptar, se aplica exactamente lo revisado. |
-| **Post Condición** | El modelo contiene lo que la persona aprobó, y no una segunda opinión del modelo. |
-| **Excepción** | Modelo no disponible o sin respuesta: se informa sin modificar nada. |
+| **Flujo Principal** | 1. Escribir el pedido, por ejemplo «creame la clase Paciente con nombre y teléfono» o «un paciente tiene muchas consultas». 2. El modelo traduce el pedido a frases del idioma controlado. 3. La gramática determinista las valida. 4. El alcance recorta la propuesta a un solo elemento y cuenta cuántas instrucciones quedaron afuera. 5. Se muestra la propuesta para revisión. 6. Al aceptar, se aplica exactamente lo revisado. |
+| **Post Condición** | El modelo contiene un elemento más: el que la persona aprobó, y no una segunda opinión del modelo. |
+| **Excepción** | Modelo no disponible o sin respuesta: se informa sin modificar nada. Pedido de varios elementos a la vez: se resuelve el primero y se informa cuántos quedaron afuera. |
 
 **CU14. Consultar al agente guía**
 
@@ -962,32 +975,44 @@ varias instancias del servidor. La variante `DO NOTHING` es deliberada: un
 conflicto no debe marcar la transacción para reversión, porque la petición que
 pierde la disputa continúa normalmente informando que el elemento está tomado.
 
-#### Diagrama de comunicación — CU13: Pedir un diagrama en lenguaje libre
+#### Diagrama de comunicación — CU13: Pedir un elemento en lenguaje libre
 
 ![Diagrama de comunicación de CU13](diagramas/comunicacion-cu13.png)
 
-*Figura 5. CU13, pedir un diagrama en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando.*
+*Figura 5. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo.*
 
 
 | # | De | A | Mensaje |
 |---|---|---|---|
-| 1 | Modelador | ControladorPedido | `pedir("un sistema para una clínica")` |
+| 1 | Modelador | ControladorPedido | `pedir("creame la clase Paciente con nombre y teléfono")` |
 | 2 | ControladorPedido | ServicioPedido | `leer(pedido, tokenLectura)` |
 | 3 | ServicioPedido | TraductorOllama | `aFrasesCanonicas(pedido, contexto)` |
 | 4 | TraductorOllama | Gemma 3 4B | HTTP local; devuelve frases del idioma controlado |
 | 5 | ServicioPedido | ParserVoz | `interpretar(frase)` → comando, o la frase se descarta |
-| 6 | ServicioPedido | PropuestasEnRevision | Guardar la propuesta bajo su token |
-| 7 | ControladorPedido | Modelador | La propuesta, para revisarla |
-| 8 | Modelador | ControladorPedido | `aplicar(tokenLectura)` |
-| 9 | ServicioPedido | PropuestasEnRevision | Recuperar la propuesta guardada — **no se vuelve a consultar al modelo** |
-| 10 | ServicioPedido | ServicioOperaciones | `registrar(cada comando)`, el mismo camino que CU7 |
+| 6 | ServicioPedido | AlcanceDelPedido | `recortar(comandos)` → **un solo elemento**, y cuántos quedaron afuera |
+| 7 | ServicioPedido | PropuestasEnRevision | Guardar la propuesta ya recortada, bajo su token |
+| 8 | ControladorPedido | Modelador | La propuesta, para revisarla |
+| 9 | Modelador | ControladorPedido | `aplicar(tokenLectura)` |
+| 10 | ServicioPedido | PropuestasEnRevision | Recuperar la propuesta guardada — **no se vuelve a consultar al modelo** |
+| 11 | ServicioPedido | ServicioOperaciones | `registrar(cada comando)`, el mismo camino que CU7 |
 
-El paso 9 es la corrección más significativa del sistema. La versión original
-volvía a consultar al modelo al aplicar, bajo el supuesto de que con temperatura
-cero la respuesta sería idéntica. La medición demostró lo contrario, de modo que
-lo aplicado no era lo revisado. Ahora el servidor recupera su propia propuesta:
-el cliente nunca envía comandos —no decide qué entra al modelo— pero tampoco se
-consulta al modelo por segunda vez.
+Dos pasos de esta secuencia merecen explicación, porque ninguno estaba en la
+primera versión y los dos existen por una medición.
+
+**El paso 10 es la corrección más significativa del sistema.** La versión
+original volvía a consultar al modelo al aplicar, bajo el supuesto de que con
+temperatura cero la respuesta sería idéntica. La medición demostró lo
+contrario, de modo que lo aplicado no era lo revisado. Ahora el servidor
+recupera su propia propuesta: el cliente nunca envía comandos —no decide qué
+entra al modelo— pero tampoco se consulta al modelo por segunda vez.
+
+**El paso 6 es el que mantiene a la herramienta en su lugar.** Recorta la
+propuesta a un elemento, y ocurre *antes* del paso 7 a propósito: si el recorte
+se hiciera al aplicar, la persona revisaría una propuesta más grande que la que
+termina entrando, y el paso de revisión volvería a no garantizar nada. Está
+implementado como una función del servidor y no como una instrucción al modelo
+porque se midió que el modelo desobedece sus instrucciones en la mayoría de las
+ejecuciones.
 
 ### 2.2.5 Análisis de paquetes
 

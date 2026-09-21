@@ -154,7 +154,7 @@ $llm2 = NuevoElemento $paq2 'Modelo de lenguaje local' 'Actor'
 $c2 = @{}
 foreach ($n in @(
   'CU11 Dictar cambios por voz','CU12 Leer el diagrama desde una fotografia',
-  'CU13 Pedir un diagrama en lenguaje libre','CU14 Consultar al agente guia',
+  'CU13 Pedir un elemento en lenguaje libre','CU14 Consultar al agente guia',
   'CU15 Generar el backend Spring Boot','CU16 Exportar el modelo a XMI',
   'CU17 Importar un modelo desde XMI','CU18 Modelar sin conexion y sincronizar')) {
   $c2[$n.Split(' ')[0]] = NuevoElemento $paq2 $n 'UseCase'
@@ -257,7 +257,7 @@ $diaM1.DiagramObjects.Refresh()
 Exportar $diaM1 'comunicacion-cu10.png'
 
 # =====================================================================
-# Figura 5. Comunicacion, CU13: pedir un diagrama en lenguaje libre
+# Figura 5. Comunicacion, CU13: pedir un elemento en lenguaje libre
 # =====================================================================
 $paqM2 = NuevoPaquete $modelo 'Comunicacion CU13'
 $per   = NuevoElemento $paqM2 ':Modelador' 'Object'
@@ -268,16 +268,21 @@ $tra   = NuevoElemento $paqM2 ':TraductorOllama' 'Object'
 $gem   = NuevoElemento $paqM2 ':Gemma 3 4B (Ollama local)' 'Object'
 $par   = NuevoElemento $paqM2 ':ParserVoz' 'Object'
 $ops2  = NuevoElemento $paqM2 ':ServicioOperaciones' 'Object'
+$alc   = NuevoElemento $paqM2 ':AlcanceDelPedido' 'Object'
 
-[void](Mensaje $per  $cped  '1: pedir(pedido)   /   7: la propuesta, a revisar   /   8: aplicar(token)')
+[void](Mensaje $per  $cped  '1: pedir(pedido)   /   8: la propuesta, a revisar   /   9: aplicar(token)')
 [void](Mensaje $cped $sped  '2: leer(pedido, tokenLectura)')
 [void](Mensaje $sped $tra   '3: aFrasesCanonicas(pedido, contexto)')
 [void](Mensaje $tra  $gem   '4: HTTP local  ->  frases del idioma controlado')
 [void](Mensaje $sped $par   '5: interpretar(frase)  ->  comando, o se descarta')
-[void](Mensaje $sped $props '6: guardar bajo su token   /   9: recuperarla')
-[void](Mensaje $sped $ops2  '10: registrar(cada comando)')
+# Cortas a proposito: en la rejilla, estas dos etiquetas salen del mismo objeto
+# hacia abajo y con el texto largo se pisaban entre si. El detalle completo va en
+# la tabla de mensajes del documento, que es lo que se lee de verdad.
+[void](Mensaje $sped $alc   '6: recortar()  ->  UN elemento')
+[void](Mensaje $sped $props '7: guardar   /   10: recuperar')
+[void](Mensaje $sped $ops2  '11: registrar(cada comando)')
 
-$diaM2 = $paqM2.Diagrams.AddNew('CU13 Pedir un diagrama en lenguaje libre', 'Collaboration')
+$diaM2 = $paqM2.Diagrams.AddNew('CU13 Pedir un elemento en lenguaje libre', 'Collaboration')
 [void]$diaM2.Update(); $paqM2.Diagrams.Refresh()
 # Misma rejilla compacta que la figura anterior, y por el mismo motivo.
 Ubicar $diaM2 $per     40   40 220 70
@@ -287,6 +292,7 @@ Ubicar $diaM2 $par     40  300 220 70
 Ubicar $diaM2 $sped   460  300 220 70
 Ubicar $diaM2 $tra    880  300 220 70
 Ubicar $diaM2 $ops2    40  560 220 70
+Ubicar $diaM2 $alc    460  560 220 70
 Ubicar $diaM2 $props  880  560 220 70
 $diaM2.DiagramObjects.Refresh()
 Exportar $diaM2 'comunicacion-cu13.png'

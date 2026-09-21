@@ -19,7 +19,7 @@ Todo se ejecuta desde `C:\dev\forja` salvo donde se diga otra cosa.
 | Flutter (solo para el móvil) | `flutter --version` |
 | Ollama (solo para la IA) | `ollama list` → tiene que aparecer `gemma3:4b` |
 
-### Dos trampas que ya mordieron
+### Tres trampas que ya mordieron
 
 **El puerto 5433 lo pelea otro proyecto.** El contenedor `erp_postgres` del ERP
 arranca solo con Docker Desktop y se queda con el mismo puerto que FORJA.
@@ -45,6 +45,20 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
   Where-Object { $_.CommandLine -like '*ForjaBackendApplication*' } |
   Stop-Process -Force
 ```
+
+**El micrófono NO funciona en Brave.** Medido el 21 de septiembre de 2026: Brave
+devuelve `network` con **todos** los idiomas —`es-BO`, `es-PE`, `es-CL`, `es-419`,
+`es` y sin fijar ninguno—, mientras que Edge sólo fallaba con `es-419`. Brave no
+tiene a dónde mandar el audio y no hay nada que configurar.
+
+**La demostración del micrófono va en Edge.** En Brave el dictado *escrito* anda
+igual de bien —es el mismo parser, la misma gramática, el mismo `/voz`—; lo único
+que no anda es hablarle.
+
+Ojo con el mensaje: `network` **no siempre es la red**. El reconocedor lo devuelve
+también cuando no acepta el idioma, y eso hizo perder una mañana revisando
+permisos, cortafuegos y navegadores. Si el dictado falla, lo primero que hay que
+descartar es el idioma, no la conexión.
 
 ---
 
@@ -88,7 +102,7 @@ complementarlo, y ya costó una tarde de «Could not resolve placeholder».
 
 ## 2. Las pruebas automáticas
 
-### Backend — 289 pruebas
+### Backend — 298 pruebas
 
 ```powershell
 ./mvnw test
@@ -161,7 +175,14 @@ Abrí **http://localhost:5173**.
 **Dibujar.** Botón `Clase` → nombre → aparece en la hoja. Arrastrala. Con
 `Relación` uní dos clases y elegí multiplicidades.
 
-**Dictar.** Botón `Dictar`. Escribí (o decí, si el micrófono anda):
+**Dictar.** Botón `Dictar`. Se abre una barra abajo con un cuadro de texto y los
+botones `Pedir` y `Aplicar`.
+
+> El cuadro muestra **`un Paciente tiene muchas Consultas` en gris**: es un
+> *placeholder*, no texto escrito. Mientras el cuadro esté vacío, `Pedir` y
+> `Aplicar` están apagados. Hay que hacer clic adentro y escribir.
+
+Escribí (o decí, en Edge, que es donde anda el micrófono):
 
 ```
 crea la clase Paciente
@@ -177,11 +198,30 @@ El OCR corre **en el navegador**, sin mandar la imagen a ningún lado.
 
 ### 3.4 El pedido por IA (necesita Ollama)
 
-7. Botón `Pedir` en la barra de dictado. Escribí:
-   `arma un diagrama de una veterinaria con dueños, mascotas y consultas`
-8. **Tarda entre 15 y 45 segundos.** Revisá la propuesta y aplicala.
-9. Comprobá que **lo aplicado sea exactamente lo propuesto** y que las clases no
-   se pisen.
+**La ayuda es de a un elemento por vez, a propósito.** La IA no arma el modelo:
+resuelve una instrucción, tolerando cómo se diga. Quien modela sos vos. El
+límite vive en `AlcanceDelPedido.java`, no en el prompt — porque el prompt no
+garantiza nada.
+
+7. Botón `Pedir` en la barra de dictado. Probá los dos casos que cubre:
+
+   ```
+   creame la clase Paciente con nombre, fecha de nacimiento y telefono
+   un paciente puede tener muchas consultas
+   ```
+
+8. Una clase con atributos tarda ~5 s; una relación, ~1 s. Revisá y aplicá.
+9. Probá pedirle **de más** y mirá qué hace:
+
+   ```
+   arma una base de datos para un consultorio con pacientes, medicos y recetas
+   ```
+
+   Tiene que entrar **una sola clase** y avisar, en la propuesta, cuántas
+   instrucciones quedaron afuera. Si entra más de una, el límite se rompió.
+
+10. Comprobá que **lo aplicado sea exactamente lo propuesto** y que las clases
+    no se pisen.
 
 > Si el botón `Pedir` no aparece, la bandera `FORJA_IA_HABILITADA` no llegó al
 > proceso. Con la bandera prendida pero Ollama apagado el botón **sí aparece** y

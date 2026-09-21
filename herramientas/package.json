@@ -1,0 +1,13 @@
+{
+  "name": "forja-herramientas",
+  "private": true,
+  "type": "module",
+  "description": "Dependencias de los guiones que componen el documento. Aparte de web/ a proposito: no son dependencias de la aplicacion.",
+  "scripts": {
+    "pdf": "node crear-pdf.mjs"
+  },
+  "dependencies": {
+    "marked": "^17.0.4",
+    "playwright": "^1.63.0"
+  }
+}
