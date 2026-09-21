@@ -7,6 +7,7 @@ import '../comandos.dart';
 import '../identificadores.dart';
 import '../voz/contexto.dart';
 import '../voz/dictado_local.dart';
+import '../voz/idioma_del_dictado.dart';
 import '../lienzo/pintor.dart';
 import '../main.dart';
 import '../sincronizador.dart';
@@ -169,12 +170,19 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
       return;
     }
 
+    // El idioma se elige de lo que ESTE aparato declara tener, no de un tag
+    // fijo: ver idioma_del_dictado.dart, que explica por que pedir `es_419`
+    // rompia el dictado entero.
+    final idioma = idiomaDelDictado(
+      (await _voz.locales()).map((disponible) => disponible.localeId).toList(),
+    );
+
     if (!mounted) return;
     final frase = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colores.superficie,
-      builder: (_) => _HojaDeDictado(voz: _voz),
+      builder: (_) => _HojaDeDictado(voz: _voz, idioma: idioma),
     );
     await _voz.stop();
     if (frase == null || frase.trim().isEmpty) return;
@@ -729,9 +737,12 @@ class _Insignia extends StatelessWidget {
 /// paquete de idioma esta descargado en el telefono**. Es una condicion del
 /// sistema, no de la aplicacion, y conviene comprobarla antes de la defensa.
 class _HojaDeDictado extends StatefulWidget {
-  const _HojaDeDictado({required this.voz});
+  const _HojaDeDictado({required this.voz, required this.idioma});
 
   final SpeechToText voz;
+
+  /// Nulo significa "no fijes ninguno": el aparato usa el suyo.
+  final String? idioma;
 
   @override
   State<_HojaDeDictado> createState() => _HojaDeDictadoState();
@@ -753,8 +764,10 @@ class _HojaDeDictadoState extends State<_HojaDeDictado> {
       onResult: (resultado) => setState(() => _reconocido = resultado.recognizedWords),
       listenOptions: SpeechListenOptions(
         // El castellano de la region: el reconocedor de Android acierta bastante
-        // mas con la variante correcta que con el castellano de Espana.
-        localeId: 'es_419',
+        // mas con la variante correcta que con el castellano de Espana. Cual es
+        // lo decide idiomaDelDictado() mirando lo que el aparato tiene
+        // instalado; nulo quiere decir que use el del sistema.
+        localeId: widget.idioma,
         partialResults: true,
         cancelOnError: true,
       ),
