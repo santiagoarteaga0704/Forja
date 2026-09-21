@@ -351,6 +351,11 @@ export interface Pedido {
   pedido: string
   frases: FrasePropuesta[]
   comandos: Comando[]
+  /**
+   * Instrucciones que el modelo propuso de mas y que el alcance dejo afuera.
+   * La ayuda es de a un elemento por vez: ver AlcanceDelPedido.java.
+   */
+  recortados: number
 }
 
 export interface ResultadoPedido {

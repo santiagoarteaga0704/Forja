@@ -102,9 +102,17 @@ export default function Dictado({
     const Reconocedor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     const instancia = new Reconocedor()
+    // El reconocedor EXIGE una variante con pais. Aca decia 'es-419' -el tag de
+    // macro-region de Latinoamerica- y el dictado no funcionaba en ninguna
+    // maquina: el servicio rechaza el idioma y lo informa como 'network', un
+    // error que manda a buscar el problema en la red, en los permisos o en el
+    // navegador, donde no esta. Medido el 21 sep 2026 en Edge y Brave:
+    // 'es-419', 'es' y no fijar nada fallan los tres; 'es-BO', 'es-PE', 'es-CL',
+    // 'es-MX', 'es-AR', 'es-ES' y 'es-US' andan. Por eso NO alcanza con quitar
+    // la linea y dejar que el navegador elija.
+    instancia.lang = 'es-BO'
     // Una instruccion por vez: el dictado de un diagrama son ordenes cortas, no
     // un parrafo, y cerrar el reconocimiento en cada una evita que se mezclen.
-    instancia.lang = 'es-419'
     instancia.continuous = false
     instancia.interimResults = false
     instancia.maxAlternatives = 1
@@ -115,10 +123,17 @@ export default function Dictado({
     }
     instancia.onerror = (evento: any) => {
       setEscuchando(false)
+      // 'network' no siempre es la red: el reconocedor tambien lo devuelve
+      // cuando no acepta el idioma. Decirlo crudo mando a perder una tarde
+      // revisando permisos y navegadores, asi que el mensaje ofrece la salida
+      // que siempre existe -escribir la frase-, que es lo unico que le sirve a
+      // quien lo esta leyendo.
       setError(
         evento.error === 'not-allowed'
           ? 'El navegador no dio permiso para usar el microfono'
-          : 'No se pudo escuchar: ' + evento.error,
+          : evento.error === 'network'
+            ? 'El reconocimiento de voz no respondio. Escribi la frase y aplicala igual.'
+            : 'No se pudo escuchar: ' + evento.error,
       )
     }
     instancia.onend = () => setEscuchando(false)
@@ -407,6 +422,20 @@ function ResumenDelPedido({ pedido }: { pedido: Pedido }) {
   return (
     <div className="resumen-lectura resumen-pedido">
       <h3>Esto voy a hacer</h3>
+
+      {/*
+        La ayuda es de a un elemento por vez, a proposito: quien modela sos vos.
+        Se dice cuando pasa, porque si no el diagrama recibe menos de lo que la
+        propuesta mostraba y parece una falla. Ver AlcanceDelPedido.java.
+      */}
+      {pedido.recortados > 0 && (
+        <p className="acotado">
+          La ayuda va de a una cosa por vez, así que de lo propuesto entra{' '}
+          <strong>un solo elemento</strong>. Quedaron afuera {pedido.recortados}{' '}
+          {pedido.recortados === 1 ? 'instrucción' : 'instrucciones'}: pedilas de nuevo, una
+          por una.
+        </p>
+      )}
 
       {entendidas.length === 0 && pedido.frases.length > 0 && (
         <p className="vacio">Ninguna de las frases propuestas se pudo interpretar.</p>

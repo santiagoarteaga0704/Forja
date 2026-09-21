@@ -961,7 +961,14 @@ label {
   position: absolute;
   top: calc(100% + 7px);
   right: 0;
-  z-index: 40;
+  /*
+   * Por encima del cajon de la guia (60) y del telon (50). Estaba en 40 y el
+   * menu de XMI quedaba DEBAJO del cajon: como los dos viven arriba a la
+   * derecha, "Exportar" e "Importar" eran inalcanzables con la guia abierta
+   * -que es como la aplicacion arranca-. Un menu que se abre desde la barra es
+   * transitorio y pertenece adelante de cualquier panel permanente.
+   */
+  z-index: 70;
   min-width: 210px;
   padding: 4px;
   background: var(--instrumento);
@@ -1748,6 +1755,19 @@ pre.codigo {
 .resumen-pedido {
   max-height: min(38vh, 300px);
   overflow-y: auto;
+}
+
+/* El aviso de que la ayuda se acoto a un elemento. No es un error -la
+   herramienta esta haciendo lo que debe- asi que no va en el rojo de peligro:
+   va con el fuego, que es el color con el que esta interfaz dice "esto es lo
+   que importa de esta pantalla". */
+.acotado {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--fuego);
+  background: var(--fuego-tenue);
+  font-size: var(--texto-chico, 12px);
+  line-height: 1.45;
 }
 
 /* La frase propuesta es lo que la gramatica va a interpretar: se muestra en

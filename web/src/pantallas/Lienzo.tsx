@@ -701,6 +701,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
           <Desplegable
             abierto={menuXmi}
             alCambiar={setMenuXmi}
+            alinear="derecha"
             disparador={
               <button aria-haspopup="menu" aria-expanded={menuXmi} title="Intercambio con XMI 2.5.1">
                 <IconoIntercambio />
@@ -964,11 +965,19 @@ function Desplegable({
   alCambiar,
   disparador,
   children,
+  alinear = 'izquierda',
 }: {
   abierto: boolean
   alCambiar: (abierto: boolean) => void
   disparador: React.ReactElement
   children: (cerrar: () => void) => React.ReactNode
+  /**
+   * De que borde del disparador cuelga el menu. Importa cerca del borde de la
+   * pantalla: un menu anclado a la izquierda crece hacia la derecha y, si el
+   * boton ya esta al final de la barra, se sale de la ventana. Le paso esto al
+   * de XMI, que quedaba 114 px afuera.
+   */
+  alinear?: 'izquierda' | 'derecha'
 }) {
   const caja = useRef<HTMLDivElement>(null)
 
@@ -996,7 +1005,7 @@ function Desplegable({
     <div className="desplegable" ref={caja}>
       <div onClick={() => alCambiar(!abierto)}>{disparador}</div>
       {abierto && (
-        <div className="menu izquierda" role="menu">
+        <div className={alinear === 'izquierda' ? 'menu izquierda' : 'menu'} role="menu">
           {children(() => alCambiar(false))}
         </div>
       )}
