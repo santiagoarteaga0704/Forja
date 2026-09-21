@@ -45,8 +45,12 @@ public class ParserVoz {
     /** Nombre de clase o de miembro: letras, digitos y espacios intermedios. */
     private static final String NOM = "([\\p{L}][\\p{L}\\p{N}_]*(?:\\s+[\\p{L}][\\p{L}\\p{N}_]*)*?)";
     private static final String NOM_FIN = "([\\p{L}][\\p{L}\\p{N}_]*(?:\\s+[\\p{L}][\\p{L}\\p{N}_]*)*)";
-    private static final String CREAR = "(?:crea|crear|cree|creame|agrega|agregar|agregame|anade|anadir|nueva|nuevo|dibuja|dibujar)";
-    private static final String AGREGAR = "(?:agrega|agregale|agregar|anade|anadile|anadir|pone|ponele|poner|sumale)";
+    private static final String CREAR = "(?:crea|crear|cree|creame|agrega|agregar|agregame|anade|anadir|anadi|nueva|nuevo|dibuja|dibujar)";
+    // "anadi" y "suma" son el imperativo voseante, que es como se habla aca
+    // -y como habla la propia interfaz de la herramienta-. Faltaban, y su
+    // ausencia no se notaba como "no te entendi": la frase se caia al fondo
+    // de la gramatica y terminaba creando una clase repetida en silencio.
+    private static final String AGREGAR = "(?:agrega|agregale|agregar|anade|anadile|anadir|anadi|pone|ponele|poner|sumale|suma)";
     private static final String CANTIDAD = "(muchas|muchos|varias|varios|una|uno|un|cero\\s+o\\s+mas|al\\s+menos\\s+una?|al\\s+menos\\s+uno)";
 
     private static Pattern regla(String expresion) {

@@ -2,12 +2,20 @@
   "_comentario": "Casos de la gramatica de dictado. Los leen ParserVozCorpusTest (Java) y parser_voz_corpus_test (Dart). Si tocas una regla, los dos lados tienen que seguir dando lo mismo: es lo unico que impide que la copia del telefono y la del servidor se separen sin que nadie se entere.",
   "_identificadores": "Los ids no se comparan literal porque el parser los inventa. '@Paciente' es el id de una clase que ya estaba en el contexto. '$nueva1' es uno recien inventado: se liga a lo que haya salido la primera vez y despues tiene que repetirse, que es como se verifica que los atributos cuelguen de la clase que se acaba de crear.",
   "_campos": "Solo se comparan los campos que el caso nombra. Los que no se nombran quedan libres a proposito: los identificadores generados y los valores por omision no son lo que cada caso quiere afirmar.",
-
   "contextos": {
-    "clinica": { "clases": ["Paciente", "Consulta", "Persona", "Medico", "Auditable"] },
-    "vacio": { "clases": [] }
+    "clinica": {
+      "clases": [
+        "Paciente",
+        "Consulta",
+        "Persona",
+        "Medico",
+        "Auditable"
+      ]
+    },
+    "vacio": {
+      "clases": []
+    }
   },
-
   "casos": [
     {
       "id": "crear-clase-formas-usuales",
@@ -22,72 +30,135 @@
       ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_CREAR",
-          "comando": { "claseId": "$nueva1", "nombre": "Factura", "estereotipo": null,
-                       "esAbstracta": false, "posX": 0, "posY": 0 } }
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "claseId": "$nueva1",
+            "nombre": "Factura",
+            "estereotipo": null,
+            "esAbstracta": false,
+            "posX": 0,
+            "posY": 0
+          }
+        }
       ]
     },
     {
       "_por_que": "Dictando no se puede pronunciar la mayuscula intermedia.",
       "id": "nombre-de-varias-palabras-en-camello",
       "contexto": "clinica",
-      "frases": ["crea la clase historia clinica"],
+      "frases": [
+        "crea la clase historia clinica"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_CREAR", "comando": { "nombre": "historiaClinica" } }
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "nombre": "historiaClinica"
+          }
+        }
       ]
     },
     {
       "_por_que": "El reconocedor de voz acentua como le parece y agrega puntos.",
       "id": "aguanta-acentos-y-puntuacion-del-reconocedor",
       "contexto": "clinica",
-      "frases": ["creá la clase Médico."],
+      "frases": [
+        "creá la clase Médico."
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_CREAR", "comando": { "nombre": "Medico" } }
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "nombre": "Medico"
+          }
+        }
       ]
     },
     {
       "id": "interfaz-con-su-estereotipo",
       "contexto": "clinica",
-      "frases": ["crea la interfaz Auditable"],
+      "frases": [
+        "crea la interfaz Auditable"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_CREAR", "comando": { "nombre": "Auditable", "estereotipo": "interface" } }
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "nombre": "Auditable",
+            "estereotipo": "interface"
+          }
+        }
       ]
     },
     {
       "_por_que": "El mismo $nueva1 en los tres pasos exige que los atributos cuelguen de la clase que se acaba de crear.",
       "id": "una-frase-crea-la-clase-y-sus-atributos",
       "contexto": "clinica",
-      "frases": ["crea la clase Factura con los atributos numero de tipo texto y total de tipo decimal"],
+      "frases": [
+        "crea la clase Factura con los atributos numero de tipo texto y total de tipo decimal"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_CREAR",
-          "comando": { "claseId": "$nueva1", "nombre": "Factura" } },
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "$nueva1", "nombre": "numero", "tipo": "String" } },
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "$nueva1", "nombre": "total", "tipo": "Decimal" } }
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "claseId": "$nueva1",
+            "nombre": "Factura"
+          }
+        },
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "$nueva1",
+            "nombre": "numero",
+            "tipo": "String"
+          }
+        },
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "$nueva1",
+            "nombre": "total",
+            "tipo": "Decimal"
+          }
+        }
       ]
     },
     {
       "id": "renombrar-resuelve-la-clase-contra-el-diagrama",
       "contexto": "clinica",
-      "frases": ["renombra Paciente a Interno"],
+      "frases": [
+        "renombra Paciente a Interno"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_RENOMBRAR",
-          "comando": { "claseId": "@Paciente", "nombre": "Interno" } }
+        {
+          "tipo": "CLASE_RENOMBRAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "Interno"
+          }
+        }
       ]
     },
     {
       "id": "eliminar-resuelve-la-clase-contra-el-diagrama",
       "contexto": "clinica",
-      "frases": ["elimina la clase Consulta"],
+      "frases": [
+        "elimina la clase Consulta"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_ELIMINAR", "comando": { "claseId": "@Consulta" } }
+        {
+          "tipo": "CLASE_ELIMINAR",
+          "comando": {
+            "claseId": "@Consulta"
+          }
+        }
       ]
     },
     {
@@ -100,279 +171,540 @@
       ],
       "entendida": true,
       "pasos": [
-        { "tipo": "CLASE_MARCAR",
-          "comando": { "claseId": "@Persona", "esAbstracta": true } }
+        {
+          "tipo": "CLASE_MARCAR",
+          "comando": {
+            "claseId": "@Persona",
+            "esAbstracta": true
+          }
+        }
       ]
     },
-
     {
       "id": "atributo-con-el-destino-al-principio",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo nombre de tipo texto"],
+      "frases": [
+        "a Paciente agregale el atributo nombre de tipo texto"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "@Paciente", "nombre": "nombre", "tipo": "String" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "nombre",
+            "tipo": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "el-imperativo-voseante-tambien-agrega",
+      "_por-que": "Escrito el 21 de septiembre de 2026. La lista de verbos tenia anade, anadile y anadir pero NO anadi, que es como se dice aca -y como habla la propia interfaz de la herramienta-. Al no reconocer el verbo, la frase se iba al fondo de la gramatica y terminaba CREANDO UNA CLASE REPETIDA en silencio, que es peor que no entender.",
+      "contexto": "clinica",
+      "frases": [
+        "a Paciente anadi el atributo codigo de tipo texto",
+        "en la clase Paciente anadi el atributo codigo de tipo texto",
+        "a Paciente sumá el atributo codigo de tipo texto",
+        "a Paciente agregá el atributo codigo de tipo texto"
+      ],
+      "entendida": true,
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "codigo",
+            "tipo": "String"
+          }
+        }
       ]
     },
     {
       "id": "atributo-con-el-destino-al-final",
       "contexto": "clinica",
-      "frases": ["agrega el atributo edad de tipo entero a Paciente"],
+      "frases": [
+        "agrega el atributo edad de tipo entero a Paciente"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "@Paciente", "nombre": "edad", "tipo": "Integer" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "edad",
+            "tipo": "Integer"
+          }
+        }
       ]
     },
     {
       "id": "atributo-en-forma-declarativa",
       "contexto": "clinica",
-      "frases": ["el Paciente tiene un telefono de tipo texto"],
+      "frases": [
+        "el Paciente tiene un telefono de tipo texto"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "@Paciente", "nombre": "telefono" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "telefono"
+          }
+        }
       ]
     },
     {
       "_por_que": "Aparecio dictando de verdad: el nombre quedaba en 'fecha' y el tipo se perdia, porque el final de la expresion se tragaba el resto.",
       "id": "nombre-de-atributo-multipalabra-con-tipo",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo fecha de nacimiento de tipo fecha"],
+      "frases": [
+        "a Paciente agregale el atributo fecha de nacimiento de tipo fecha"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "nombre": "fechaDeNacimiento", "tipo": "Date" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "nombre": "fechaDeNacimiento",
+            "tipo": "Date"
+          }
+        }
       ]
     },
     {
       "_por_que": "Sin tipo, el nombre llega hasta la primera palabra de marca.",
       "id": "nombre-de-atributo-multipalabra-sin-tipo",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo historia clinica clave"],
+      "frases": [
+        "a Paciente agregale el atributo historia clinica clave"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "nombre": "historiaClinica", "esIdentificador": true, "tipo": "String" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "nombre": "historiaClinica",
+            "esIdentificador": true,
+            "tipo": "String"
+          }
+        }
       ]
     },
     {
       "_por_que": "'una Consulta' se leia como el articulo 'un' mas la clase 'a Consulta', que no existe.",
       "id": "el-articulo-una-no-se-parte-en-un-mas-a",
       "contexto": "clinica",
-      "frases": ["una Consulta tiene un importe de tipo decimal"],
+      "frases": [
+        "una Consulta tiene un importe de tipo decimal"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "@Consulta", "nombre": "importe", "tipo": "Decimal" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Consulta",
+            "nombre": "importe",
+            "tipo": "Decimal"
+          }
+        }
       ]
     },
     {
       "_por_que": "Una clave es obligatoria y unica por definicion, aunque no se diga.",
       "id": "la-clave-implica-obligatorio-y-unico",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo codigo de tipo texto clave de longitud 20"],
+      "frases": [
+        "a Paciente agregale el atributo codigo de tipo texto clave de longitud 20"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "esIdentificador": true, "longitud": 20,
-                       "esRequerido": true, "esUnico": true } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "esIdentificador": true,
+            "longitud": 20,
+            "esRequerido": true,
+            "esUnico": true
+          }
+        }
       ]
     },
     {
       "id": "obligatorio-no-implica-clave-ni-unico",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo nombre de tipo texto obligatorio"],
+      "frases": [
+        "a Paciente agregale el atributo nombre de tipo texto obligatorio"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "esRequerido": true, "esIdentificador": false, "esUnico": false } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "esRequerido": true,
+            "esIdentificador": false,
+            "esUnico": false
+          }
+        }
       ]
     },
-
     {
       "id": "tipo-texto-se-normaliza-a-String",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo texto"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo texto"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "String" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "String"
+          }
+        }
+      ]
     },
     {
       "id": "tipo-entero-se-normaliza-a-Integer",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo entero"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo entero"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "Integer" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "Integer"
+          }
+        }
+      ]
     },
     {
       "id": "tipo-importe-se-normaliza-a-Decimal",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo importe"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo importe"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "Decimal" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "Decimal"
+          }
+        }
+      ]
     },
     {
       "id": "tipo-booleano-se-normaliza-a-Boolean",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo booleano"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo booleano"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "Boolean" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "Boolean"
+          }
+        }
+      ]
     },
     {
       "id": "tipo-fecha-se-normaliza-a-Date",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo fecha"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo fecha"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "Date" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "Date"
+          }
+        }
+      ]
     },
     {
       "id": "tipo-fechayhora-se-normaliza-a-DateTime",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo fechayhora"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo fechayhora"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "DateTime" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "DateTime"
+          }
+        }
+      ]
     },
     {
       "_por_que": "Un tipo desconocido se respeta: puede ser otra clase o un enumerado.",
       "id": "un-tipo-desconocido-se-respeta",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el atributo campo de tipo EstadoCivil"],
+      "frases": [
+        "a Paciente agregale el atributo campo de tipo EstadoCivil"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "ATRIBUTO_AGREGAR", "comando": { "tipo": "EstadoCivil" } }]
+      "pasos": [
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "tipo": "EstadoCivil"
+          }
+        }
+      ]
     },
-
     {
       "id": "metodo-con-nombre-y-retorno",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el metodo calcularEdad que devuelve entero"],
+      "frases": [
+        "a Paciente agregale el metodo calcularEdad que devuelve entero"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "METODO_AGREGAR",
-          "comando": { "claseId": "@Paciente", "nombre": "calcularEdad",
-                       "tipoRetorno": "Integer", "parametros": [] } }
+        {
+          "tipo": "METODO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "calcularEdad",
+            "tipoRetorno": "Integer",
+            "parametros": []
+          }
+        }
       ]
     },
     {
       "id": "metodo-sin-retorno-declarado-es-void",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale la operacion internar"],
+      "frases": [
+        "a Paciente agregale la operacion internar"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "METODO_AGREGAR",
-          "comando": { "nombre": "internar", "tipoRetorno": "void" } }
+        {
+          "tipo": "METODO_AGREGAR",
+          "comando": {
+            "nombre": "internar",
+            "tipoRetorno": "void"
+          }
+        }
       ]
     },
     {
       "_por_que": "Sin los parametros el generador produciria un metodo sin argumentos que no es el que el modelo declara.",
       "id": "metodo-con-la-firma-completa",
       "contexto": "clinica",
-      "frases": ["a Paciente agregale el metodo registrarConsulta con parametros motivo de tipo texto y monto de tipo importe que devuelve booleano"],
+      "frases": [
+        "a Paciente agregale el metodo registrarConsulta con parametros motivo de tipo texto y monto de tipo importe que devuelve booleano"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "METODO_AGREGAR",
-          "comando": { "nombre": "registrarConsulta", "tipoRetorno": "Boolean",
-                       "parametros": [
-                         { "nombre": "motivo", "tipo": "String" },
-                         { "nombre": "monto", "tipo": "Decimal" }
-                       ] } }
+        {
+          "tipo": "METODO_AGREGAR",
+          "comando": {
+            "nombre": "registrarConsulta",
+            "tipoRetorno": "Boolean",
+            "parametros": [
+              {
+                "nombre": "motivo",
+                "tipo": "String"
+              },
+              {
+                "nombre": "monto",
+                "tipo": "Decimal"
+              }
+            ]
+          }
+        }
       ]
     },
-
     {
       "_por_que": "'muchas' se lee como cero o mas: es la lectura que no inventa una restriccion que nadie pidio.",
       "id": "asociacion-con-muchos-lleva-cero-o-mas",
       "contexto": "clinica",
-      "frases": ["un Paciente tiene muchas Consultas"],
+      "frases": [
+        "un Paciente tiene muchas Consultas"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "RELACION_CREAR",
-          "comando": { "tipo": "ASOCIACION", "origenId": "@Paciente", "destinoId": "@Consulta",
-                       "multiplicidadOrigen": "1", "multiplicidadDestino": "0..*" } }
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "ASOCIACION",
+            "origenId": "@Paciente",
+            "destinoId": "@Consulta",
+            "multiplicidadOrigen": "1",
+            "multiplicidadDestino": "0..*"
+          }
+        }
       ]
     },
     {
       "id": "al-menos-una-se-distingue-de-muchas",
       "contexto": "clinica",
-      "frases": ["un Paciente tiene al menos una Consulta"],
+      "frases": [
+        "un Paciente tiene al menos una Consulta"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "RELACION_CREAR", "comando": { "multiplicidadDestino": "1..*" } }
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "multiplicidadDestino": "1..*"
+          }
+        }
       ]
     },
     {
       "_por_que": "Se dice 'muchos Medicos' pero la clase se llama Medico.",
       "id": "el-plural-dictado-resuelve-la-clase-en-singular",
       "contexto": "clinica",
-      "frases": ["una Consulta tiene muchos Medicos"],
+      "frases": [
+        "una Consulta tiene muchos Medicos"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "RELACION_CREAR", "comando": { "destinoId": "@Medico" } }
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "destinoId": "@Medico"
+          }
+        }
       ]
     },
     {
       "_por_que": "El generador lee el origen como la subclase: invertido, la jerarquia saldria al reves en el codigo.",
       "id": "la-herencia-apunta-de-la-subclase-a-la-superclase",
       "contexto": "clinica",
-      "frases": ["Paciente hereda de Persona"],
+      "frases": [
+        "Paciente hereda de Persona"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "RELACION_CREAR",
-          "comando": { "tipo": "HERENCIA", "origenId": "@Paciente", "destinoId": "@Persona" } }
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "HERENCIA",
+            "origenId": "@Paciente",
+            "destinoId": "@Persona"
+          }
+        }
       ]
     },
     {
       "id": "realizacion",
       "contexto": "clinica",
-      "frases": ["Medico implementa Auditable"],
+      "frases": [
+        "Medico implementa Auditable"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "RELACION_CREAR", "comando": { "tipo": "REALIZACION" } }]
+      "pasos": [
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "REALIZACION"
+          }
+        }
+      ]
     },
     {
       "id": "composicion",
       "contexto": "clinica",
-      "frases": ["Paciente se compone de muchas Consultas"],
+      "frases": [
+        "Paciente se compone de muchas Consultas"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "RELACION_CREAR", "comando": { "tipo": "COMPOSICION" } }]
+      "pasos": [
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "COMPOSICION"
+          }
+        }
+      ]
     },
     {
       "id": "agregacion",
       "contexto": "clinica",
-      "frases": ["Medico agrupa muchas Consultas"],
+      "frases": [
+        "Medico agrupa muchas Consultas"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "RELACION_CREAR", "comando": { "tipo": "AGREGACION" } }]
+      "pasos": [
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "AGREGACION"
+          }
+        }
+      ]
     },
     {
       "id": "dependencia",
       "contexto": "clinica",
-      "frases": ["Consulta depende de Persona"],
+      "frases": [
+        "Consulta depende de Persona"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "RELACION_CREAR", "comando": { "tipo": "DEPENDENCIA" } }]
+      "pasos": [
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "tipo": "DEPENDENCIA"
+          }
+        }
+      ]
     },
-
     {
       "_por_que": "Las dos frases empiezan igual. Lo que las separa es si lo que sigue al verbo es una clase del diagrama.",
       "id": "tiene-mas-una-clase-conocida-es-relacion",
       "contexto": "clinica",
-      "frases": ["Paciente tiene muchas Consultas"],
+      "frases": [
+        "Paciente tiene muchas Consultas"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "RELACION_CREAR", "comando": { "destinoId": "@Consulta" } }]
+      "pasos": [
+        {
+          "tipo": "RELACION_CREAR",
+          "comando": {
+            "destinoId": "@Consulta"
+          }
+        }
+      ]
     },
     {
       "id": "tiene-mas-algo-que-no-es-clase-es-atributo",
       "contexto": "clinica",
-      "frases": ["Paciente tiene un peso de tipo decimal"],
+      "frases": [
+        "Paciente tiene un peso de tipo decimal"
+      ],
       "entendida": true,
       "pasos": [
-        { "tipo": "ATRIBUTO_AGREGAR",
-          "comando": { "claseId": "@Paciente", "nombre": "peso", "tipo": "Decimal" } }
+        {
+          "tipo": "ATRIBUTO_AGREGAR",
+          "comando": {
+            "claseId": "@Paciente",
+            "nombre": "peso",
+            "tipo": "Decimal"
+          }
+        }
       ]
     },
     {
       "_por_que": "Decirlo asi -y no 'no te entendi'- es la diferencia entre que la persona corrija el nombre y que repita la frase mas fuerte.",
       "id": "una-clase-que-no-existe-se-explica",
       "contexto": "clinica",
-      "frases": ["a Factura agregale el atributo total de tipo decimal"],
+      "frases": [
+        "a Factura agregale el atributo total de tipo decimal"
+      ],
       "entendida": false,
       "sugerencias": [
         "No hay ninguna clase llamada \"Factura\" en el diagrama",
@@ -384,7 +716,11 @@
       "_por_que": "No alcanza con decir que no se entendio: hay que ensenar la forma que si funciona.",
       "id": "una-frase-sin-sentido-devuelve-ejemplos",
       "contexto": "clinica",
-      "frases": ["hola que tal como andas", "", "   "],
+      "frases": [
+        "hola que tal como andas",
+        "",
+        "   "
+      ],
       "entendida": false,
       "sugerencias": [
         "crea la clase Paciente",
@@ -399,14 +735,25 @@
     {
       "id": "sobre-un-diagrama-vacio-se-puede-crear",
       "contexto": "vacio",
-      "frases": ["crea la clase Paciente"],
+      "frases": [
+        "crea la clase Paciente"
+      ],
       "entendida": true,
-      "pasos": [{ "tipo": "CLASE_CREAR", "comando": { "nombre": "Paciente" } }]
+      "pasos": [
+        {
+          "tipo": "CLASE_CREAR",
+          "comando": {
+            "nombre": "Paciente"
+          }
+        }
+      ]
     },
     {
       "id": "sobre-un-diagrama-vacio-no-se-puede-referenciar",
       "contexto": "vacio",
-      "frases": ["a Paciente agregale el atributo nombre de tipo texto"],
+      "frases": [
+        "a Paciente agregale el atributo nombre de tipo texto"
+      ],
       "entendida": false
     }
   ]

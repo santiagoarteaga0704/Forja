@@ -22,9 +22,11 @@ const nom = r'([\p{L}][\p{L}\p{N}_]*(?:\s+[\p{L}][\p{L}\p{N}_]*)*?)';
 const nomFin = r'([\p{L}][\p{L}\p{N}_]*(?:\s+[\p{L}][\p{L}\p{N}_]*)*)';
 
 const crear = r'(?:crea|crear|cree|creame|agrega|agregar|agregame|anade|anadir'
-    r'|nueva|nuevo|dibuja|dibujar)';
-const agregar = r'(?:agrega|agregale|agregar|anade|anadile|anadir|pone|ponele'
-    r'|poner|sumale)';
+    r'|anadi|nueva|nuevo|dibuja|dibujar)';
+// "anadi" y "suma" son el imperativo voseante. Ver el comentario en
+// ParserVoz.java: faltaban, y la frase terminaba creando una clase repetida.
+const agregar = r'(?:agrega|agregale|agregar|anade|anadile|anadir|anadi|pone|ponele'
+    r'|poner|sumale|suma)';
 const cantidad = r'(muchas|muchos|varias|varios|una|uno|un|cero\s+o\s+mas'
     r'|al\s+menos\s+una?|al\s+menos\s+uno)';
 
