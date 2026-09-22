@@ -47,6 +47,10 @@ class _HojaDeDictadoState extends State<HojaDeDictado> {
         localeId: widget.idioma,
         partialResults: true,
         cancelOnError: true,
+        // Sin esto el reconocedor de Android puede salir a la red. El requisito
+        // central del proyecto es que el dictado funcione sin senal, con el
+        // paquete de idioma descargado en el aparato. Esto lo garantiza.
+        onDevice: true,
       ),
     );
   }
