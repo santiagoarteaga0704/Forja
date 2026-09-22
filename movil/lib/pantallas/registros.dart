@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../generado/asistente.dart';
+import '../generado/dictado_de_registros.dart';
 import '../generado/repositorio.dart';
 import '../generado/tipos_de_campo.dart';
 import '../generado/voz_registros.dart';
@@ -20,6 +23,7 @@ class PantallaRegistros extends StatefulWidget {
     required this.clase,
     required this.repositorio,
     required this.diagrama,
+    this.asistente,
   });
 
   final Clase clase;
@@ -30,6 +34,20 @@ class PantallaRegistros extends StatefulWidget {
   // cualquier entidad, no solo la que esta abierta.
   final Diagrama diagrama;
 
+  /// El modelo en el aparato, si esta y cuando este.
+  ///
+  /// Es un ValueListenable y no un Asistente pelado por una razon concreta:
+  /// MaterialPageRoute construye su pagina UNA sola vez y la cachea, asi que un
+  /// setState de un ancestro del Navigator no la vuelve a construir. Como el
+  /// modelo son 529 MB y tarda mas en cargar de lo que tarda alguien en entrar
+  /// a una entidad, pasando el valor esta pantalla se quedaria en null para
+  /// siempre, sin ninguna senal y sin mas rodeo que salir y volver a entrar.
+  /// Escuchando, el asistente llega aunque la pantalla ya este abierta.
+  ///
+  /// Sigue siendo opcional: la pantalla entera funciona sin modelo, solo que un
+  /// pedido que la gramatica no entiende se queda sin segunda oportunidad.
+  final ValueListenable<Asistente?>? asistente;
+
   @override
   State<PantallaRegistros> createState() => _PantallaRegistrosState();
 }
@@ -38,6 +56,18 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
   late Future<List<Map<String, dynamic>>> _filas;
   final _valores = <String, String>{};
   final SpeechToText _voz = SpeechToText();
+
+  /// Un dictado por vez. Sin esto, dos toques al microfono abren dos chats
+  /// sobre el mismo modelo en paralelo, que es la forma mas rapida de quedarse
+  /// sin memoria en un telefono que ya tiene medio giga de pesos cargados.
+  bool _dictando = false;
+
+  /// Solo mientras se consulta al modelo. El microfono se convierte en una
+  /// rueda: son varios segundos de pantalla quieta y sin esto parece colgada.
+  bool _pensando = false;
+
+  /// Lo que se escucha cuando no hay nada que escuchar.
+  late final ValueListenable<Asistente?> _asistente = widget.asistente ?? sinAsistente;
 
   @override
   void initState() {
@@ -69,6 +99,16 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
   /// que haya un solo lugar donde arreglar como se escucha, no dos que se van
   /// separando con el tiempo.
   Future<void> _dictar() async {
+    if (_dictando) return;
+    setState(() => _dictando = true);
+    try {
+      await _dictarUnaVez();
+    } finally {
+      if (mounted) setState(() => _dictando = false);
+    }
+  }
+
+  Future<void> _dictarUnaVez() async {
     final disponible = await _voz.initialize(
       onError: (error) => _avisar('No se pudo escuchar: ${error.errorMsg}'),
     );
@@ -94,14 +134,37 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
     // Se interpreta aca, en el aparato: sin esto dictar un registro
     // necesitaria red, y la restriccion del proyecto es que ninguna pantalla
     // la necesite para abrirse ni para operar sin conexion.
-    final pedido = interpretarPedidoDeRegistro(frase, widget.diagrama);
+    final dictado = await resolverPedidoDictado(
+      frase: frase,
+      diagrama: widget.diagrama,
+      // El valor se lee ACA y no se guarda en initState: si el modelo termino
+      // de cargar despues de abrir esta pantalla, este es el momento en que ya
+      // esta.
+      asistente: _asistente.value,
+      alPensar: (piensa) {
+        if (mounted) setState(() => _pensando = piensa);
+      },
+      confirmar: (canonica, pedido) async =>
+          mounted && await confirmarPedidoDictado(context, canonica, pedido),
+    );
+
+    if (dictado.cancelado) {
+      _avisar('No se creo nada.');
+      return;
+    }
+    final pedido = dictado.pedido;
     if (pedido == null) {
       // No se inventa nada: si la entidad o el campo no estan en el diagrama,
-      // se muestra lo que se entendio y no se crea nada.
+      // se muestra lo que se entendio y no se crea nada. Vale igual cuando la
+      // frase paso por el modelo: lo que el modelo propone tambien tiene que
+      // caer dentro del diagrama.
       _avisar('No entendi: "$frase"');
       return;
     }
 
+    // Si el usuario se fue de la pantalla mientras el modelo pensaba, no se
+    // crea nada: la fila se guardaria igual y no quedaria nadie para avisar.
+    if (!mounted) return;
     await widget.repositorio.crear(pedido.clase, pedido.datos);
     if (!mounted) return;
     setState(() => _filas = widget.repositorio.filas(widget.clase.nombre));
@@ -120,10 +183,26 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
         appBar: AppBar(
           title: Text(widget.clase.nombre),
           actions: [
-            IconButton(
-              tooltip: 'Dictar un registro',
-              onPressed: _dictar,
-              icon: const Icon(Icons.mic),
+            // Escucha al asistente para que el boton diga la verdad: sin este
+            // ValueListenableBuilder, un modelo que termina de cargar con la
+            // pantalla ya abierta no se notaria por ningun lado.
+            ValueListenableBuilder<Asistente?>(
+              valueListenable: _asistente,
+              builder: (_, asistente, _) => IconButton(
+                tooltip: _pensando
+                    ? 'Pensando...'
+                    : asistente == null
+                        ? 'Dictar un registro'
+                        : 'Dictar un registro (con ayuda del modelo)',
+                onPressed: _dictando ? null : _dictar,
+                icon: _pensando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(asistente == null ? Icons.mic : Icons.mic_none),
+              ),
             ),
           ],
         ),
@@ -163,3 +242,46 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
         ]),
       );
 }
+
+/// Le muestra al usuario lo que el modelo propuso y espera un si.
+///
+/// Es el freno de mano de todo este escalon: el modelo propone una frase, la
+/// gramatica la interpreta, y recien despues de este cartel se crea algo. Sin
+/// el, una traduccion desafortunada agregaria un registro en silencio.
+Future<bool> confirmarPedidoDictado(
+  BuildContext context,
+  String fraseCanonica,
+  PedidoDeRegistro pedido,
+) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (dialogo) => AlertDialog(
+        title: const Text('Se entendio asi'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('"$fraseCanonica"'),
+            const SizedBox(height: 12),
+            // Se muestra el pedido ya interpretado y no solo la frase: lo que
+            // se va a guardar es esto, y es lo unico que el usuario puede
+            // revisar de verdad.
+            Text('Agregar a ${pedido.clase}:'),
+            for (final dato in pedido.datos.entries)
+              Text('${dato.key}: ${dato.value}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogo).pop(true),
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    ) ??
+    // Cerrar el cartel tocando afuera es no confirmar.
+    false;

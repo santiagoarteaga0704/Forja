@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'almacen.dart';
 import 'api.dart';
+import 'generado/asistente.dart';
+import 'generado/motor_gemma.dart';
 import 'pantalla_rota.dart';
 import 'pantallas/diagramas.dart';
 import 'pantallas/entrar.dart';
@@ -51,6 +53,15 @@ class _AplicacionForjaState extends State<AplicacionForja> {
   Credencial? _credencial;
   bool _cargando = true;
 
+  /// El modelo en el aparato, cuando llega a cargar. Empieza en null y puede
+  /// quedarse en null para siempre: es el unico escalon prescindible de la app.
+  ///
+  /// Es un ValueNotifier y no un campo con setState porque las pantallas que lo
+  /// usan viven detras de rutas que se construyen UNA sola vez: reconstruir
+  /// esta no las reconstruye a ellas. Con el notificador, la referencia que
+  /// recibieron al abrirse es la misma que avisa cuando el modelo llega.
+  final ValueNotifier<Asistente?> _asistente = ValueNotifier(null);
+
   /// Identifica a esta instalacion durante toda la corrida. Junto con el usuario
   /// determina quien posee un bloqueo, y es lo que el servidor libera cuando el
   /// canal se cierra.
@@ -73,6 +84,33 @@ class _AplicacionForjaState extends State<AplicacionForja> {
       _credencial = credencial;
       _cargando = false;
     });
+
+    // Despues de dibujar y sin esperarlo: son 529 MB de pesos y cargarlos antes
+    // de la primera pantalla dejaria la app en blanco vaya a saber cuanto.
+    _arrancarAsistente();
+  }
+
+  /// Enciende el modelo, y si no se puede no pasa nada.
+  ///
+  /// Sin modelo se pierde el tercer escalon del dictado -la traduccion de una
+  /// frase que la gramatica no entendio- y nada mas. No es un error que el
+  /// usuario tenga que ver: la app entera sigue funcionando igual.
+  Future<void> _arrancarAsistente() async {
+    try {
+      final preguntar = await arrancarGemma();
+      if (!mounted) return;
+      // Sin setState: quien tiene que enterarse escucha el notificador, y
+      // reconstruir esto no reconstruiria ninguna pantalla ya abierta.
+      _asistente.value = Asistente(preguntarAlModelo: preguntar);
+    } catch (_) {
+      // A proposito en silencio.
+    }
+  }
+
+  @override
+  void dispose() {
+    _asistente.dispose();
+    super.dispose();
   }
 
   Future<void> _entrar(Credencial credencial) async {
@@ -105,6 +143,7 @@ class _AplicacionForjaState extends State<AplicacionForja> {
                   credencial: _credencial!,
                   sesionId: _sesionId,
                   alSalir: _salir,
+                  asistente: _asistente,
                 ),
     );
   }

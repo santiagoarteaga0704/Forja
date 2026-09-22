@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../almacen.dart';
 import '../api.dart';
 import '../generado/almacen_registros.dart';
+import '../generado/asistente.dart';
 import '../generado/repositorio.dart';
 import '../main.dart';
 import '../tipos.dart';
@@ -24,6 +26,7 @@ class PantallaDiagramas extends StatefulWidget {
     required this.credencial,
     required this.sesionId,
     required this.alSalir,
+    this.asistente,
   });
 
   final Api api;
@@ -31,6 +34,13 @@ class PantallaDiagramas extends StatefulWidget {
   final Credencial credencial;
   final String sesionId;
   final Future<void> Function() alSalir;
+
+  /// Solo lo lleva de la mano hasta la pantalla de registros. Esta pantalla no
+  /// dicta nada.
+  ///
+  /// ValueListenable y no valor: las rutas que empuja esta pantalla cachean su
+  /// pagina, asi que el valor de hoy seria el valor para siempre.
+  final ValueListenable<Asistente?>? asistente;
 
   @override
   State<PantallaDiagramas> createState() => _PantallaDiagramasState();
@@ -80,7 +90,11 @@ class _PantallaDiagramasState extends State<PantallaDiagramas> {
     );
     if (!mounted) return;
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PantallaEntidades(diagrama: diagrama, repositorio: repositorio),
+      builder: (_) => PantallaEntidades(
+        diagrama: diagrama,
+        repositorio: repositorio,
+        asistente: widget.asistente,
+      ),
     ));
   }
 

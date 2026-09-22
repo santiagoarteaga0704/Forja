@@ -38,6 +38,12 @@ dependencies:
   path_provider: ^2.1.6
   web_socket_channel: ^3.0.3
   speech_to_text: ^7.4.0
+  # Clavadas sin ^ a proposito: este plugin cambio de forma entre 0.13 y 1.0
+  # -los motores pasaron a ser opt-in y generateChatResponse dejo de devolver
+  # un String- y motor_gemma.dart esta escrito contra la 1.0.0. Una subida
+  # automatica lo rompe en silencio. Se sube a mano y se lee el CHANGELOG.
+  flutter_gemma: 1.0.0
+  flutter_gemma_mediapipe: 1.0.0
 
 dev_dependencies:
   flutter_test:

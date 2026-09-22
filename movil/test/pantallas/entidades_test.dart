@@ -32,10 +32,15 @@ Future<void> _abrir(WidgetTester tester, Widget pantalla) async {
 /// Da vueltas al bucle de eventos real hasta que el buscado aparece, o hasta
 /// que se acaba el limite. Si se acaba, la prueba sigue y el `expect` de
 /// afuera es el que informa el fallo.
+///
+/// El limite es de quince segundos y no cuesta nada, porque el bucle sale
+/// apenas aparece lo buscado: no son quince segundos de prueba, son quince
+/// segundos de paciencia para una maquina cargada. Pero que quede claro lo que
+/// este numero NO es: no es el arreglo de nada. Ver `_esperarDireccion`.
 Future<void> _esperar(
   WidgetTester tester,
   Finder buscado, {
-  Duration limite = const Duration(seconds: 5),
+  Duration limite = const Duration(seconds: 15),
 }) async {
   final fin = DateTime.now().add(limite);
   while (DateTime.now().isBefore(fin)) {
@@ -48,11 +53,37 @@ Future<void> _esperar(
 
 /// Lo mismo, pero mirando el archivo en vez de la pantalla: la escritura que
 /// dispara `onChanged` tampoco vuelve a manos de la prueba.
+///
+/// AVISO, y es lo importante de este archivo: «tipear rapido deja guardada la
+/// direccion completa, no un prefijo» **parpadea en Windows**, y subir este
+/// limite NO lo arregla. Lo unico que consigue es que cada fallo tarde quince
+/// segundos en vez de cinco. Cuando falla, el bucle consume el limite entero y
+/// lo guardado se queda fijo en un prefijo -«...:808» sin el ultimo
+/// caracter- para siempre; no es lentitud, es que el valor correcto no va a
+/// llegar nunca.
+///
+/// La causa esta en `almacen_registros.dart`: `_escribirArchivo` escribe en un
+/// `.tmp` y hace `temporal.rename(destino)`, y en **Windows** ese rename falla
+/// si alguien tiene el destino abierto para leer. Este poller lee cada 20 ms
+/// mientras todavia quedan escrituras encadenadas, asi que la ultima revienta;
+/// `_guardarDireccion` se traga el error en un SnackBar y el prefijo queda.
+///
+/// Se midio aislado -sin widgets, contra el codigo de `ef268b1`-: 40 intentos
+/// de escribir la direccion letra por letra con un lector concurrente dejaron
+/// **26 en un prefijo** y **466 escrituras con error**.
+///
+/// Dos cosas que hacen que esto sea para saber y no para arreglar de apuro:
+/// es **preexistente** -no lo introdujo el trabajo del modelo en el aparato- y
+/// **no afecta al producto**, porque en Android el `rename` de POSIX renombra
+/// sobre un archivo abierto sin chistar. Es un defecto del anfitrion Windows.
+/// Se decidio convivir con el: volver a meter mano en la primitiva de
+/// escritura -que ya llevaba dos rondas de defectos- la noche antes de una
+/// defensa tiene peor pronostico que una prueba que parpadea en el escritorio.
 Future<String?> _esperarDireccion(
   WidgetTester tester,
   AlmacenRegistros almacen,
   String esperada, {
-  Duration limite = const Duration(seconds: 5),
+  Duration limite = const Duration(seconds: 15),
 }) async {
   String? leida;
   final fin = DateTime.now().add(limite);

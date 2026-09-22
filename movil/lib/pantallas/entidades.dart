@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../generado/api_generada.dart';
+import '../generado/asistente.dart';
 import '../generado/nombres.dart';
 import '../generado/repositorio.dart';
 import '../tipos.dart';
@@ -17,10 +19,22 @@ import 'registros.dart';
 /// direccion del backend que se esta editando y cuantas operaciones quedan sin
 /// enviar.
 class PantallaEntidades extends StatefulWidget {
-  const PantallaEntidades({super.key, required this.diagrama, required this.repositorio});
+  const PantallaEntidades({
+    super.key,
+    required this.diagrama,
+    required this.repositorio,
+    this.asistente,
+  });
 
   final Diagrama diagrama;
   final Repositorio repositorio;
+
+  /// Va de paso hacia la pantalla de registros, que es donde se dicta.
+  ///
+  /// Viaja como ValueListenable y no como valor porque el MaterialPageRoute que
+  /// abre la pantalla de registros construye su pagina una sola vez: con el
+  /// valor, un modelo que termina de cargar despues no llegaria nunca.
+  final ValueListenable<Asistente?>? asistente;
 
   @override
   State<PantallaEntidades> createState() => _PantallaEntidadesState();
@@ -183,6 +197,7 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
                     clase: clase,
                     repositorio: _repositorio,
                     diagrama: widget.diagrama,
+                    asistente: widget.asistente,
                   ),
                 )),
               ),
