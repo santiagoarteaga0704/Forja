@@ -7,6 +7,7 @@ import type {
   TipoOperacion,
   Visibilidad,
 } from '../tipos'
+import { nuevoId } from '../id'
 
 interface Props {
   clase?: ClaseVista
@@ -216,7 +217,7 @@ function ContenidoDeClase({
       'ATRIBUTO_AGREGAR',
       {
         claseId: clase.id,
-        atributoId: crypto.randomUUID(),
+        atributoId: nuevoId(),
         nombre: atributo.nombre.trim(),
         tipo: atributo.tipo.trim() || 'String',
         visibilidad: atributo.visibilidad,
@@ -238,7 +239,7 @@ function ContenidoDeClase({
       'METODO_AGREGAR',
       {
         claseId: clase.id,
-        metodoId: crypto.randomUUID(),
+        metodoId: nuevoId(),
         nombre: metodo.nombre.trim(),
         tipoRetorno: metodo.tipoRetorno.trim() || 'void',
         visibilidad: metodo.visibilidad,

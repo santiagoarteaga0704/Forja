@@ -24,6 +24,7 @@ import type {
   TipoElemento,
   TipoOperacion,
 } from './tipos'
+import { nuevoId } from './id'
 
 export const BASE = import.meta.env.VITE_API ?? 'http://localhost:8080'
 
@@ -182,7 +183,7 @@ export const api = {
         sesionId,
         // El token lo genera el cliente antes de enviar: es lo que hace que un
         // reintento tras un corte de red no duplique el cambio.
-        tokenCliente: crypto.randomUUID(),
+        tokenCliente: nuevoId(),
       }),
     }),
 
@@ -290,7 +291,7 @@ export const api = {
   aplicarPizarra: (diagramaId: string, texto: string, sesionId: string) =>
     pedir<ResultadoFoto>(`/api/diagramas/${diagramaId}/foto`, {
       method: 'POST',
-      body: JSON.stringify({ texto, sesionId, tokenLectura: crypto.randomUUID() }),
+      body: JSON.stringify({ texto, sesionId, tokenLectura: nuevoId() }),
     }),
 
   // ---------- Pedido en una frase ------------------------------------------
@@ -384,7 +385,7 @@ export const api = {
   importarXmi: (diagramaId: string, documento: string, sesionId: string) =>
     pedir<ResumenImportacion>(
       `/api/diagramas/${diagramaId}/xmi?sesionId=${encodeURIComponent(sesionId)}` +
-        `&tokenImportacion=${crypto.randomUUID()}`,
+        `&tokenImportacion=${nuevoId()}`,
       { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: documento },
     ),
 }

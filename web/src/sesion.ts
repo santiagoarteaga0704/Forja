@@ -1,4 +1,5 @@
 import { fijarToken } from './api'
+import { nuevoId } from './id'
 import type { Credencial } from './tipos'
 
 const CLAVE = 'forja.credencial'
@@ -12,7 +13,7 @@ const CLAVE = 'forja.credencial'
  * distintas, y deben poder quitarse el turno la una a la otra igual que dos
  * personas.
  */
-export const SESION_ID = `web-${crypto.randomUUID()}`
+export const SESION_ID = `web-${nuevoId()}`
 
 export function leerCredencial(): Credencial | null {
   try {

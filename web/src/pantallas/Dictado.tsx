@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ErrorApi, api } from '../api'
 import { IconoMicrofono } from '../iconos'
+import { nuevoId } from '../id'
 import { SESION_ID } from '../sesion'
 import type { Pedido, ResultadoDictado } from '../tipos'
 
@@ -181,7 +182,7 @@ export default function Dictado({
 
     const control = new AbortController()
     cancelacion.current = control
-    tokenLectura.current = crypto.randomUUID()
+    tokenLectura.current = nuevoId()
 
     setPidiendo(true)
     setPedido(null)
@@ -229,7 +230,7 @@ export default function Dictado({
         diagramaId,
         pedido.pedido,
         SESION_ID,
-        tokenLectura.current ?? crypto.randomUUID(),
+        tokenLectura.current ?? nuevoId(),
       )
       if (resultado.aplicadas > 0) {
         alAplicar()

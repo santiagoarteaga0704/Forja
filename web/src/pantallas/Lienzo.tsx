@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BASE, ErrorApi, api } from '../api'
 import { abrirCanal, type Canal } from '../canal'
+import { nuevoId } from '../id'
 import Dictado from './Dictado'
 import Foto from './Foto'
 import {
@@ -470,7 +471,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
     await enviar(
       'CLASE_CREAR',
       {
-        claseId: crypto.randomUUID(),
+        claseId: nuevoId(),
         nombre: nombre.trim(),
         esAbstracta: false,
         posX: sitio.x,
@@ -508,7 +509,7 @@ export default function Lienzo({ credencial, proyecto, diagrama, alVolver }: Pro
     await enviar(
       'RELACION_CREAR',
       {
-        relacionId: crypto.randomUUID(),
+        relacionId: nuevoId(),
         origenId: pendiente.origenId,
         destinoId: pendiente.destinoId,
         tipo: pendiente.tipo,
