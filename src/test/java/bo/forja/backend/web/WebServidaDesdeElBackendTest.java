@@ -35,7 +35,8 @@ class WebServidaDesdeElBackendTest {
     @Test
     @DisplayName("la pagina y sus recursos no exigen token")
     void laWebNoExigeToken() throws Exception {
-        for (String ruta : new String[]{"/", "/index.html", "/assets/app.js", "/favicon.ico"}) {
+        for (String ruta : new String[]{"/", "/index.html", "/assets/app.js", "/favicon.ico",
+                "/marca/forja-favicon.svg"}) {
             mvc.perform(get(ruta))
                     .andExpect(status().is(not(401)));
         }

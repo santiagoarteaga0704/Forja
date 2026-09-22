@@ -69,7 +69,7 @@ public class ConfiguracionSeguridad {
                         // aplicacion por primera vez todavia no tiene token, asi
                         // que la pantalla de entrada no puede exigirlo.
                         .requestMatchers(HttpMethod.GET,
-                                "/", "/index.html", "/assets/**", "/favicon.ico",
+                                "/", "/index.html", "/assets/**", "/marca/**", "/favicon.ico",
                                 "/*.svg", "/*.png", "/*.ico", "/*.webmanifest").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(recurso -> recurso.jwt(Customizer.withDefaults()));
