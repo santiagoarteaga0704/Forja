@@ -91,8 +91,15 @@ el modelo, y el encolado de los cambios pendientes.
 No funciona sin red: la primera bajada de la definición.
 
 La maquinaria de almacén y cola ya está escrita (`almacen.dart`, `sincronizador.dart`); hoy apunta
-a FORJA y hay que darle un segundo destino. Se conserva la idempotencia por identificador de
-operación, que es lo que permite reenviar la cola tras un corte sin duplicar nada.
+a FORJA y hay que darle un segundo destino. Se conserva el identificador de operación, pero contra
+el backend generado sirve sólo puertas adentro del teléfono: marca la fila local como pendiente y
+ordena la cola. **El backend generado no tiene idempotencia.** `ApiGenerada.crear()` manda
+únicamente `datos`, y el `@PostMapping` que emite `EscritorCapas.java` recibe un `@RequestBody` de
+la entidad pelado: no tiene dónde recibir ese identificador ni con qué compararlo. La consecuencia
+es concreta: un POST que llega pero cuya respuesta se pierde deja la operación encolada, y la
+próxima sincronización duplica la fila. La idempotencia por token existe en FORJA —hay una tabla
+`operacion` con unicidad por `(diagrama_id, token_cliente)`— y el supuesto se copió desde ahí a un
+backend que no tiene esa tabla.
 
 ## La voz y el modelo
 

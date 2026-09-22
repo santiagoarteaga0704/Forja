@@ -17,8 +17,20 @@ class OperacionPendiente {
     this.datos = const {},
   });
 
-  /// Identificador generado en el aparato. Es lo que permite reenviar la cola
-  /// tras un corte sin duplicar: el servidor reconoce el repetido.
+  /// Identificador generado en el aparato. Sirve puertas adentro del telefono:
+  /// marca la fila local con '_pendiente' hasta que la operacion llega, y deja
+  /// seguir una operacion por la cola sin confundirla con otra.
+  ///
+  /// NO lo ve el servidor. `ApiGenerada.crear()` manda solo `datos`, y el
+  /// `@PostMapping` que emite EscritorCapas.java recibe un `@RequestBody`
+  /// pelado de la entidad: no tiene donde recibir este id ni con que
+  /// compararlo. El backend generado no tiene idempotencia. La consecuencia
+  /// concreta: un POST que llega pero cuya respuesta se pierde deja la
+  /// operacion encolada, y la proxima sincronizacion duplica la fila.
+  ///
+  /// El supuesto contrario venia de FORJA, donde si es cierto -alla hay una
+  /// tabla `operacion` con unicidad por (diagrama_id, token_cliente)- y se
+  /// copio a un backend que no tiene esa tabla.
   final String id;
   final String clase;
 
