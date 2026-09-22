@@ -79,12 +79,13 @@ class AlmacenRegistros {
     return (json as List<dynamic>).map((f) => Map<String, dynamic>.from(f as Map)).toList();
   }
 
-  Future<void> encolar(OperacionPendiente operacion) async {
-    _escrituraPendiente = _escrituraPendiente.then((_) async {
+  Future<void> encolar(OperacionPendiente operacion) {
+    final propia = _escrituraPendiente.then((_) async {
       final cola = await leerCola();
       await reemplazarCola([...cola, operacion]);
     });
-    await _escrituraPendiente;
+    _escrituraPendiente = propia.catchError((_) {});
+    return propia;
   }
 
   Future<List<OperacionPendiente>> leerCola() async {

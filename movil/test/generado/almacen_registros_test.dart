@@ -67,4 +67,34 @@ void main() {
 
     expect(await almacen.leerCola(), isEmpty);
   });
+
+  test('un encolar fallido no traba los posteriores', () async {
+    // Convertir carpeta en archivo para forzar fallo de escritura
+    await carpeta.delete(recursive: true);
+    File(carpeta.path).writeAsStringSync('no soy una carpeta');
+
+    // Este encolar debe fallar
+    bool fallo = false;
+    try {
+      await almacen.encolar(OperacionPendiente(
+          id: 'op-1', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Ana'}));
+    } catch (e) {
+      fallo = true;
+    }
+    expect(fallo, true);
+
+    // Restaurar carpeta
+    File(carpeta.path).deleteSync();
+    await carpeta.create();
+
+    // Este encolar debe funcionar sin restricciones
+    await almacen.encolar(OperacionPendiente(
+        id: 'op-2', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Beto'}));
+
+    final cola = await almacen.leerCola();
+
+    // Solo op-2 debe estar en la cola (op-1 fallo y no se encolo)
+    expect(cola.length, 1);
+    expect(cola.first.id, 'op-2');
+  });
 }
