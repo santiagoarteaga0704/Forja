@@ -1,0 +1,69 @@
+# FORJA en la nube: la aplicacion y su base, en una sola maquina.
+#
+#   docker compose -f compose.produccion.yml up -d --build
+#
+# Pensado para una instancia gratuita de AWS (1 GB de RAM), y por eso los dos
+# servicios llevan limite de memoria: sin ellos, la base y la JVM crecen hasta
+# que el sistema mata a una de las dos, y el corte llega sin aviso.
+#
+# Lo que NO esta aqui y es a proposito: Ollama. El modelo local ocupa mas que la
+# instancia entera. En el despliegue, el pedido por IA y el agente quedan
+# apagados y la aplicacion es la de siempre sin ellos; la lectura de fotos, en
+# cambio, SI funciona, porque usa un servicio remoto y solo necesita la clave.
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: forja-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: forja
+      POSTGRES_USER: forja
+      POSTGRES_PASSWORD: ${FORJA_DB_PASSWORD:?hay que definir FORJA_DB_PASSWORD}
+    volumes:
+      - forja-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forja -d forja"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    # Sin puertos publicados: la base solo la alcanza la aplicacion, por la red
+    # interna del compose. Un Postgres abierto a internet se encuentra solo.
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: forja-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/forja
+      SPRING_DATASOURCE_USERNAME: forja
+      SPRING_DATASOURCE_PASSWORD: ${FORJA_DB_PASSWORD}
+      # Minimo 32 caracteres. NO tiene valor por omision a proposito: el de
+      # desarrollo esta escrito en el repositorio, que es publico.
+      FORJA_JWT_SECRETO: ${FORJA_JWT_SECRETO:?hay que definir FORJA_JWT_SECRETO}
+      # La web viaja dentro de esta misma imagen, asi que no hay otro origen que
+      # permitir. Queda declarado por si algun dia se sirve aparte.
+      FORJA_WEB_ORIGENES: ${FORJA_WEB_ORIGENES:-http://localhost:5173}
+      # Lectura de fotos. Sin clave, la pantalla lo dice y deja escribir a mano.
+      FORJA_VISION_HABILITADA: ${FORJA_VISION_HABILITADA:-false}
+      FORJA_VISION_CLAVE: ${FORJA_VISION_CLAVE:-}
+      # El bloque local queda apagado: Ollama no corre en esta instancia.
+      FORJA_IA_HABILITADA: "false"
+    ports:
+      - "80:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+
+volumes:
+  forja-pgdata:

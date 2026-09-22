@@ -1,0 +1,11 @@
+# Lo que no tiene por que viajar al contexto de construccion. Sin esto, Docker
+# copia el target/ y los node_modules -cientos de megas- antes de empezar.
+target/
+web/node_modules/
+web/dist/
+movil/
+herramientas/node_modules/
+docs/
+.git/
+.idea/
+*.log

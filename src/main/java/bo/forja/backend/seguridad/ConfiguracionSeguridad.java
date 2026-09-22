@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -61,6 +62,15 @@ public class ConfiguracionSeguridad {
                         // apreton de manos: el navegador no permite enviar
                         // cabeceras al abrir un WebSocket.
                         .requestMatchers("/ws/**").permitAll()
+                        // El cliente web viaja dentro de esta misma imagen en el
+                        // despliegue, y se sirve desde este mismo origen: un solo
+                        // dominio, sin CORS que configurar y con el canal
+                        // colaborativo por el mismo puerto. Quien abre la
+                        // aplicacion por primera vez todavia no tiene token, asi
+                        // que la pantalla de entrada no puede exigirlo.
+                        .requestMatchers(HttpMethod.GET,
+                                "/", "/index.html", "/assets/**", "/favicon.ico",
+                                "/*.svg", "/*.png", "/*.ico", "/*.webmanifest").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(recurso -> recurso.jwt(Customizer.withDefaults()));
         return http.build();

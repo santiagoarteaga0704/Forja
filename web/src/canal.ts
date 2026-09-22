@@ -36,7 +36,13 @@ export function abrirCanal(opciones: Opciones): Canal {
   let reintento: number | undefined
 
   const url = () => {
-    const base = BASE.replace(/^http/, 'ws')
+    // En el despliegue la web viaja dentro del mismo servidor que la API, asi
+    // que BASE queda vacio y todas las llamadas son relativas. Un WebSocket no
+    // puede serlo: hay que decirle el servidor, y ademas el esquema tiene que
+    // seguir al de la pagina -desde https solo se puede abrir wss-.
+    const base = BASE
+      ? BASE.replace(/^http/, 'ws')
+      : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`
     const consulta = new URLSearchParams({
       token: opciones.token,
       diagrama: opciones.diagramaId,
