@@ -114,13 +114,12 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
       return;
     }
 
-    final pendientesAntes = _pendientes;
     setState(() => _sincronizando = true);
 
-    var vaciadas = 0;
+    ResultadoDeSincronizacion? resultado;
     String? error;
     try {
-      vaciadas = await _repositorio.sincronizar();
+      resultado = await _repositorio.sincronizar();
     } catch (_) {
       error = 'No se pudo sincronizar: revisa la conexion y la direccion del backend.';
     }
@@ -129,15 +128,20 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
     if (!mounted) return;
     setState(() => _sincronizando = false);
 
-    if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-    } else if (vaciadas == 0 && pendientesAntes > 0) {
-      // Repositorio.sincronizar() no lanza por un backend inalcanzable: solo
-      // devuelve 0. Sin este aviso, ese 0 se leeria como que no habia nada
-      // que hacer en vez de que no se pudo llegar.
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No se pudo llegar al backend generado: la cola sigue esperando.'),
-      ));
+    // Repositorio.sincronizar() no lanza: cuenta lo que paso. Sin estos avisos,
+    // una pasada que no movio nada se leeria como que no habia nada que hacer.
+    final avisos = <String>[
+      ?error,
+      // Lo descartado va primero porque es lo unico irrecuperable: son datos
+      // que alguien cargo y que el backend no va a aceptar nunca. Se nombran
+      // uno por uno para que se sepa cual hay que volver a cargar a mano.
+      if (resultado != null && resultado.rechazadas.isNotEmpty)
+        'El backend generado rechazo y se descarto: ${resultado.rechazadas.join('; ')}.',
+      ?resultado?.corte,
+    ];
+
+    if (avisos.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(avisos.join(' '))));
     }
   }
 

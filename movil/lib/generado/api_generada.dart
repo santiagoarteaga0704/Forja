@@ -10,11 +10,26 @@ import 'nombres.dart';
 /// forma -EscritorCapas.java- asi que la ruta se deduce del nombre de la clase
 /// y el resto es CRUD. Tampoco hay autenticacion, porque el backend generado no
 /// la tiene: no es un olvido de este cliente.
+/// El backend generado contesto, y contesto que no.
+///
+/// Se distingue de un fallo de red -una SocketException, un tiempo agotado-
+/// porque las consecuencias son opuestas, igual que [ErrorApi] frente a
+/// [SinConexion] del lado de FORJA: un rechazo no mejora reintentando y la
+/// falta de red se resuelve sola esperando. La cola de operaciones pendientes
+/// decide con esa diferencia si conserva o descarta, asi que confundirlas
+/// significa o perder trabajo o dejar la cola trabada para siempre.
 class ErrorDelBackendGenerado implements Exception {
   ErrorDelBackendGenerado(this.codigo, this.cuerpo);
 
   final int codigo;
   final String cuerpo;
+
+  /// Cierto si volver a intentar no puede cambiar el resultado.
+  ///
+  /// Mismo criterio que `ErrorApi.esDefinitivo`, y a proposito: las dos colas
+  /// de la app tienen que tratar igual al mismo servidor. 401 y 429 quedan
+  /// afuera porque son "todavia no", no "nunca".
+  bool get esDefinitivo => codigo >= 400 && codigo < 500 && codigo != 401 && codigo != 429;
 
   @override
   String toString() => 'El backend generado respondio $codigo: $cuerpo';

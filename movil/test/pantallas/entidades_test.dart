@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:forja_movil/generado/almacen_registros.dart';
 import 'package:forja_movil/generado/api_generada.dart';
@@ -265,5 +266,47 @@ void main() {
     expect(find.textContaining('No se pudo llegar al backend generado'), findsOneWidget);
     // La operacion no se perdio: sigue encolada esperando otra oportunidad.
     expect(find.text('1 operacion(es) esperando'), findsOneWidget);
+  });
+
+  testWidgets('un rechazo del backend se cuenta como rechazo, no como falta de red',
+      (tester) async {
+    // El otro lado del mismo problema: `Repositorio.sincronizar()` tenia un
+    // `catch` pelado, asi que un 400 se anunciaba como "No se pudo llegar al
+    // backend generado" y la operacion quedaba trabando la cola. Ahora se
+    // descarta y se nombra: lo que se perdio tiene que decirse, porque es
+    // trabajo que alguien cargo y que no va a entrar nunca.
+    final almacen = AlmacenRegistros(carpeta);
+    await tester.runAsync(() => almacen.encolar(const OperacionPendiente(
+        id: 'op-1', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Ana'})));
+
+    await _abrir(
+      tester,
+      PantallaEntidades(
+        diagrama: unaClase(),
+        repositorio: Repositorio(
+          almacen: almacen,
+          api: ApiGenerada(
+            base: 'http://192.168.43.1:8080',
+            cliente: MockClient((peticion) async => peticion.method == 'GET'
+                ? http.Response('[]', 200,
+                    headers: {'content-type': 'application/json; charset=utf-8'})
+                : http.Response('falta la fecha de nacimiento', 400)),
+          ),
+        ),
+      ),
+    );
+    await _esperar(tester, find.text('1 operacion(es) esperando'));
+
+    await tester.tap(find.text('Sincronizar'));
+    await _esperar(tester, find.textContaining('rechazo y se descarto'));
+
+    // Se nombra lo descartado: quien lo cargo tiene que saber cual volver a
+    // cargar a mano.
+    expect(find.textContaining('Ana'), findsOneWidget);
+    // Y no se le echa la culpa a la red, que anduvo perfecto.
+    expect(find.textContaining('No se pudo llegar'), findsNothing);
+    // La cola quedo libre en vez de muerta detras de algo imposible.
+    await _esperar(tester, find.text('Sin operaciones pendientes'));
+    expect(find.text('Sin operaciones pendientes'), findsOneWidget);
   });
 }
