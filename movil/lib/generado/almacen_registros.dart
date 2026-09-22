@@ -98,4 +98,23 @@ class AlmacenRegistros {
 
   Future<void> reemplazarCola(List<OperacionPendiente> cola) =>
       _guardar('cola-registros.json', cola.map((o) => o.aJson()).toList());
+
+  /// La direccion del backend generado no se puede dejar fija: el dia de la
+  /// demostracion el telefono prende su punto de acceso y la laptop recibe
+  /// una IP de ese DHCP, distinta en cada sitio. Se guarda igual que el resto
+  /// -JSON, escritura atomica- y no aparte, para no inventar un tercer
+  /// mecanismo de persistencia en esta misma clase.
+  Future<void> guardarDireccionBackend(String? direccion) async {
+    if (direccion == null || direccion.isEmpty) {
+      final archivo = _archivo('direccion-backend.json');
+      if (await archivo.exists()) await archivo.delete();
+      return;
+    }
+    await _guardar('direccion-backend.json', direccion);
+  }
+
+  Future<String?> leerDireccionBackend() async {
+    final json = await _leer('direccion-backend.json');
+    return json as String?;
+  }
 }

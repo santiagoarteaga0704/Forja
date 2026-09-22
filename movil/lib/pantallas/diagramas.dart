@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../almacen.dart';
 import '../api.dart';
+import '../generado/almacen_registros.dart';
+import '../generado/repositorio.dart';
 import '../main.dart';
 import '../tipos.dart';
+import 'entidades.dart';
 import 'lienzo.dart';
 
 /// Eleccion del diagrama.
@@ -42,6 +46,42 @@ class _PantallaDiagramasState extends State<PantallaDiagramas> {
   void initState() {
     super.initState();
     _cargar();
+  }
+
+  /// El diagrama entero para abrir la pantalla de entidades: la lista que
+  /// tiene esta pantalla es solo el resumen (id, nombre, version), sin clases
+  /// ni atributos. Primero lo guardado -si ya se abrio el lienzo una vez, ya
+  /// esta- y recien si falta se pide al servidor.
+  Future<Diagrama?> _diagramaCompleto(ResumenDiagrama resumen) async {
+    final local = await widget.almacen.leerDiagrama(resumen.id);
+    if (local != null) return local;
+    try {
+      final diagrama = await widget.api.diagrama(resumen.id);
+      await widget.almacen.guardarDiagrama(diagrama);
+      return diagrama;
+    } on SinConexion {
+      return null;
+    } on ErrorApi {
+      return null;
+    }
+  }
+
+  Future<void> _abrirEntidades(ResumenDiagrama resumen) async {
+    final diagrama = await _diagramaCompleto(resumen);
+    if (!mounted) return;
+    if (diagrama == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Este diagrama todavia no se descargo y no hay conexion.'),
+      ));
+      return;
+    }
+    final repositorio = Repositorio(
+      almacen: AlmacenRegistros(await getApplicationDocumentsDirectory()),
+    );
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PantallaEntidades(diagrama: diagrama, repositorio: repositorio),
+    ));
   }
 
   Future<void> _cargar() async {
@@ -153,7 +193,17 @@ class _PantallaDiagramasState extends State<PantallaDiagramas> {
                             style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('version ${diagrama.version}',
                             style: const TextStyle(color: Colores.textoDebil, fontSize: 12)),
-                        trailing: const Icon(Icons.chevron_right, color: Colores.textoDebil),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: 'Backend generado',
+                              onPressed: () => _abrirEntidades(diagrama),
+                              icon: const Icon(Icons.dns_outlined, color: Colores.textoDebil),
+                            ),
+                            const Icon(Icons.chevron_right, color: Colores.textoDebil),
+                          ],
+                        ),
                         onTap: () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => PantallaLienzo(
                             api: widget.api,
