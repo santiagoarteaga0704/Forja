@@ -7,11 +7,13 @@ import bo.forja.backend.servicio.ServicioModelo;
 import bo.forja.backend.servicio.ServicioProyectos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -86,7 +88,13 @@ public class ServicioGeneracion {
 
         salida.put("pom.xml", andamiaje.pom(plan));
         salida.put("README.md", andamiaje.readme(plan));
+        salida.put("compose.yaml", andamiaje.compose(plan));
         salida.put("src/main/resources/application.yml", andamiaje.configuracion(plan));
+        salida.put(raizJava + "/web/ConfiguracionCors.java", andamiaje.cors(plan));
+        // El wrapper viaja tal cual, sin plantilla: son los mismos archivos que
+        // usa FORJA. Sin ellos el README miente -manda a correr ./mvnw- y el
+        // proyecto solo arranca si quien lo bajo tiene Maven instalado.
+        salida.putAll(wrapper());
         salida.put(raizJava + "/" + andamiaje.nombreClaseAplicacion(plan) + ".java",
                 andamiaje.aplicacion(plan));
 
@@ -112,6 +120,31 @@ public class ServicioGeneracion {
     }
 
     /** El mismo proyecto, empaquetado para descargar. */
+    /**
+     * El wrapper de Maven, copiado de los recursos de la aplicacion.
+     * <p>
+     * Se empaqueta con FORJA en lugar de escribirse aqui porque son casi
+     * quinientas lineas de guion de arranque que no tiene sentido mantener
+     * dentro de una plantilla, y porque asi el proyecto generado usa
+     * exactamente el mismo wrapper que esta probado en este repositorio.
+     */
+    private Map<String, String> wrapper() {
+        Map<String, String> salida = new LinkedHashMap<>();
+        salida.put("mvnw", recurso("andamiaje/mvnw"));
+        salida.put("mvnw.cmd", recurso("andamiaje/mvnw.cmd"));
+        salida.put(".mvn/wrapper/maven-wrapper.properties",
+                recurso("andamiaje/wrapper/maven-wrapper.properties"));
+        return salida;
+    }
+
+    private String recurso(String ruta) {
+        try (InputStream entrada = new ClassPathResource(ruta).getInputStream()) {
+            return new String(entrada.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("Falta el recurso " + ruta + " en el empaquetado", e);
+        }
+    }
+
     public byte[] comprimir(Map<String, String> archivos, String carpetaRaiz) {
         ByteArrayOutputStream destino = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(destino, StandardCharsets.UTF_8)) {

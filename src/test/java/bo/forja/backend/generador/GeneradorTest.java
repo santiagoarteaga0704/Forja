@@ -42,6 +42,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -454,6 +456,53 @@ class GeneradorTest {
                 .isGreaterThan(2000);
     }
 
+    @Test
+    @DisplayName("el proyecto trae con que arrancarse: el wrapper y su propia base")
+    void traeConQueArrancarse() {
+        // Sin esto, el README miente: manda a correr ./mvnw y el wrapper no
+        // esta en el zip. Y la base habia que inventarsela, peleando ademas
+        // por el 5432 con cualquier otro Postgres de la maquina.
+        Map<String, String> archivos = generar();
+
+        assertThat(archivos).containsKeys(
+                "mvnw", "mvnw.cmd", ".mvn/wrapper/maven-wrapper.properties", "compose.yaml");
+
+        // El puerto y el nombre de la base se leen de lo que pide la aplicacion
+        // en lugar de fijarlos aqui: lo que importa no es cuales son, sino que
+        // el compose y la aplicacion digan lo mismo. Si no coinciden, la base
+        // arranca y la aplicacion no la encuentra.
+        String yml = archivos.get("src/main/resources/application.yml");
+        Matcher url = Pattern.compile("localhost:(\\d+)/(\\S+)").matcher(yml);
+        assertThat(url.find()).as("la configuracion declara una base").isTrue();
+
+        assertThat(archivos.get("compose.yaml"))
+                .contains("POSTGRES_DB: " + url.group(2))
+                .contains(url.group(1) + ":5432");
+    }
+
+    @Test
+    @DisplayName("la API se puede probar desde el navegador, sin otra herramienta")
+    void laApiSePuedeProbarDesdeElNavegador() {
+        Map<String, String> archivos = generar();
+
+        assertThat(archivos.get("pom.xml")).contains("springdoc-openapi-starter-webmvc-ui");
+        assertThat(archivos.get("README.md")).contains("/swagger-ui.html");
+    }
+
+    @Test
+    @DisplayName("un frontend en otro puerto puede llamar a la API")
+    void unFrontendPuedeLlamarla() {
+        // Sin esto el navegador bloquea cada llamada y el error no nombra al
+        // backend: se lee como un problema del frontend. Postman no lo detecta
+        // porque no es un navegador y no aplica la politica de origenes.
+        Map<String, String> archivos = generar();
+
+        String cors = archivos.get(ruta("web/ConfiguracionCors.java"));
+        assertThat(cors).isNotNull();
+        assertThat(cors).contains("addMapping(\"/api/**\")");
+        assertThat(cors).contains("localhost:5173");
+    }
+
     // ---------- Auxiliares -------------------------------------------------
 
     private static final String PAQUETE = "com.clinica.demo";
@@ -490,7 +539,11 @@ class GeneradorTest {
                         org.springframework.web.bind.annotation.RestController.class,
                         org.springframework.http.ResponseEntity.class,
                         org.springframework.boot.SpringApplication.class,
-                        org.springframework.boot.autoconfigure.SpringBootApplication.class)
+                        org.springframework.boot.autoconfigure.SpringBootApplication.class,
+                        // La configuracion de CORS del proyecto generado implementa
+                        // WebMvcConfigurer, que vive en spring-webmvc.
+                        org.springframework.web.servlet.config.annotation.WebMvcConfigurer.class,
+                        org.springframework.context.annotation.Configuration.class)
                 .map(clase -> {
                     try {
                         return Path.of(clase.getProtectionDomain().getCodeSource()
