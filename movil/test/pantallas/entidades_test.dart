@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -266,6 +267,64 @@ void main() {
     expect(find.textContaining('No se pudo llegar al backend generado'), findsOneWidget);
     // La operacion no se perdio: sigue encolada esperando otra oportunidad.
     expect(find.text('1 operacion(es) esperando'), findsOneWidget);
+  });
+
+  testWidgets('al volver de cargar registros el contador ya dice la verdad',
+      (tester) async {
+    // El guion de la demostracion: modo avion, entrar a una entidad, cargar dos
+    // registros, volver. El contador solo se leia en initState y despues de
+    // sincronizar, asi que al volver decia «Sin operaciones pendientes» con dos
+    // operaciones en la cola: la pantalla desmentia justo el paso que hay que
+    // demostrar, y se corregia recien al tocar Sincronizar, que es el siguiente.
+    final almacen = AlmacenRegistros(carpeta);
+    // Sin `api`: esto es el modo avion. Cargar encola y nada sale del aparato.
+    final repositorio = Repositorio(almacen: almacen);
+
+    await _abrir(
+      tester,
+      PantallaEntidades(
+        diagrama: Diagrama(id: 'd1', nombre: 'Clinica', version: 1, clases: [
+          Clase(id: 'c1', nombre: 'Paciente', atributos: const [
+            Atributo(id: 'a1', nombre: 'nombre', tipo: 'String'),
+          ]),
+        ]),
+        repositorio: repositorio,
+      ),
+    );
+    expect(find.text('Sin operaciones pendientes'), findsOneWidget);
+
+    // Nada de `pumpAndSettle` aca: la pantalla de registros deja futuros de
+    // archivo pedidos desde el reloj falso, que ahi adentro no se completan
+    // nunca, asi que esperar a que "todo se aquiete" no termina jamas. Lo que
+    // hay que dejar correr es la transicion de ruta, y eso dura un segundo.
+    await tester.tap(find.text('Paciente'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Agregar'), findsOneWidget);
+
+    // Dos registros cargados sin senal, escritos derecho en el archivo de la
+    // cola. Seria mas fiel llamar a `repositorio.crear`, que es lo que hace el
+    // boton «Agregar», pero con la pantalla de registros montada `runAsync` se
+    // cuelga: la primera operacion de archivo pasa y la segunda no vuelve mas.
+    // La cola es un archivo JSON, asi que escribirla es igual de real y no
+    // depende de que el bucle de eventos coopere.
+    File('${carpeta.path}${Platform.pathSeparator}cola-registros.json')
+        .writeAsStringSync(jsonEncode([
+      const OperacionPendiente(
+              id: 'op-1', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Ana'})
+          .aJson(),
+      const OperacionPendiente(
+              id: 'op-2', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Beto'})
+          .aJson(),
+    ]));
+
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await _esperar(tester, find.text('2 operacion(es) esperando'));
+
+    expect(find.text('2 operacion(es) esperando'), findsOneWidget);
+    expect(find.text('Sin operaciones pendientes'), findsNothing);
   });
 
   testWidgets('un rechazo del backend se cuenta como rechazo, no como falta de red',

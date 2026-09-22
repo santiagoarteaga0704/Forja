@@ -196,14 +196,23 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
                 title: Text(clase.nombre),
                 subtitle: Text('/api/${rutaDe(clase.nombre)}'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => PantallaRegistros(
-                    clase: clase,
-                    repositorio: _repositorio,
-                    diagrama: widget.diagrama,
-                    asistente: widget.asistente,
-                  ),
-                )),
+                // Se espera el retorno y se recuenta: cargar registros sin
+                // senal encola operaciones, y el contador solo se leia en
+                // initState y despues de sincronizar. Al volver decia "Sin
+                // operaciones pendientes" con la cola llena, y se corregia
+                // recien al tocar Sincronizar, que es justo el paso siguiente
+                // al que hay que demostrar.
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PantallaRegistros(
+                      clase: clase,
+                      repositorio: _repositorio,
+                      diagrama: widget.diagrama,
+                      asistente: widget.asistente,
+                    ),
+                  ));
+                  await _actualizarPendientes();
+                },
               ),
           ],
         ),
