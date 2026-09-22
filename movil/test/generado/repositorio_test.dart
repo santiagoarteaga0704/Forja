@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -126,5 +127,46 @@ void main() {
     expect(await almacen.leerCola(), isEmpty);
     final fila = (await repoConectado.filas('Paciente')).single;
     expect(fila['_pendiente'], isNotNull);
+  });
+
+  test('si la segunda de dos operaciones de la misma clase falla, la primera '
+      'no dispara un refetch que la borre de filas', () async {
+    // Este es el defecto critico que encontro la revision: agrupar por clase
+    // apenas UNA operacion tiene exito -en vez de esperar a que no quede
+    // ninguna de esa clase en la cola- hacia que un refetch pisara la copia
+    // local con una version del servidor que todavia no tenia a la que fallo.
+    final metodosVistos = <String>[];
+    final repo = Repositorio(
+      almacen: almacen,
+      api: ApiGenerada(
+        base: 'http://x',
+        cliente: MockClient((peticion) async {
+          metodosVistos.add(peticion.method);
+          if (peticion.method == 'GET') {
+            return http.Response('[]', 200,
+                headers: {'content-type': 'application/json; charset=utf-8'});
+          }
+          final cuerpo = jsonDecode(peticion.body) as Map;
+          if (cuerpo['nombre'] == 'Beto') {
+            return http.Response('error del servidor', 500);
+          }
+          return http.Response('{"id":"1"}', 201,
+              headers: {'content-type': 'application/json; charset=utf-8'});
+        }),
+      ),
+    );
+
+    await repo.crear('Paciente', {'nombre': 'Ana'});
+    await repo.crear('Paciente', {'nombre': 'Beto'});
+
+    final vaciadas = await repo.sincronizar();
+
+    expect(vaciadas, 1);
+    final cola = await almacen.leerCola();
+    expect(cola.single.datos['nombre'], 'Beto');
+
+    final filas = await repo.filas('Paciente');
+    expect(filas.map((f) => f['nombre']), containsAll(['Ana', 'Beto']));
+    expect(metodosVistos, isNot(contains('GET')));
   });
 }

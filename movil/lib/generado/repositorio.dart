@@ -23,7 +23,7 @@ class Repositorio {
       datos: datos,
     );
     // Se ve primero y se manda despues: al reves, sin senal la pantalla
-    // quedaria vacia y parecería que no se guardo nada.
+    // quedaria vacia y pareceria que no se guardo nada.
     final filas = await almacen.leerFilas(clase);
     await almacen.guardarFilas(clase, [...filas, {...datos, '_pendiente': operacion.id}]);
     await almacen.encolar(operacion);
@@ -37,10 +37,11 @@ class Repositorio {
 
     final cola = await almacen.leerCola();
     final quedan = <OperacionPendiente>[];
+    final clasesExitosas = <String>{};
     var vaciadas = 0;
-    final clasesVaciadas = <String>{};
 
-    for (final operacion in cola) {
+    for (var i = 0; i < cola.length; i++) {
+      final operacion = cola[i];
       try {
         switch (operacion.verbo) {
           case 'crear':
@@ -51,12 +52,14 @@ class Repositorio {
             await backend.borrar(operacion.clase, operacion.registroId!);
         }
         vaciadas++;
-        clasesVaciadas.add(operacion.clase);
+        clasesExitosas.add(operacion.clase);
       } catch (_) {
-        // Se corta en la primera que falla y se conserva el resto en orden: si
-        // se saltearan las siguientes, un alta posterior podria llegar antes
-        // que la que la precede.
-        quedan.addAll(cola.skip(cola.indexOf(operacion)));
+        // Se corta en la primera que falla y se conserva el resto en orden,
+        // por indice explicito y no por igualdad de objeto: OperacionPendiente
+        // no sobrescribe == ni hashCode hoy, pero si algun dia lo hiciera,
+        // cola.indexOf(operacion) podria encontrar el elemento equivocado y
+        // reordenar la cola en silencio.
+        quedan.addAll(cola.skip(i));
         break;
       }
     }
@@ -64,12 +67,21 @@ class Repositorio {
     await almacen.reemplazarCola(quedan);
 
     // Las filas que se guardaron antes de enviarlas quedaron marcadas con
-    // '_pendiente'. Ya se mandaron: hay que pedirle al backend la version
-    // definitiva -con sus identificadores de verdad- y reemplazar la copia
-    // local, que es la unica forma de que la marca desaparezca. Si este pedido
-    // falla no se toca nada: las marcas quedan puestas y la proxima
-    // sincronizacion, si logra vaciar la cola de nuevo, lo intenta otra vez.
-    for (final clase in clasesVaciadas) {
+    // '_pendiente'. Una clase se refresca solo si termino la pasada sin
+    // ninguna operacion suya sobreviviente en la cola: si quedara una
+    // pendiente -por ejemplo porque la siguiente operacion de esa misma clase
+    // fallo- pedir la lista ahora traeria una version del servidor que
+    // todavia no la tiene, y esa fila desapareceria de la pantalla aunque
+    // siga encolada. Con la clase realmente vacia, se le pide al backend la
+    // version definitiva -con sus identificadores de verdad- y se reemplaza
+    // la copia local, que es la unica forma de que la marca desaparezca. Si
+    // este pedido falla no se toca nada: las marcas quedan puestas y la
+    // proxima sincronizacion, si logra vaciar la cola de nuevo, lo intenta
+    // otra vez.
+    final clasesPendientes = quedan.map((o) => o.clase).toSet();
+    final clasesARefrescar = clasesExitosas.difference(clasesPendientes);
+
+    for (final clase in clasesARefrescar) {
       try {
         final filas = await backend.listar(clase);
         await almacen.guardarFilas(clase, filas);
