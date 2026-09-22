@@ -68,6 +68,40 @@ void main() {
     expect(await almacen.leerCola(), isEmpty);
   });
 
+  test('la direccion del backend se guarda y se vuelve a leer', () async {
+    expect(await almacen.leerDireccionBackend(), isNull);
+
+    await almacen.guardarDireccionBackend('http://192.168.43.15:8080');
+
+    expect(await almacen.leerDireccionBackend(), 'http://192.168.43.15:8080');
+  });
+
+  test('guardar la direccion vacia borra lo que hubiera guardado', () async {
+    await almacen.guardarDireccionBackend('http://192.168.43.15:8080');
+
+    await almacen.guardarDireccionBackend('');
+
+    expect(await almacen.leerDireccionBackend(), isNull);
+  });
+
+  test('tipear rapido deja guardada la direccion completa, no un prefijo', () async {
+    // Simula lo que pasa en la pantalla: onChanged dispara un guardado por
+    // cada tecla, sin esperar a que termine el anterior. Antes de serializar
+    // dentro de _guardar esto fallaba con PathAccessException al primer
+    // intento -o, si no fallaba, dejaba guardado un prefijo intermedio en vez
+    // de la direccion completa, porque el orden en que terminaban los
+    // renombres no era el orden en que se pidieron.
+    const direccionCompleta = '192.168.43.15';
+    final parciales = [
+      for (var i = 1; i <= direccionCompleta.length; i++) direccionCompleta.substring(0, i)
+    ];
+
+    final futuros = [for (final parcial in parciales) almacen.guardarDireccionBackend(parcial)];
+    await Future.wait(futuros);
+
+    expect(await almacen.leerDireccionBackend(), direccionCompleta);
+  });
+
   test('un encolar fallido no traba los posteriores', () async {
     // Convertir carpeta en archivo para forzar fallo de escritura
     await carpeta.delete(recursive: true);

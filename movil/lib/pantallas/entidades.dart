@@ -72,7 +72,15 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
   /// mismo gesto, sin un boton aparte que haya que acordarse de tocar.
   Future<void> _guardarDireccion(String texto) async {
     final limpia = texto.trim();
-    await _repositorio.almacen.guardarDireccionBackend(limpia.isEmpty ? null : limpia);
+    try {
+      await _repositorio.almacen.guardarDireccionBackend(limpia.isEmpty ? null : limpia);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo guardar la direccion del backend.'),
+      ));
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _repositorio = Repositorio(
@@ -83,11 +91,40 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
   }
 
   Future<void> _sincronizar() async {
+    if (_repositorio.api == null) {
+      // Sin direccion no hay adonde mandar la cola: decirlo evita que parezca
+      // que el boton no hizo nada.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Carga la direccion del backend generado: sin ella no hay adonde sincronizar.'),
+      ));
+      return;
+    }
+
+    final pendientesAntes = _pendientes;
     setState(() => _sincronizando = true);
-    await _repositorio.sincronizar();
+
+    var vaciadas = 0;
+    String? error;
+    try {
+      vaciadas = await _repositorio.sincronizar();
+    } catch (_) {
+      error = 'No se pudo sincronizar: revisa la conexion y la direccion del backend.';
+    }
+
     await _actualizarPendientes();
     if (!mounted) return;
     setState(() => _sincronizando = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    } else if (vaciadas == 0 && pendientesAntes > 0) {
+      // Repositorio.sincronizar() no lanza por un backend inalcanzable: solo
+      // devuelve 0. Sin este aviso, ese 0 se leeria como que no habia nada
+      // que hacer en vez de que no se pudo llegar.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo llegar al backend generado: la cola sigue esperando.'),
+      ));
+    }
   }
 
   @override
