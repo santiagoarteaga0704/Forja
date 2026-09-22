@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 /// Las filas del backend generado y los cambios que todavia no llegaron.
 ///
@@ -47,11 +48,13 @@ class AlmacenRegistros {
   AlmacenRegistros(this.carpeta);
 
   final Directory carpeta;
+  Future<void> _escrituraPendiente = Future.value();
 
   File _archivo(String nombre) => File('${carpeta.path}${Platform.pathSeparator}$nombre');
 
   Future<void> _guardar(String nombre, Object contenido) async {
-    final temporal = _archivo('$nombre.tmp');
+    final id = Random().nextInt(1000000);
+    final temporal = _archivo('$nombre.$id.tmp');
     await temporal.writeAsString(jsonEncode(contenido), flush: true);
     await temporal.rename(_archivo(nombre).path);
   }
@@ -77,8 +80,11 @@ class AlmacenRegistros {
   }
 
   Future<void> encolar(OperacionPendiente operacion) async {
-    final cola = await leerCola();
-    await reemplazarCola([...cola, operacion]);
+    _escrituraPendiente = _escrituraPendiente.then((_) async {
+      final cola = await leerCola();
+      await reemplazarCola([...cola, operacion]);
+    });
+    await _escrituraPendiente;
   }
 
   Future<List<OperacionPendiente>> leerCola() async {

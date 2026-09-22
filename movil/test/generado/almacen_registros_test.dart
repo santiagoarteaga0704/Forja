@@ -46,4 +46,25 @@ void main() {
 
     expect(await almacen.leerFilas('Paciente'), isEmpty);
   });
+
+  test('dos encolar concurrentes sin await no pierden operaciones', () async {
+    final op1 = OperacionPendiente(
+        id: 'op-1', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Ana'});
+    final op2 = OperacionPendiente(
+        id: 'op-2', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Beto'});
+
+    await Future.wait([almacen.encolar(op1), almacen.encolar(op2)]);
+
+    final cola = await almacen.leerCola();
+
+    expect(cola.length, 2);
+    expect(cola.map((o) => o.id), ['op-1', 'op-2']);
+  });
+
+  test('una cola corrupta se descarta en lugar de arrastrarse', () async {
+    File('${carpeta.path}${Platform.pathSeparator}cola-registros.json')
+        .writeAsStringSync('[ esto no es json');
+
+    expect(await almacen.leerCola(), isEmpty);
+  });
 }
