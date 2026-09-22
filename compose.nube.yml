@@ -1,0 +1,67 @@
+# FORJA en la instancia: baja una imagen ya construida y la corre.
+#
+#   docker compose -f compose.nube.yml up -d
+#
+# Es el hermano de compose.produccion.yml y se diferencia en una sola cosa: no
+# construye nada. La imagen se construye en la maquina de desarrollo, que tiene
+# con que, y la instancia solo la descarga. Construirla aqui -npm y Maven- no
+# entra en el gigabyte de una instancia gratuita, y cuando entra tarda veinte
+# minutos que el dia de una defensa no sobran.
+#
+# Hace falta un archivo .env al lado, que NO se versiona:
+#
+#   FORJA_IMAGEN=tu-usuario/forja:1
+#   FORJA_DB_PASSWORD=...
+#   FORJA_JWT_SECRETO=...            (32 caracteres o mas)
+#   FORJA_VISION_HABILITADA=true
+#   FORJA_VISION_CLAVE=...
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: forja
+      POSTGRES_USER: forja
+      POSTGRES_PASSWORD: ${FORJA_DB_PASSWORD:?falta FORJA_DB_PASSWORD en el .env}
+    volumes:
+      - forja-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forja -d forja"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    # Sin puertos publicados: a la base solo llega la aplicacion, por la red
+    # interna. Un Postgres abierto a internet lo encuentran solo.
+
+  app:
+    image: ${FORJA_IMAGEN:?falta FORJA_IMAGEN en el .env}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/forja
+      SPRING_DATASOURCE_USERNAME: forja
+      SPRING_DATASOURCE_PASSWORD: ${FORJA_DB_PASSWORD}
+      FORJA_JWT_SECRETO: ${FORJA_JWT_SECRETO:?falta FORJA_JWT_SECRETO en el .env}
+      # La web viaja dentro de la misma imagen: no hay otro origen que permitir.
+      FORJA_WEB_ORIGENES: ${FORJA_WEB_ORIGENES:-http://localhost:5173}
+      # La lectura de fotos si funciona en la nube: solo necesita clave y red.
+      FORJA_VISION_HABILITADA: ${FORJA_VISION_HABILITADA:-false}
+      FORJA_VISION_CLAVE: ${FORJA_VISION_CLAVE:-}
+      # Ollama no corre aqui: el modelo ocupa mas que la instancia entera.
+      FORJA_IA_HABILITADA: "false"
+    ports:
+      - "80:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+
+volumes:
+  forja-pgdata:
