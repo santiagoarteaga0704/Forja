@@ -179,7 +179,11 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
                 subtitle: Text('/api/${rutaDe(clase.nombre)}'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => PantallaRegistros(clase: clase, repositorio: _repositorio),
+                  builder: (_) => PantallaRegistros(
+                    clase: clase,
+                    repositorio: _repositorio,
+                    diagrama: widget.diagrama,
+                  ),
                 )),
               ),
           ],

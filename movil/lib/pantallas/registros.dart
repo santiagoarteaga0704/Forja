@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../generado/repositorio.dart';
 import '../generado/tipos_de_campo.dart';
+import '../generado/voz_registros.dart';
+import '../main.dart';
 import '../tipos.dart';
+import '../voz/hoja_de_dictado.dart';
+import '../voz/idioma_del_dictado.dart';
 
 /// Las filas de una entidad y el formulario para agregar una.
 ///
@@ -10,10 +15,20 @@ import '../tipos.dart';
 /// diagrama decide el teclado, que es lo unico que hace falta para que cargar
 /// un numero no obligue a buscar el simbolo.
 class PantallaRegistros extends StatefulWidget {
-  const PantallaRegistros({super.key, required this.clase, required this.repositorio});
+  const PantallaRegistros({
+    super.key,
+    required this.clase,
+    required this.repositorio,
+    required this.diagrama,
+  });
 
   final Clase clase;
   final Repositorio repositorio;
+
+  // El diagrama entero, no solo la clase: interpretarPedidoDeRegistro necesita
+  // buscar en todas las clases y sus campos, porque lo dictado puede nombrar
+  // cualquier entidad, no solo la que esta abierta.
+  final Diagrama diagrama;
 
   @override
   State<PantallaRegistros> createState() => _PantallaRegistrosState();
@@ -22,6 +37,7 @@ class PantallaRegistros extends StatefulWidget {
 class _PantallaRegistrosState extends State<PantallaRegistros> {
   late Future<List<Map<String, dynamic>>> _filas;
   final _valores = <String, String>{};
+  final SpeechToText _voz = SpeechToText();
 
   @override
   void initState() {
@@ -46,9 +62,71 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
     setState(() => _filas = widget.repositorio.filas(widget.clase.nombre));
   }
 
+  // ---------- Dictado --------------------------------------------------
+
+  /// Dicta un alta: "agrega un paciente llamado Juan". Usa el mismo cuadro de
+  /// dictado que el lienzo -HojaDeDictado, en voz/hoja_de_dictado.dart- para
+  /// que haya un solo lugar donde arreglar como se escucha, no dos que se van
+  /// separando con el tiempo.
+  Future<void> _dictar() async {
+    final disponible = await _voz.initialize(
+      onError: (error) => _avisar('No se pudo escuchar: ${error.errorMsg}'),
+    );
+    if (!disponible) {
+      _avisar('Este telefono no tiene reconocimiento de voz disponible');
+      return;
+    }
+
+    final idioma = idiomaDelDictado(
+      (await _voz.locales()).map((disponible) => disponible.localeId).toList(),
+    );
+
+    if (!mounted) return;
+    final frase = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colores.superficie,
+      builder: (_) => HojaDeDictado(voz: _voz, idioma: idioma),
+    );
+    await _voz.stop();
+    if (frase == null || frase.trim().isEmpty) return;
+
+    // Se interpreta aca, en el aparato: sin esto dictar un registro
+    // necesitaria red, y la restriccion del proyecto es que ninguna pantalla
+    // la necesite para abrirse ni para operar sin conexion.
+    final pedido = interpretarPedidoDeRegistro(frase, widget.diagrama);
+    if (pedido == null) {
+      // No se inventa nada: si la entidad o el campo no estan en el diagrama,
+      // se muestra lo que se entendio y no se crea nada.
+      _avisar('No entendi: "$frase"');
+      return;
+    }
+
+    await widget.repositorio.crear(pedido.clase, pedido.datos);
+    if (!mounted) return;
+    setState(() => _filas = widget.repositorio.filas(widget.clase.nombre));
+    _avisar('Agregado a ${pedido.clase}.');
+  }
+
+  void _avisar(String texto) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(texto), duration: const Duration(seconds: 4)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(widget.clase.nombre)),
+        appBar: AppBar(
+          title: Text(widget.clase.nombre),
+          actions: [
+            IconButton(
+              tooltip: 'Dictar un registro',
+              onPressed: _dictar,
+              icon: const Icon(Icons.mic),
+            ),
+          ],
+        ),
         body: Column(children: [
           for (final atributo in _editables)
             Padding(

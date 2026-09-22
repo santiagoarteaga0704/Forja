@@ -7,6 +7,7 @@ import '../comandos.dart';
 import '../identificadores.dart';
 import '../voz/contexto.dart';
 import '../voz/dictado_local.dart';
+import '../voz/hoja_de_dictado.dart';
 import '../voz/idioma_del_dictado.dart';
 import '../lienzo/pintor.dart';
 import '../main.dart';
@@ -182,7 +183,7 @@ class _PantallaLienzoState extends State<PantallaLienzo> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colores.superficie,
-      builder: (_) => _HojaDeDictado(voz: _voz, idioma: idioma),
+      builder: (_) => HojaDeDictado(voz: _voz, idioma: idioma),
     );
     await _voz.stop();
     if (frase == null || frase.trim().isEmpty) return;
@@ -728,92 +729,5 @@ class _Insignia extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
         ),
         child: Text(texto, style: const TextStyle(fontSize: 10, color: Colores.ambarClaro)),
-      );
-}
-
-/// Hoja de dictado: escucha y devuelve el texto reconocido.
-///
-/// El reconocimiento lo hace Android, que puede funcionar sin conexion **si el
-/// paquete de idioma esta descargado en el telefono**. Es una condicion del
-/// sistema, no de la aplicacion, y conviene comprobarla antes de la defensa.
-class _HojaDeDictado extends StatefulWidget {
-  const _HojaDeDictado({required this.voz, required this.idioma});
-
-  final SpeechToText voz;
-
-  /// Nulo significa "no fijes ninguno": el aparato usa el suyo.
-  final String? idioma;
-
-  @override
-  State<_HojaDeDictado> createState() => _HojaDeDictadoState();
-}
-
-class _HojaDeDictadoState extends State<_HojaDeDictado> {
-  String _reconocido = '';
-  bool _escuchando = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _escuchar();
-  }
-
-  Future<void> _escuchar() async {
-    setState(() => _escuchando = true);
-    await widget.voz.listen(
-      onResult: (resultado) => setState(() => _reconocido = resultado.recognizedWords),
-      listenOptions: SpeechListenOptions(
-        // El castellano de la region: el reconocedor de Android acierta bastante
-        // mas con la variante correcta que con el castellano de Espana. Cual es
-        // lo decide idiomaDelDictado() mirando lo que el aparato tiene
-        // instalado; nulo quiere decir que use el del sistema.
-        localeId: widget.idioma,
-        partialResults: true,
-        cancelOnError: true,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(
-          left: 18,
-          right: 18,
-          top: 18,
-          bottom: 18 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.mic, size: 34, color: _escuchando ? Colores.ambar : Colores.textoDebil),
-          const SizedBox(height: 10),
-          Text(
-            _reconocido.isEmpty
-                ? (_escuchando ? 'Escuchando...' : 'Toca para dictar')
-                : _reconocido,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 15),
-          ),
-          const SizedBox(height: 6),
-          const Text('Por ejemplo: "un Paciente tiene muchas Consultas"',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colores.textoDebil, fontSize: 11.5)),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: _reconocido.trim().isEmpty
-                    ? null
-                    : () => Navigator.pop(context, _reconocido),
-                child: const Text('Aplicar'),
-              ),
-            ),
-          ]),
-        ]),
       );
 }
