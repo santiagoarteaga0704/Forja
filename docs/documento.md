@@ -74,9 +74,13 @@ SANTA CRUZ - BOLIVIA
 | 5 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
 | 6 | Modelo de despliegue | 2.3.1.1 |
 | 7 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
+| 8 | Código QR del repositorio | Anexo A |
+| 9 | Código QR de la aplicación desplegada | Anexo B |
 
-Las siete figuras se construyeron en **Enterprise Architect 17.2** mediante
-automatización COM; el guion que las genera queda en el repositorio.
+Las siete primeras figuras se construyeron en **Enterprise Architect 17.2**
+mediante automatización COM; el guion que las genera queda en el repositorio.
+Las dos últimas son códigos QR generados por guion y verificados
+decodificándolos.
 
 ---
 
@@ -102,6 +106,14 @@ tiempo, por tres vías distintas —dibujándolo, dictándolo en castellano o
 fotografiando una pizarra— y que conecta ese modelo con su implementación: genera
 un proyecto Spring Boot ejecutable e intercambia el modelo con Enterprise
 Architect mediante XMI 2.5.1, en los dos sentidos.
+
+El recorrido no termina en el código generado. La aplicación móvil de FORJA es
+además el frontend de ese backend: deriva del mismo diagrama, en tiempo de
+ejecución, una pantalla por cada clase, de modo que lo que se dibujó en la
+pizarra por la mañana puede estar cargando datos reales desde un teléfono por la
+tarde, sin haber escrito una línea de interfaz. Es el tramo que cierra el
+argumento de la herramienta: el modelo no es documentación de algo que después se
+programa, es la fuente de la que salen el servicio y la pantalla.
 
 El sistema incorpora además un agente guía embebido que observa el uso de la
 herramienta y el estado del modelo para enseñar a usarla y señalar problemas de
@@ -139,8 +151,13 @@ intercambiar el modelo con Enterprise Architect a través de XMI 2.5.1.
   capas que compile.
 - Implementar la exportación e importación de modelos en XMI 2.5.1 compatible con
   Enterprise Architect.
-- Desarrollar un cliente móvil Android capaz de modelar sin conexión y
-  sincronizar los cambios al recuperarla.
+- Desarrollar un cliente móvil Android que modele sin conexión y que además
+  sea el frontend del backend generado, derivando sus pantallas del propio
+  diagrama en tiempo de ejecución, con dictado por voz sobre los campos del
+  formulario y un modelo de lenguaje en el aparato que propone —y nunca
+  aplica— cuando las reglas no alcanzan.
+- Desplegar la herramienta en una instancia de nube servida por HTTPS, de modo
+  que el navegador y el teléfono la alcancen desde cualquier red.
 
 ## 1.4 Descripción del problema
 
@@ -184,8 +201,10 @@ tiempo real, con exclusión mutua sobre cada elemento arbitrada por la base de
 datos y difusión inmediata de los cambios aceptados.
 
 **Módulo de Dictado por Voz.** Gramática determinista en castellano que convierte
-frases habladas o escritas en operaciones del modelo, funcionando también sin
-conexión en el cliente móvil.
+frases habladas o escritas en operaciones del modelo: sobre el diagrama en el
+cliente web, y sobre los campos de un formulario en el cliente móvil. La
+gramática no necesita conexión; el reconocedor que la alimenta es el de Android
+y sí la necesita mientras el aparato no tenga descargado el paquete de español.
 
 **Módulo de Lectura de Pizarra.** Reconocimiento óptico de una fotografía de un
 diagrama dibujado a mano, ejecutado en el propio navegador.
@@ -204,14 +223,29 @@ Boot con cuatro capas por cada clase concreta del modelo.
 **Módulo de Intercambio XMI.** Exportación e importación de modelos en XMI 2.5.1
 compatible con Enterprise Architect, preservando la disposición del diagrama.
 
-**Módulo Móvil.** Cliente Android que permite modelar sin conexión, encolando las
-operaciones y sincronizándolas al recuperar la red.
+**Módulo Móvil.** Cliente Android con dos papeles. Como cliente de FORJA permite
+modelar sin conexión, encolando las operaciones y sincronizándolas al recuperar
+la red. Como **frontend del backend generado** deriva del propio diagrama, en
+tiempo de ejecución, una lista y un formulario por cada clase, de modo que la
+misma aplicación instalada sirve para cualquier modelo sin recompilarla; los
+registros se cargan sin conexión y se encolan hasta que el backend generado esté
+al alcance, y se pueden dictar campo por campo.
+
+**Módulo de Despliegue.** La herramienta corre en una instancia de nube junto a
+su base de datos, empaquetada en una imagen de contenedor, y se sirve por HTTPS
+a través de una distribución de red de entrega de contenido.
 
 ### Fuera del alcance
 
 - Otros diagramas UML: solo se modela el diagrama de clases.
-- Generación del cliente frontend: se genera el backend, no la interfaz.
+- Generación del cliente frontend: se genera el backend, no la interfaz. Que el
+  cliente móvil derive sus pantallas del diagrama es otra cosa y no debe
+  confundirse con esto: no se emite código de interfaz en ninguna parte.
 - Ingeniería inversa desde código existente hacia el modelo.
+- Despliegue del backend generado: se genera y se levanta en el equipo de quien
+  demuestra, no en la nube.
+- Autenticación del backend generado: lo que FORJA emite no la tiene, y el
+  cliente no puede aportar lo que el servidor no pide.
 
 ---
 
@@ -270,7 +304,9 @@ distinguir las dos cosas.
 | React 19 + Vite | Cliente web |
 | Gemini (modelo de visión) | Lectura de la fotografía de un diagrama |
 | Flutter | Cliente móvil Android |
-| Ollama + Gemma 3 | Ejecución local del modelo de lenguaje |
+| Ollama + Gemma 3 4B | Ejecución del modelo de lenguaje en el equipo |
+| flutter_gemma + Gemma 3 1B | Ejecución del modelo de lenguaje dentro del teléfono |
+| Docker y Docker Compose | Empaquetado y puesta en marcha del despliegue |
 
 La criptografía, el mapeo objeto-relacional y la lectura de imágenes no se
 implementaron: son problemas resueltos, y reescribirlos habría consumido el
@@ -295,6 +331,14 @@ declara por constructor. El resultado compila y se ejecuta, y sus piezas pueden
 sustituirse individualmente: es un ensamblado de componentes, no un volcado de
 texto.
 
+Hay una quinta capa que el generador **no** emite y que conviene nombrar aquí,
+porque es la que explica una decisión de diseño del cliente móvil: la interfaz de
+usuario. El teléfono no recibe pantallas generadas; las deriva del mismo diagrama
+en tiempo de ejecución, de modo que la misma aplicación instalada sirve para
+cualquier modelo. Es la diferencia entre reutilizar un componente —una aplicación
+escrita una vez, parametrizada por el diagrama— y generar uno nuevo por cada
+modelo, y se optó por lo primero (2.4.6).
+
 ### El mantenimiento del software
 
 El desarrollo basado en componentes se justifica en buena medida por su efecto
@@ -310,8 +354,11 @@ del diagrama. Los tres se corrigieron con una prueba que los reproduce primero.
 **Mantenimiento adaptativo.** Ajusta el sistema a cambios de su entorno. El caso
 del proyecto es el traductor de lenguaje natural: se diseñó inicialmente para
 ejecutarse dentro del cliente móvil y se adaptó a un servicio local invocado
-desde el servidor cuando la medición mostró que el modelo pequeño no daba
-resultados utilizables en el teléfono.
+desde el servidor cuando la medición mostró que el modelo pequeño no daba, en el
+navegador, resultados utilizables. Más tarde el teléfono recibió su propio
+modelo, mucho más chico, en el único lugar donde equivocarse sale barato: como
+tercer escalón del dictado, proponiendo una frase que las reglas vuelven a
+interpretar. La misma pieza cambió dos veces de lugar sin cambiar de contrato.
 
 **Mantenimiento preventivo.** Modifica el sistema para evitar fallos futuros. El
 ejemplo del proyecto es la separación de la base de datos de pruebas: la suite
@@ -388,7 +435,14 @@ bien.**
 | Paradigma | Dónde | Para qué |
 |---|---|---|
 | Simbólico | Agente guía: 24 reglas y 17 respuestas escritas | Razonar sobre el modelo y enseñar la herramienta |
+| Simbólico | Gramática determinista del dictado, en el navegador y en el teléfono | Convertir una frase en una operación |
 | Generativo | Traducción de lenguaje libre a operaciones, de a un elemento | Entender lo que una persona escribe o dice |
+
+El paradigma generativo aparece en dos lugares y en los dos con la misma forma:
+en el cliente web, consultando a Gemma 3 4B por Ollama desde el servidor, y en el
+cliente móvil, con Gemma 3 1B corriendo dentro del aparato. Cambia el tamaño del
+modelo y cambia dónde se ejecuta; no cambia la regla de que **el modelo propone
+una frase y la gramática determinista es lo único que escribe**.
 
 El criterio que ordena la separación es que **las reglas mandan, y el modelo
 generativo interviene únicamente donde las reglas no llegan.** Para saber que una
@@ -533,6 +587,19 @@ Ollama que ejecuta Gemma 3 en el equipo. Es consultado para traducir lenguaje
 libre a operaciones y para responder preguntas que la base de reglas no cubre. Su
 ausencia no impide operar el sistema.
 
+**A5. Backend generado** *(actor secundario, sistema externo)*. El proyecto
+Spring Boot que la propia herramienta produce y que alguien levanta. No inicia
+casos de uso: recibe los registros que se cargan desde el cliente móvil. Es un
+actor secundario y no un componente de FORJA, y la distinción importa: FORJA lo
+escribe, pero una vez escrito es un sistema aparte, con su propia base de datos y
+su propio ciclo de vida.
+
+**A6. Operador de datos.** Persona que usa el cliente móvil para cargar registros
+contra el backend generado. No modela: consume la aplicación que salió del
+modelo. Se distingue del Modelador porque su trabajo empieza donde termina el de
+aquel, y porque es el actor que justifica que la herramienta genere código
+ejecutable y no solo documentación.
+
 ### 2.1.2 Casos de uso
 
 | ID | Caso de uso |
@@ -555,6 +622,7 @@ ausencia no impide operar el sistema.
 | CU16 | Exportar el modelo a XMI |
 | CU17 | Importar un modelo desde XMI |
 | CU18 | Modelar sin conexión y sincronizar |
+| CU19 | Cargar registros en el backend generado desde el teléfono |
 
 ### 2.1.3 Priorizar casos de uso
 
@@ -590,6 +658,7 @@ allí no se corrige localmente, obliga a rediseñar.
 | CU16 | Exportar el modelo a XMI | Aprobado | Alta | Medio | Modelador |
 | CU17 | Importar un modelo desde XMI | Aprobado | Alta | Alto | Modelador |
 | CU18 | Modelar sin conexión y sincronizar | Aprobado | Normal | Alto | Modelador |
+| CU19 | Cargar registros en el backend generado desde el teléfono | Aprobado | Alta | **Alto** | Operador de datos |
 
 ### 2.1.4 Detallar casos de uso
 
@@ -831,6 +900,19 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El modelo del servidor incorpora lo hecho sin conexión, una sola vez. |
 | **Excepción** | Elemento tomado por otra persona: esa operación se rechaza y se informa. |
 
+**CU19. Cargar registros en el backend generado desde el teléfono**
+
+| | |
+|---|---|
+| **Nombre de Caso de Uso** | CU19 Cargar registros en el backend generado desde el teléfono |
+| **Propósito** | Usar desde el móvil la aplicación que salió del modelo, cargando registros reales contra el backend generado. |
+| **Actores** | Operador de datos, Backend generado |
+| **Actor Iniciador** | Operador de datos |
+| **Precondición** | Haber bajado la definición del diagrama al menos una vez, y tener el backend generado levantado y alcanzable. |
+| **Flujo Principal** | 1. Elegir el diagrama bajado. 2. El cliente deriva de él una lista y un formulario por cada clase, sin recompilarse. 3. Indicar la dirección del backend generado. 4. Elegir una entidad y completar el formulario, con el teclado o dictando campo por campo. 5. El alta se ve en la lista y se encola. 6. Si el backend está al alcance, la cola se vacía y las filas de esa clase se vuelven a pedir al servidor. |
+| **Post Condición** | El registro queda guardado en la base del backend generado, y la lista del teléfono muestra lo que el servidor guardó. |
+| **Excepción** | Sin alcance del backend, la operación queda encolada y se reintenta. Un rechazo definitivo del servidor saca la operación de la cola y se informa nombrándola. Una entidad con clave ajena obligatoria no puede crearse desde el formulario (2.4.6). |
+
 ### 2.1.5 Estructura del modelo de casos de uso
 
 El modelo se organiza en dos ciclos: el Ciclo #1 agrupa los casos que construyen
@@ -849,6 +931,13 @@ Los dos diagramas se construyeron en Enterprise Architect. Se presentan
 separados y no en uno solo porque, con los dieciocho casos juntos, el actor
 Modelador se conecta con diecisiete de ellos y el dibujo deja de poder leerse;
 la separación coincide además con la priorización en ciclos.
+
+**CU19 no aparece en las figuras.** Se incorporó después de que los diagramas se
+generaran, cuando el cliente móvil pasó de ser un segundo modelador a ser el
+frontend del backend generado. Pertenece al Ciclo #2, junto a las demás salidas
+hacia la implementación, y su ficha está en 2.1.4; es también el único caso de
+uso cuyo actor iniciador no modela y cuyo actor secundario es un sistema que la
+propia herramienta escribió.
 
 La relación `«include»` más significativa del modelo es que **CU11, CU12, CU13,
 CU17 y CU18 incluyen a CU7, CU8 y CU9**: dictar, fotografiar, pedir al modelo,
@@ -1058,12 +1147,60 @@ una sesión viva en el servidor.
 consecuencia arquitectónica es que la corrección se mantiene aunque el servidor
 se replique.
 
+**El cliente móvil habla con dos servidores, no con uno.** La *definición* del
+modelo —el diagrama— la pide a FORJA; los *datos* que se cargan sobre ese modelo
+van al backend generado. Son dos clientes HTTP con dos colas separadas dentro de
+la misma aplicación, y la separación responde a que las dos mitades tienen
+disponibilidades distintas: la definición se consigue una vez y con red, mientras
+que los datos tienen que poder escribirse siempre, haya red o no. Es también la
+razón por la que el cliente no descubre nada en tiempo de ejecución: la forma de
+la API generada es predecible y se deduce del mismo diagrama que dio origen al
+backend.
+
 #### 2.3.1.1 Diseño físico — Modelo de despliegue
 
 ![Modelo de despliegue](diagramas/despliegue.png)
 
 *Figura 6. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
 
+
+**Lo que está desplegado.** FORJA corre en una instancia EC2 `t3.micro` de AWS,
+en la región `us-east-2`, gobernada por Docker Compose: dos contenedores —la
+aplicación, que lleva el cliente web dentro de su propia imagen, y PostgreSQL 17—
+levantados desde una imagen publicada en Docker Hub. La imagen se construye en el
+equipo de desarrollo y la instancia únicamente la descarga: compilar allí, con
+npm y Maven, no entra en el gigabyte de memoria de una instancia gratuita, y
+cuando entra tarda veinte minutos. Los dos servicios llevan límite de memoria
+declarado, porque sin él la base y la máquina virtual de Java crecen hasta que el
+sistema operativo mata a una de las dos y el corte llega sin aviso.
+
+**Delante hay una distribución de CloudFront**, que publica el sitio en
+`https://d2x41sl49sltgo.cloudfront.net`. No es una cuestión estética. El
+navegador habilita el micrófono y el generador de identificadores
+`crypto.randomUUID` solamente en un **contexto seguro**, de modo que sin HTTPS
+dos funciones del cliente quedan apagadas en cuanto la dirección deja de ser
+`localhost`. Es exactamente el defecto que apareció al desplegar y que en
+desarrollo no puede verse.
+
+**El backend generado no se despliega, y es deliberado.** Se levanta en el equipo
+de quien demuestra, en el puerto 8081, con su propia base PostgreSQL en el 5442.
+Hay una razón de recursos —la instancia tiene 1 GB de memoria y ya corre FORJA
+con su base— y una razón mejor: que el backend generado se descargue, se
+descomprima, arranque y conteste delante del evaluador es lo que demuestra que
+FORJA lo generó. Un servicio que ya estaba andando no demuestra nada.
+
+**El teléfono alcanza cada mitad por una vía distinta.** A FORJA llega por
+internet, contra la dirección de CloudFront, y le basta hacerlo una vez para
+bajar la definición del diagrama. Al backend generado llega por red local,
+típicamente por el punto de acceso del propio teléfono, que no depende de la red
+del lugar ni necesita internet.
+
+**Nota sobre la Figura 6.** El diagrama representa la topología anterior a este
+despliegue: el navegador, el dispositivo Android, la instancia con la aplicación
+y su base, y el equipo de demostración con el modelo local. No incorpora todavía
+la distribución de CloudFront, ni el backend generado con su base en el equipo de
+demostración, ni el segundo enlace del teléfono hacia ese backend. Los cuatro
+párrafos anteriores describen la topología vigente.
 
 **Nota sobre el despliegue del modelo de lenguaje.** Gemma 3 4B requiere
 aproximadamente 3,5 GB de memoria de vídeo, lo que excede las instancias
@@ -1074,6 +1211,11 @@ sigue siendo la vía principal del dictado y el agente responde desde su catálo
 La demostración de las funciones generativas se realiza sobre la instalación
 local. Esta separación es posible porque el módulo se diseñó como recortable
 desde el principio.
+
+El modelo del cliente móvil es otro y no depende de esto: Gemma 3 1B en formato
+int4, 529 MB, que corre dentro del teléfono y no consulta a ningún servidor.
+También allí el módulo es recortable, y sin él la aplicación pierde un escalón
+del dictado y nada más.
 
 ### 2.3.2 Diseño de datos
 
@@ -1121,7 +1263,10 @@ exclusión mutua.** No es una restricción defensiva: es el mecanismo.
 
 **La unicidad de `(diagrama_id, token_cliente)` en `operacion` es la
 idempotencia.** Permite que el cliente móvil reenvíe su cola tras un corte sin
-duplicar el modelo.
+duplicar el modelo. Conviene precisar que esa garantía es de FORJA y no se
+hereda: el backend generado no tiene esta tabla, de modo que la segunda cola del
+cliente móvil —la que escribe registros— no es idempotente. Se detalla en
+2.4.6.
 
 #### 2.3.2.2 Diseño físico — Tabla de volumen
 
@@ -1282,9 +1427,9 @@ duplicar el modelo.
 
 | Componente | Tecnología | Tamaño |
 |---|---|---|
-| Servidor | Java 21, Spring Boot 4.1.1 | 151 archivos, 18.738 líneas |
-| Cliente web | TypeScript, React 19, Vite 8 | 21 archivos, 4.548 líneas |
-| Cliente móvil | Dart, Flutter | 18 archivos, 3.954 líneas |
+| Servidor | Java 21, Spring Boot 4.1.1 | 159 archivos, 20.663 líneas |
+| Cliente web | TypeScript, React 19, Vite 8 | 23 archivos, 5.977 líneas |
+| Cliente móvil | Dart, Flutter | 33 archivos, 6.523 líneas |
 | Base de datos | PostgreSQL 17, esquema versionado con Flyway | 12 tablas, 2 migraciones |
 
 ### 2.4.2 El núcleo: el comando como única vía de cambio
@@ -1402,16 +1547,121 @@ Tres ajustes surgidos de medir contra el modelo real:
    completo en la memoria de vídeo disponible: entre 12 y 25 segundos si entra,
    entre 39 y 46 si se reparte con el procesador.
 
-### 2.4.6 Implementación del cliente móvil sin conexión
+### 2.4.6 Implementación del cliente móvil
 
-El cliente Flutter mantiene una copia local del modelo y una cola de operaciones
-pendientes. Cada operación lleva un identificador generado en el dispositivo, que
-es lo que permite reenviar la cola tras un corte sin duplicar nada: el servidor
-reconoce el identificador repetido y responde que la operación ya estaba
-registrada.
+El cliente móvil cumple dos papeles y habla con dos servidores distintos.
+Separarlos importa, porque confundirlos fue el defecto de diseño que hubo que
+corregir: la primera versión de la aplicación era únicamente un cliente de FORJA
+—entraba con una credencial, bajaba diagramas y los dibujaba— y el enunciado
+pedía un cliente **del backend generado**. El backend que FORJA produce, que es
+la razón de ser de la herramienta, no lo consumía nadie.
 
-La sincronización pide el **delta**: las operaciones posteriores a la última
-secuencia conocida, en lugar del modelo completo.
+**Como cliente de FORJA** mantiene una copia local del modelo y una cola de
+operaciones pendientes. Cada operación lleva un identificador generado en el
+dispositivo, que es lo que permite reenviar la cola tras un corte sin duplicar
+nada: el servidor reconoce el identificador repetido y responde que la operación
+ya estaba registrada. La sincronización pide el **delta** —las operaciones
+posteriores a la última secuencia conocida— en lugar del modelo completo.
+
+**Como frontend del backend generado** no tiene ninguna pantalla escrita por
+entidad ni código generado dentro del teléfono: las pantallas se **derivan del
+diagrama en tiempo de ejecución**. Cada clase produce una lista y un formulario,
+cada atributo produce un campo con su teclado y su validación, y el nombre de la
+clase produce la ruta. La consecuencia práctica es la que justifica la decisión:
+una sola aplicación instalada sirve para cualquier diagrama sin volver a
+compilarse, que es exactamente lo que no ocurriría si las pantallas se emitieran
+como código.
+
+| Del diagrama | Sale en el teléfono |
+|---|---|
+| Cada clase | Una pantalla de lista y un formulario de alta |
+| El nombre de la clase | La ruta de la entidad bajo `/api` |
+| Cada atributo y su tipo | Un campo del formulario, con su teclado y su conversión |
+
+Esa derivación es posible porque el generador emite siempre la misma forma
+—cinco rutas por entidad y ninguna capa de seguridad—, y esa previsibilidad
+vuelve innecesario cualquier descubrimiento en tiempo de ejecución: el teléfono
+deduce las rutas del mismo diagrama del que salió el backend. No hay OpenAPI, no
+hay introspección, no hay nada que pueda desincronizarse en caliente. Lo que sí
+podría separarse es el código de los dos lados, y por eso dos archivos del
+cliente están declarados explícitamente como espejos de sus pares del servidor:
+`generado/nombres.dart` lo es de `Nombres.java` —pluralizar distinto significaría
+llamar a una ruta que no existe y leer un 404 sin ninguna pista de que el
+problema es una letra— y `generado/tipos_de_campo.dart` lo es de `TipoJava.java`,
+con las mismas equivalencias de entrada aunque allá el destino sea un tipo de
+Java y aquí un teclado.
+
+**Dos cosas viajan por caminos distintos.** La definición —el diagrama— baja de
+FORJA, que está desplegada y es alcanzable por HTTPS desde cualquier red; se pide
+una vez y queda guardada en el aparato. Los datos —los registros que alguien
+carga— van al backend generado, que corre en la máquina de quien demuestra y se
+alcanza por red local. La separación no es incidental: responde a que las dos
+mitades tienen disponibilidades distintas, porque la definición se consigue una
+vez y con comodidad, mientras que los datos tienen que poder escribirse siempre.
+
+**Sin conexión funciona todo menos esa primera bajada.** Las listas se leen del
+almacén local; un alta aparece en la pantalla antes de salir del teléfono y se
+encola; cuando el backend generado vuelve a estar al alcance, la cola se vacía, y
+al terminar de vaciarse todas las operaciones de una clase sus filas se vuelven a
+pedir al servidor, para quedarse con lo que el backend efectivamente guardó y no
+con lo que el teléfono supuso. Que la aplicación funcione sin señal no es un modo
+aparte que se encienda: es el comportamiento normal, y tener red solo cambia
+cuándo se vacía la cola.
+
+La cola distingue un fallo de red de un rechazo del servidor, porque las
+consecuencias son opuestas: un corte conserva la operación y detiene la pasada
+—la señal vuelve sola—, mientras que un rechazo definitivo saca la operación de
+la cola, la nombra en pantalla y deja seguir a las que venían detrás. Tratar las
+dos cosas igual, que es lo que hacía la primera versión, significa o perder
+trabajo del usuario o dejar la cola trabada para siempre detrás de algo que el
+servidor no iba a aceptar nunca.
+
+**El dictado llena el formulario; no da de alta.** Lo dictado cae en un campo —el
+que la frase nombre, o el primero que esté vacío— y se convierte al tipo
+declarado en el diagrama: «23 de marzo del 2000» se escribe `2000-03-23`, «sí» se
+escribe `true`, «12,5» se escribe `12.5`. Convertir no es un adorno: lo que el
+reconocedor entrega no entra en la columna tal cual. La palabra «agregar» es la
+que dispara el alta, de modo que lo dictado siempre se ve en el campo antes de
+que se cree nada. Lo que no se puede convertir se deja tal como se escuchó, para
+que el usuario lo corrija con el teclado; una fecha adivinada es peor que un
+campo mal escrito, porque el campo mal escrito se ve.
+
+**El modelo en el aparato es el tercer escalón, y solo propone.** Cuando la
+gramática determinista no entiende, entra Gemma 3 1B en formato int4 mediante
+`flutter_gemma`, corriendo dentro del teléfono y sin salir a ninguna red. Y entra
+con la misma barrera que rige en todo el sistema: **el modelo no emite
+operaciones, propone una frase canónica que la gramática determinista vuelve a
+interpretar**, y el usuario confirma antes de que se aplique. La barrera no es
+ceremonia. En el cliente web ya ocurrió que un respaldo por inteligencia
+artificial aplicara sin revisión y creara clases fantasma en silencio: el modelo
+propone, las reglas disponen. Si el modelo no está, o no carga, la aplicación
+funciona completa y pierde únicamente ese escalón, que por eso se construyó
+último.
+
+**Límites declarados.** Cinco, y se declaran porque el código no los cumple y
+sostener lo contrario sería una promesa vacía:
+
+- El formulario muestra los **atributos** de la clase, no sus relaciones, de modo
+  que una entidad cuya clave ajena es obligatoria no se puede crear desde el
+  teléfono. En el modelo de prueba, `Paciente` y `Medico` se cargan sin
+  inconveniente; `Consulta` y `Medicamento` exigen su padre.
+- El almacén local **no separa por diagrama**: hay un backend generado por vez.
+- El backend generado **no tiene idempotencia**. El identificador de operación
+  ordena la cola puertas adentro del teléfono y marca la fila local como
+  pendiente, pero el `@PostMapping` que emite el generador recibe la entidad
+  pelada y no tiene dónde recibirlo ni con qué compararlo. La consecuencia es
+  concreta: un alta que llega pero cuya respuesta se pierde queda encolada, y la
+  siguiente sincronización duplica la fila. La idempotencia por token existe en
+  FORJA, donde hay una tabla `operacion` con unicidad por diagrama y token del
+  cliente, y el supuesto se copió desde ahí a un backend que no tiene esa tabla.
+- El **dictado requiere conexión en el teléfono de prueba**, que no tiene
+  descargado el paquete de español para reconocimiento sin conexión. El
+  reconocedor es un servicio de Android y no una pieza del proyecto; en un
+  aparato que traiga el paquete alcanza con volver a pedir el reconocimiento en
+  el dispositivo, que es una opción de la llamada.
+- El **modelo nunca se ejecutó con el archivo real**: los 529 MB no están en el
+  equipo de desarrollo. Lo verificado es lo contrario, y no es poco: que sin ese
+  archivo la aplicación funciona entera y pierde solo el tercer escalón.
 
 ---
 
@@ -1419,11 +1669,19 @@ secuencia conocida, en lugar del modelo completo.
 
 ### 2.5.1 Estrategia
 
-La verificación automatizada comprende **298 pruebas** que se ejecutan contra una
-instancia real de PostgreSQL y no contra una base en memoria. La decisión es
-deliberada: la exclusión mutua y la serialización de la bitácora las arbitra el
-motor de base de datos, y contra un sustituto no se estaría probando lo que
-importa.
+La verificación automatizada comprende **610 pruebas**: 340 del servidor y 270
+del cliente móvil, todas en verde al cierre de este documento. Las del servidor
+se ejecutan contra una instancia real de PostgreSQL y no contra una base en
+memoria. La decisión es deliberada: la exclusión mutua y la serialización de la
+bitácora las arbitra el motor de base de datos, y contra un sustituto no se
+estaría probando lo que importa.
+
+Las del cliente móvil corren con `flutter test` y no necesitan servidor: el
+cliente HTTP se sustituye, de modo que lo que se verifica es la lógica del
+teléfono —qué ruta deduce, dónde cae lo dictado, qué hace la cola cuando el
+servidor no está— y no la disponibilidad de la red. El modelo de lenguaje entra
+como una función que se le pasa al asistente, precisamente para que sus pruebas
+no dependan de cargar 529 MB.
 
 Las pruebas corren sobre una **base de datos separada** de la de desarrollo. La
 suite vacía todas las tablas al iniciar y al terminar, y mientras compartió base
@@ -1443,6 +1701,10 @@ probando la aplicación.
 | Agente guía | Que responda siempre, que no lo rompa ninguna entrada, y el orden reglas-modelo |
 | API | Recorrido completo de dos personas sobre el mismo diagrama |
 | Sesión | Credencial válida cuya cuenta ya no existe |
+| Móvil: derivación de pantallas | Que la ruta y los campos salgan del diagrama, y que los espejos de `Nombres.java` y `TipoJava.java` no se separen de su par |
+| Móvil: cola sin conexión | Alta sin red, encolado, vaciado y la diferencia entre un corte y un rechazo definitivo |
+| Móvil: dictado sobre el formulario | En qué campo cae cada valor y cómo se convierte al tipo declarado |
+| Móvil: el modelo como tercer escalón | Que la gramática se intente primero, que el modelo solo proponga y que su ausencia no rompa nada |
 
 ### 2.5.3 Pruebas de seguridad
 
@@ -1480,6 +1742,17 @@ defecto había permanecido oculto porque las pruebas de ida y vuelta se hacían
 sobre documentos generados por la propia herramienta —un sesgo característico al
 verificar un formato de intercambio—.
 
+**El cliente móvil contra el backend generado.** El recorrido se probó con el
+teléfono en la mano y el backend generado corriendo en el equipo: se bajó la
+definición de un diagrama de clínica, la aplicación derivó de él una pantalla por
+entidad sin que se recompilara nada, y se cargaron registros de `Paciente` y de
+`Medico` tanto con el teclado como por dictado. De ahí salieron dos de los
+límites declarados en 2.4.6, y salieron de usar la aplicación y no de leer el
+código: que una entidad con clave ajena obligatoria no puede crearse desde el
+formulario, porque el formulario muestra atributos y no relaciones, y que el
+reconocimiento de voz de ese aparato pide conexión por no tener descargado el
+paquete de español.
+
 ---
 
 # Bibliografía
@@ -1512,12 +1785,39 @@ verificar un formato de intercambio—.
 
 ## A. Repositorio
 
-El código fuente completo, con las 55 confirmaciones fechadas que documentan el
+El código fuente completo, con las 116 confirmaciones fechadas que documentan el
 proceso, está disponible en:
 
 **https://github.com/santiagoarteaga0704/Forja**
 
-## B. Documentación técnica complementaria
+![Código QR del repositorio](diagramas/qr-repositorio.png)
+
+*Figura 8. Código QR del repositorio. Lleva a
+`https://github.com/santiagoarteaga0704/Forja`, donde están el código fuente de
+los tres módulos, la historia de confirmaciones fechadas y esta misma
+documentación con sus figuras.*
+
+## B. La aplicación desplegada
+
+FORJA está publicada y es alcanzable desde cualquier red, sin instalar nada, en:
+
+**https://d2x41sl49sltgo.cloudfront.net**
+
+![Código QR de la aplicación desplegada](diagramas/qr-servidor.png)
+
+*Figura 9. Código QR de la aplicación desplegada. Lleva a
+`https://d2x41sl49sltgo.cloudfront.net`, la instancia EC2 servida por HTTPS a
+través de CloudFront. Es también la dirección con la que el cliente móvil entra a
+bajar la definición del diagrama.*
+
+En la versión desplegada la lectura de fotografías de pizarra funciona —usa un
+servicio remoto y solo necesita su clave—, mientras que el pedido en lenguaje
+libre del cliente web y el modelo del agente quedan apagados, por lo que se
+explica en 2.3.1.1. Los registros que se cargan desde el teléfono no van a esta
+dirección: van al backend generado, que se levanta en el equipo de la
+demostración según el anexo D.
+
+## C. Documentación técnica complementaria
 
 | Documento | Contenido |
 |---|---|
@@ -1526,8 +1826,14 @@ proceso, está disponible en:
 | `docs/ejemplos/clinica-desde-ea.xmi` | Modelo generado por Enterprise Architect, para probar la importación |
 | `herramientas/crear-ejemplo-ea.ps1` | Genera ese ejemplo por automatización COM |
 | `herramientas/medir-el-modelo.py` | Mide el tiempo de respuesta del modelo de lenguaje |
+| `docs/despliegue.md` | Cómo se publicó la herramienta: imagen, instancia, HTTPS |
+| `docs/como-probarlo-en-el-telefono.md` | Instalación del APK y puesta a punto del teléfono |
+| `docs/ejemplos/universidad-desde-ea.xmi` | Modelo grande de Enterprise Architect, para importaciones exigentes |
 
-## C. Cómo poner el sistema en marcha
+## D. Cómo poner el sistema en marcha
+
+**FORJA, en desarrollo.** La versión desplegada no necesita nada de esto; estos
+pasos son para levantarla en un equipo propio.
 
 ```powershell
 docker compose up -d                                  # PostgreSQL
@@ -1539,8 +1845,46 @@ cd web
 npm run dev                                           # cliente en 5173
 ```
 
-## D. Requisito de memoria del modelo de lenguaje
+**El backend generado.** Se descarga desde FORJA como un archivo comprimido y se
+descomprime en cualquier carpeta. Los dos comandos se dan desde adentro del
+proyecto descomprimido, no desde el de FORJA:
 
-Gemma 3 4B ocupa 3,5 GB de memoria de vídeo. Si el equipo tiene menos disponible,
-Ollama reparte la carga con el procesador y el tiempo de respuesta se triplica. La
-comprobación es `ollama ps`: la columna `PROCESSOR` debe indicar 100 % GPU.
+```powershell
+docker compose up -d                                  # su PostgreSQL, en 5442
+./mvnw spring-boot:run                                # el servicio, en 8081
+```
+
+La documentación interactiva de su API queda en
+`http://localhost:8081/swagger-ui.html`, que es la forma más rápida de comprobar
+que las cinco rutas de cada entidad existen y contestan. Esa misma dirección,
+con la dirección IP de la máquina en lugar de `localhost`, es la que se carga en
+el cliente móvil para que empiece a escribir registros.
+
+**El cliente móvil.**
+
+```powershell
+cd movil
+flutter build apk --release --split-per-abi
+```
+
+Se instala el APK `arm64-v8a`, que es el que corresponde a un teléfono Android
+actual. El modelo de lenguaje, si se quiere el tercer escalón del dictado, se
+copia aparte con `adb push` a la carpeta externa de la aplicación: son 529 MB y
+no viajan dentro del APK ni dentro del repositorio.
+
+## E. Requisito de memoria del modelo de lenguaje
+
+Hay dos modelos y son distintos, uno por cliente.
+
+**En el equipo, para el cliente web.** Gemma 3 4B ocupa 3,5 GB de memoria de
+vídeo. Si el equipo tiene menos disponible, Ollama reparte la carga con el
+procesador y el tiempo de respuesta se triplica. La comprobación es `ollama ps`:
+la columna `PROCESSOR` debe indicar 100 % GPU.
+
+**En el teléfono, para el cliente móvil.** Gemma 3 1B en formato int4 ocupa
+529 MB en disco. El archivo no entra al repositorio —GitHub rechaza archivos de
+más de 100 MB, y almacenarlo aparte gastaría esos 529 MB en cada clonación— de
+modo que se copia una vez con `adb push` a la carpeta externa de la aplicación,
+que es la única en la que `adb` escribe sin privilegios especiales. La aplicación
+lo busca allí al arrancar; si no está, sigue funcionando sin el tercer escalón
+del dictado.
