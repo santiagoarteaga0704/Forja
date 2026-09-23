@@ -10,10 +10,11 @@
 | 5 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
 | 6 | Modelo de despliegue | 2.3.1.1 |
 | 7 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
-| 8 | Código QR del repositorio | Anexo A |
-| 9 | Código QR de la aplicación desplegada | Anexo B |
+| 8 | Modelo físico de datos (tablas, tipos y claves) | 2.3.2.2 |
+| 9 | Código QR del repositorio | Anexo A |
+| 10 | Código QR de la aplicación desplegada | Anexo B |
 
-Las siete primeras figuras se construyeron en **Enterprise Architect 17.2**
+Las ocho primeras figuras se construyeron en **Enterprise Architect 17.2**
 mediante automatización COM; el guion que las genera queda en el repositorio.
 Las dos últimas son códigos QR generados por guion y verificados
 decodificándolos.
@@ -1204,7 +1205,18 @@ hereda: el backend generado no tiene esta tabla, de modo que la segunda cola del
 cliente móvil —la que escribe registros— no es idempotente. Se detalla en
 2.4.6.
 
-#### 2.3.2.2 Diseño físico — Tabla de volumen
+#### 2.3.2.2 Diseño físico
+
+El esquema que sigue no es una traducción del modelo lógico hecha para el
+documento: es el que crean las migraciones `V1__init.sql` y
+`V2__uso_herramienta.sql`, que son las que corre Flyway al arrancar. Los nombres
+y los tipos están copiados de ahí.
+
+![Modelo físico de datos](diagramas/modelo-fisico.png)
+
+*Figura 8. Modelo físico de datos. Cada caja es una tabla con sus columnas y el tipo de PostgreSQL; `PK` marca la clave primaria —compuesta en `proyecto_miembro` y en `uso_herramienta`— y `FK` la clave ajena. Las flechas son las restricciones referenciales. `relacion_uml` referencia dos veces a `clase_uml`, por `origen_id` y por `destino_id`, y se dibuja con un solo conector porque ambos van entre las mismas dos cajas.*
+
+**Tabla de volumen**
 
 **usuario**
 
@@ -1728,7 +1740,7 @@ proceso, está disponible en:
 
 ![Código QR del repositorio](diagramas/qr-repositorio.png)
 
-*Figura 8. Código QR del repositorio. Lleva a
+*Figura 9. Código QR del repositorio. Lleva a
 `https://github.com/santiagoarteaga0704/Forja`, donde están el código fuente de
 los tres módulos, la historia de confirmaciones fechadas y esta misma
 documentación con sus figuras.*
@@ -1741,7 +1753,7 @@ FORJA está publicada y es alcanzable desde cualquier red, sin instalar nada, en
 
 ![Código QR de la aplicación desplegada](diagramas/qr-servidor.png)
 
-*Figura 9. Código QR de la aplicación desplegada. Lleva a
+*Figura 10. Código QR de la aplicación desplegada. Lleva a
 `https://d2x41sl49sltgo.cloudfront.net`, la instancia EC2 servida por HTTPS a
 través de CloudFront. Es también la dirección con la que el cliente móvil entra a
 bajar la definición del diagrama.*

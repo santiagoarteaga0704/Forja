@@ -42,7 +42,7 @@ if (-not (Test-Path $cuerpoMd)) { throw "No se encontro $cuerpoMd" }
 # --- 1. Imagenes -----------------------------------------------------------
 Write-Host "`n[1/4] Verificando las imagenes del documento..." -ForegroundColor Cyan
 
-# Las siete figuras salen de Enterprise Architect con herramientas\crear-diagramas.ps1
+# Las ocho figuras salen de Enterprise Architect con herramientas\crear-diagramas.ps1
 # y los dos codigos QR de herramientas\crear-qr.mjs. Este guion NO las genera:
 # solo comprueba que esten, para no tapar con otra herramienta las que ya hay.
 # El Markdown las referencia como diagramas\xxx.png, o sea relativas a docs\.

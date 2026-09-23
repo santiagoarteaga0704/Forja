@@ -1,4 +1,4 @@
-# Genera en Enterprise Architect las siete figuras del documento y las exporta
+# Genera en Enterprise Architect las ocho figuras del documento y las exporta
 # como PNG a docs/diagramas.
 #
 # Se hace con EA y no con una herramienta de dibujo por dos razones: la notacion
@@ -85,7 +85,27 @@ function Componer($todo, $parte, $multiplicidad = '0..*') {
   return $c
 }
 
+function Ajena($hijo, $padre, $nombre = '') {
+  # Clave ajena del modelo fisico: se traza de la tabla que la declara hacia la
+  # referenciada, con la multiplicidad del lado que corresponde. No lleva rombo
+  # -eso es composicion, y aqui lo que hay es una restriccion referencial-.
+  $c = $hijo.Connectors.AddNew($nombre, 'Association')
+  $c.SupplierID = $padre.ElementID
+  $c.Direction = 'Source -> Destination'
+  [void]$c.Update()
+  $c.ClientEnd.Cardinality = '0..*'
+  $c.SupplierEnd.Cardinality = '1'
+  [void]$c.Update()
+  return $c
+}
+
 # t y b van negados: EA cuenta el eje vertical hacia arriba.
+#
+# OJO: l NO puede valer 0. Con «l=0;...» EA descarta la ubicacion entera y el
+# elemento no se dibuja: no avisa, no falla, simplemente falta en el PNG. Al
+# angostar los diagramas se puso la primera columna en x=0 y desaparecieron
+# tres clases del modelo de datos sin un solo error. La primera columna
+# arranca en 20.
 function Ubicar($diagrama, $elemento, $l, $t, $ancho, $alto) {
   $o = $diagrama.DiagramObjects.AddNew("l=$l;r=$($l+$ancho);t=$(-$t);b=$(-($t+$alto));", '')
   $o.ElementID = $elemento.ElementID
@@ -168,12 +188,22 @@ foreach ($k in 'CU16','CU17') { [void](Conectar $c2[$k] $ea2  'Association') }
 
 $dia2 = $paq2.Diagrams.AddNew('Casos de Uso - Ciclo 2', 'Use Case')
 [void]$dia2.Update(); $paq2.Diagrams.Refresh()
-Ubicar $dia2 $mod2   40 380  90 100
-Ubicar $dia2 $llm2 1120 180 110 100
-Ubicar $dia2 $ea2  1120 680 110 100
+# Las tres columnas van juntas a proposito. Lo unico que decide si el texto se
+# lee al pegar la figura en Word es la relacion entre el alto de linea y el
+# ancho de la imagen: Word la reduce al ancho util de la pagina, de modo que
+# cuanto mas ancho el PNG, mas chica la letra. Con los actores secundarios en
+# x=1120 el PNG salia de 1822 puntos de ancho y la letra quedaba en dos puntos.
+# La correccion es angostar el dibujo -acercar las columnas-, NO agrandar la
+# fuente: agrandarla ensancha las cajas y el resultado es el mismo. Medido: el
+# PNG baja de 1822 a poco mas de 900 puntos, por debajo de los 1050 que hacen
+# falta para que el texto salga a ocho puntos en una pagina de dieciseis
+# centimetros. El orden vertical no se toca, que es lo que evita los cruces.
+Ubicar $dia2 $mod2   20 380  90 100
+Ubicar $dia2 $llm2  430 180 110 100
+Ubicar $dia2 $ea2   430 680 110 100
 $y = 40
 foreach ($k in 'CU11','CU12','CU13','CU14','CU15','CU16','CU17','CU18') {
-  Ubicar $dia2 $c2[$k] 400 $y 260 70; $y += 110
+  Ubicar $dia2 $c2[$k] 160 $y 260 70; $y += 110
 }
 $dia2.DiagramObjects.Refresh()
 Exportar $dia2 'casos-de-uso-ciclo2.png'
@@ -402,20 +432,147 @@ Atributo $uso 'herramienta' 'Herramienta'; Atributo $uso 'veces' 'int'
 
 $diaC = $paqC.Diagrams.AddNew('Modelo de Datos', 'Logical')
 [void]$diaC.Update(); $paqC.Diagrams.Refresh()
-Ubicar $diaC $usuario   40   40 220 130
-Ubicar $diaC $proy     320   40 220 120
-Ubicar $diaC $oper     880   40 240 150
-Ubicar $diaC $uso       40  260 220  90
-Ubicar $diaC $miembro  320  260 220  90
-Ubicar $diaC $bloq     880  260 240 130
-Ubicar $diaC $diag     320  450 220 120
-Ubicar $diaC $rel      880  450 240 130
-Ubicar $diaC $clase    320  660 220 160
-Ubicar $diaC $atr       20  900 230 160
-Ubicar $diaC $met      340  900 220 130
-Ubicar $diaC $parU     340 1110 220 100
+# Misma rejilla de tres columnas que antes, pero angostada: la disposicion no
+# cambia, cambia el ancho. Las cajas eran de 220 a 240 puntos y la linea mas
+# larga -«multiplicidadDestino: String»- ocupa bastante menos, de modo que
+# sobraba casi un tercio de caja vacia y la tercera columna arrancaba en x=880.
+# El PNG salia de 1686 puntos y en la hoja, reducido al ancho util, la letra
+# quedaba diminuta. Los huecos entre columnas se dejan holgados a proposito:
+# ahi van los rotulos de multiplicidad, y pegando las columnas se montaban
+# sobre el borde de la caja vecina.
+Ubicar $diaC $usuario   20   40 140 130
+Ubicar $diaC $proy     200   40 140 120
+Ubicar $diaC $oper     380   40 150 150
+Ubicar $diaC $uso       20  260 140  90
+Ubicar $diaC $miembro  200  260 140  90
+Ubicar $diaC $bloq     380  260 150 130
+Ubicar $diaC $diag     200  450 140 120
+Ubicar $diaC $rel      380  450 150 130
+Ubicar $diaC $clase    200  660 140 160
+Ubicar $diaC $atr       20  900 140 160
+Ubicar $diaC $met      200  900 140 130
+Ubicar $diaC $parU     200 1110 140 100
 $diaC.DiagramObjects.Refresh()
 Exportar $diaC 'modelo-de-datos.png'
+
+# =====================================================================
+# Figura 8. Modelo fisico de datos
+# =====================================================================
+# La figura anterior es el modelo LOGICO: clases con atributos de dominio. Esta
+# es el esquema tal como existe en PostgreSQL, y por eso no se copia de las
+# entidades de Java sino de las migraciones -V1__init.sql y
+# V2__uso_herramienta.sql-, que son las que corre Flyway y por lo tanto la
+# unica fuente de verdad. Nombres y tipos van literales del SQL: `pos_x`, no
+# `posX`; `VARCHAR(180)`, no `String`.
+#
+# Las claves se marcan en el propio tipo -«id: UUID PK», «proyecto_id: UUID
+# FK»- en lugar de con un estereotipo o un icono, porque se lee sin leyenda y
+# sobrevive a la reduccion de la imagen en la hoja.
+$paqF = NuevoPaquete $modelo 'Modelo Fisico'
+
+function Tabla($paquete, $nombre, $columnas) {
+  $e = NuevoElemento $paquete $nombre 'Class'
+  # Sin estereotipo a proposito: «table» y «entity» hacen que EA dibuje un
+  # icono en lugar de la caja con compartimentos, que es justo lo que se
+  # necesita para ver las columnas.
+  foreach ($c in $columnas) { Atributo $e $c[0] $c[1] }
+  return $e
+}
+
+$tb = @{}
+$tb['usuario'] = Tabla $paqF 'usuario' @(
+  @('id','UUID PK'), @('email','VARCHAR(180) UNIQUE'), @('password_hash','VARCHAR(120)'),
+  @('nombre','VARCHAR(120)'), @('activo','BOOLEAN'), @('creado_en','TIMESTAMPTZ'))
+$tb['proyecto'] = Tabla $paqF 'proyecto' @(
+  @('id','UUID PK'), @('nombre','VARCHAR(150)'), @('descripcion','TEXT'),
+  @('propietario_id','UUID FK'), @('creado_en','TIMESTAMPTZ'), @('actualizado_en','TIMESTAMPTZ'))
+$tb['proyecto_miembro'] = Tabla $paqF 'proyecto_miembro' @(
+  @('proyecto_id','UUID PK FK'), @('usuario_id','UUID PK FK'), @('rol','VARCHAR(20)'),
+  @('invitado_en','TIMESTAMPTZ'))
+$tb['diagrama'] = Tabla $paqF 'diagrama' @(
+  @('id','UUID PK'), @('proyecto_id','UUID FK'), @('nombre','VARCHAR(150)'),
+  @('tipo','VARCHAR(20)'), @('version','BIGINT'), @('creado_en','TIMESTAMPTZ'),
+  @('actualizado_en','TIMESTAMPTZ'))
+$tb['clase_uml'] = Tabla $paqF 'clase_uml' @(
+  @('id','UUID PK'), @('diagrama_id','UUID FK'), @('nombre','VARCHAR(120)'),
+  @('estereotipo','VARCHAR(60)'), @('es_abstracta','BOOLEAN'), @('pos_x','DOUBLE PRECISION'),
+  @('pos_y','DOUBLE PRECISION'), @('ancho','DOUBLE PRECISION'), @('alto','DOUBLE PRECISION'),
+  @('creado_en','TIMESTAMPTZ'))
+$tb['atributo_uml'] = Tabla $paqF 'atributo_uml' @(
+  @('id','UUID PK'), @('clase_id','UUID FK'), @('nombre','VARCHAR(120)'),
+  @('tipo','VARCHAR(80)'), @('visibilidad','VARCHAR(12)'), @('es_identificador','BOOLEAN'),
+  @('es_requerido','BOOLEAN'), @('es_unico','BOOLEAN'), @('longitud','INTEGER'),
+  @('valor_defecto','VARCHAR(120)'), @('orden','INTEGER'))
+$tb['metodo_uml'] = Tabla $paqF 'metodo_uml' @(
+  @('id','UUID PK'), @('clase_id','UUID FK'), @('nombre','VARCHAR(120)'),
+  @('tipo_retorno','VARCHAR(80)'), @('visibilidad','VARCHAR(12)'), @('es_abstracto','BOOLEAN'),
+  @('es_estatico','BOOLEAN'), @('orden','INTEGER'))
+$tb['parametro_uml'] = Tabla $paqF 'parametro_uml' @(
+  @('id','UUID PK'), @('metodo_id','UUID FK'), @('nombre','VARCHAR(120)'),
+  @('tipo','VARCHAR(80)'), @('orden','INTEGER'))
+$tb['relacion_uml'] = Tabla $paqF 'relacion_uml' @(
+  @('id','UUID PK'), @('diagrama_id','UUID FK'), @('origen_id','UUID FK'),
+  @('destino_id','UUID FK'), @('tipo','VARCHAR(20)'), @('multiplicidad_origen','VARCHAR(10)'),
+  @('multiplicidad_destino','VARCHAR(10)'), @('rol_origen','VARCHAR(120)'),
+  @('rol_destino','VARCHAR(120)'), @('etiqueta','VARCHAR(150)'))
+$tb['bloqueo_elemento'] = Tabla $paqF 'bloqueo_elemento' @(
+  @('id','UUID PK'), @('diagrama_id','UUID FK'), @('elemento_tipo','VARCHAR(20)'),
+  @('elemento_id','UUID'), @('usuario_id','UUID FK'), @('sesion_id','VARCHAR(80)'),
+  @('adquirido_en','TIMESTAMPTZ'), @('expira_en','TIMESTAMPTZ'))
+$tb['operacion'] = Tabla $paqF 'operacion' @(
+  @('id','UUID PK'), @('diagrama_id','UUID FK'), @('secuencia','BIGINT'),
+  @('usuario_id','UUID FK'), @('tipo','VARCHAR(40)'), @('carga','JSONB'),
+  @('token_cliente','VARCHAR(80)'), @('origen','VARCHAR(20)'), @('creada_en','TIMESTAMPTZ'))
+$tb['uso_herramienta'] = Tabla $paqF 'uso_herramienta' @(
+  @('usuario_id','UUID PK FK'), @('herramienta','VARCHAR(40) PK'), @('veces','INTEGER'),
+  @('primera_vez','TIMESTAMPTZ'), @('ultima_vez','TIMESTAMPTZ'))
+
+[void](Ajena $tb['proyecto']         $tb['usuario'])
+[void](Ajena $tb['proyecto_miembro'] $tb['proyecto'])
+[void](Ajena $tb['proyecto_miembro'] $tb['usuario'])
+[void](Ajena $tb['uso_herramienta']  $tb['usuario'])
+[void](Ajena $tb['diagrama']         $tb['proyecto'])
+[void](Ajena $tb['clase_uml']        $tb['diagrama'])
+[void](Ajena $tb['bloqueo_elemento'] $tb['diagrama'])
+[void](Ajena $tb['bloqueo_elemento'] $tb['usuario'])
+[void](Ajena $tb['operacion']        $tb['diagrama'])
+[void](Ajena $tb['operacion']        $tb['usuario'])
+[void](Ajena $tb['relacion_uml']     $tb['diagrama'])
+# relacion_uml tiene DOS ajenas hacia clase_uml, origen_id y destino_id, pero
+# se dibuja un solo conector rotulado: dos conectores entre el mismo par de
+# cajas quedan uno encima del otro y se ven como uno solo, con la diferencia de
+# que asi el rotulo miente menos. Las dos columnas figuran igual en la caja.
+[void](Ajena $tb['atributo_uml']     $tb['clase_uml'])
+[void](Ajena $tb['metodo_uml']       $tb['clase_uml'])
+[void](Ajena $tb['parametro_uml']    $tb['metodo_uml'])
+[void](Ajena $tb['relacion_uml']     $tb['clase_uml'] 'origen / destino')
+
+$diaF = $paqF.Diagrams.AddNew('Modelo Fisico de Datos', 'Logical')
+[void]$diaF.Update(); $paqF.Diagrams.Refresh()
+# Doce tablas en tres columnas por cuatro filas, y no en una sola fila, por el
+# limite de ancho: en fila unica el PNG pasaria de los cuatro mil puntos. El
+# reparto no es arbitrario, agrupa por quien referencia a quien para que las
+# ajenas queden entre cajas vecinas: `usuario` arriba a la izquierda con lo que
+# cuelga de el, `diagrama` en el centro con el modelo UML debajo.
+# Las columnas de la izquierda y del centro llevan 160 puntos; la de la derecha
+# 190, porque ahi vive `multiplicidad_destino: VARCHAR(10)`, la linea mas larga
+# del esquema, y con menos se recortaria. Los 70 puntos de hueco entre columnas
+# no son decoracion: son el lugar donde EA dibuja los rotulos de multiplicidad,
+# y con las columnas pegadas se montaban sobre el borde de la caja de al lado.
+Ubicar $diaF $tb['usuario']           20   40 165 112
+Ubicar $diaF $tb['proyecto']         215   40 165 112
+Ubicar $diaF $tb['proyecto_miembro'] 405   40 190  86
+Ubicar $diaF $tb['uso_herramienta']   20  222 165  99
+Ubicar $diaF $tb['diagrama']         215  222 165 125
+Ubicar $diaF $tb['bloqueo_elemento'] 405  222 190 138
+Ubicar $diaF $tb['operacion']         20  430 165 151
+Ubicar $diaF $tb['clase_uml']        215  430 165 164
+Ubicar $diaF $tb['relacion_uml']     405  430 190 164
+Ubicar $diaF $tb['atributo_uml']      20  664 165 177
+Ubicar $diaF $tb['metodo_uml']       215  664 165 138
+Ubicar $diaF $tb['parametro_uml']    405  664 190  99
+$diaF.DiagramObjects.Refresh()
+Exportar $diaF 'modelo-fisico.png'
 
 $repo.CloseFile()
 $repo.Exit()
