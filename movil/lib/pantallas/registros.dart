@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../generado/asistente.dart';
-import '../generado/dictado_de_registros.dart';
+import '../generado/dictado_de_campos.dart';
 import '../generado/repositorio.dart';
 import '../generado/tipos_de_campo.dart';
 import '../generado/voz_registros.dart';
@@ -54,7 +54,15 @@ class PantallaRegistros extends StatefulWidget {
 
 class _PantallaRegistrosState extends State<PantallaRegistros> {
   late Future<List<Map<String, dynamic>>> _filas;
-  final _valores = <String, String>{};
+
+  /// Una caja de texto por campo, y la caja es la unica fuente de verdad.
+  ///
+  /// Antes lo dictado se guardaba en un mapa aparte y se creaba el registro de
+  /// una: el usuario nunca veia lo que se habia entendido. Ahora el dictado
+  /// escribe ACA, en la caja, que es lo mismo que hace el teclado: lo dictado
+  /// se lee, se corrige y recien despues se da de alta.
+  final _controladores = <String, TextEditingController>{};
+
   final SpeechToText _voz = SpeechToText();
 
   /// Un dictado por vez. Sin esto, dos toques al microfono abren dos chats
@@ -73,11 +81,28 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
   void initState() {
     super.initState();
     _filas = widget.repositorio.filas(widget.clase.nombre);
+    for (final atributo in _editables) {
+      _controladores[atributo.nombre] = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controlador in _controladores.values) {
+      controlador.dispose();
+    }
+    super.dispose();
   }
 
   /// Los identificadores no se piden: los pone el backend generado.
-  Iterable<Atributo> get _editables =>
-      widget.clase.atributos.where((a) => !a.esIdentificador);
+  List<Atributo> get _editables =>
+      widget.clase.atributos.where((a) => !a.esIdentificador).toList();
+
+  /// Lo que hay escrito ahora en la ficha, sin espacios de sobra.
+  Map<String, String> get _valores => {
+        for (final atributo in _editables)
+          atributo.nombre: (_controladores[atributo.nombre]?.text ?? '').trim(),
+      };
 
   TextInputType _tecladoDe(Atributo atributo) => switch (claseDeCampoDe(atributo.tipo)) {
         ClaseDeCampo.entero => TextInputType.number,
@@ -86,18 +111,57 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
         _ => TextInputType.text,
       };
 
+  /// Crea el registro, pero solo si esta entero.
+  ///
+  /// El backend generado emite las columnas con `nullable = false`, asi que un
+  /// campo que falta no es un registro incompleto: es un 500. Y un 500 se
+  /// trata como error temporal, o sea que la operacion se queda en la cola y
+  /// se reintenta para siempre. Un solo alta a medio llenar deja la cola
+  /// trabada sin salida. Por eso la validacion vive aca, antes de encolar
+  /// nada, y no se confia en que el servidor avise.
+  ///
+  /// Se exigen TODOS los campos editables y no solo los marcados `esRequerido`
+  /// en el diagrama: se probo contra el backend generado y rechaza cualquier
+  /// campo faltante, tenga o no la marca. El diagrama miente por omision y lo
+  /// que manda es lo que el servidor hace.
   Future<void> _guardar() async {
-    await widget.repositorio.crear(widget.clase.nombre, Map.of(_valores));
-    _valores.clear();
+    if (_sinAtributos) return;
+
+    final valores = _valores;
+    final faltan = _editables
+        .map((a) => a.nombre)
+        .where((nombre) => (valores[nombre] ?? '').isEmpty)
+        .toList();
+
+    if (faltan.isNotEmpty) {
+      _avisar(faltan.length == 1
+          ? 'Falta ${faltan.single}: el backend generado no acepta el registro sin ese campo.'
+          : 'Faltan ${faltan.join(', ')}: el backend generado no acepta el registro con campos vacíos.');
+      return;
+    }
+
+    await widget.repositorio.crear(widget.clase.nombre, valores);
+    for (final controlador in _controladores.values) {
+      controlador.clear();
+    }
+    if (!mounted) return;
     setState(() => _filas = widget.repositorio.filas(widget.clase.nombre));
   }
 
   // ---------- Dictado --------------------------------------------------
 
-  /// Dicta un alta: "agrega un paciente llamado Juan". Usa el mismo cuadro de
-  /// dictado que el lienzo -HojaDeDictado, en voz/hoja_de_dictado.dart- para
-  /// que haya un solo lugar donde arreglar como se escucha, no dos que se van
-  /// separando con el tiempo.
+  /// Dicta UN campo de la ficha, no un registro entero.
+  ///
+  /// Asi lo dicto el usuario en el telefono y asi es como funciona: un toque
+  /// de microfono, un valor, y el valor aparece en la caja. «agregar» es lo
+  /// que crea. El camino anterior -una frase, un registro creado de una- no
+  /// podia funcionar: la gramatica llena un solo campo y Paciente tiene tres
+  /// obligatorios, asi que cada dictado creaba un registro que el backend
+  /// rechazaba con 500.
+  ///
+  /// Usa el mismo cuadro de dictado que el lienzo -HojaDeDictado, en
+  /// voz/hoja_de_dictado.dart- para que haya un solo lugar donde arreglar como
+  /// se escucha, no dos que se van separando con el tiempo.
   Future<void> _dictar() async {
     if (_dictando) return;
     setState(() => _dictando = true);
@@ -129,50 +193,80 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
       builder: (_) => HojaDeDictado(
         voz: _voz,
         idioma: idioma,
-        ejemplo: 'Por ejemplo: "agrega un paciente llamado Juan"',
+        ejemplo: _ejemploDeDictado,
       ),
     );
     await _voz.stop();
     if (frase == null || frase.trim().isEmpty) return;
 
-    // Se interpreta aca, en el aparato: sin esto dictar un registro
-    // necesitaria red, y la restriccion del proyecto es que ninguna pantalla
-    // la necesite para abrirse ni para operar sin conexion.
-    final dictado = await resolverPedidoDictado(
+    // Se ubica aca, en el aparato: sin esto dictar necesitaria red, y la
+    // restriccion del proyecto es que ninguna pantalla la necesite para
+    // abrirse ni para operar sin conexion.
+    var dictado = ubicarDictado(
       frase: frase,
-      diagrama: widget.diagrama,
-      // El valor se lee ACA y no se guarda en initState: si el modelo termino
-      // de cargar despues de abrir esta pantalla, este es el momento en que ya
-      // esta.
-      asistente: _asistente.value,
-      alPensar: (piensa) {
-        if (mounted) setState(() => _pensando = piensa);
-      },
-      confirmar: (canonica, pedido) async =>
-          mounted && await confirmarPedidoDictado(context, canonica, pedido),
+      campos: _editables,
+      valores: _valores,
     );
 
-    if (dictado.cancelado) {
-      _avisar('No se creo nada.');
+    // El modelo es el segundo escalon y solo el segundo: entra cuando las
+    // reglas no supieron donde poner lo dictado. Propone una frase canonica
+    // que vuelve a pasar por las mismas reglas, asi que no puede nombrar un
+    // campo que no este en el diagrama ni escribir en la base por su cuenta.
+    if (dictado.vacio) dictado = await _ubicarConElModelo(frase);
+
+    if (!mounted) return;
+    if (dictado.esAlta) {
+      await _guardar();
       return;
     }
-    final pedido = dictado.pedido;
-    if (pedido == null) {
-      // No se inventa nada: si la entidad o el campo no estan en el diagrama,
-      // se muestra lo que se entendio y no se crea nada. Vale igual cuando la
-      // frase paso por el modelo: lo que el modelo propone tambien tiene que
-      // caer dentro del diagrama.
-      _avisar('No entendi: "$frase"');
+    if (dictado.campos.isEmpty) {
+      _avisar('No entendí dónde poner "$frase". Nombrá el campo, o escribilo con el teclado.');
       return;
     }
 
-    // Si el usuario se fue de la pantalla mientras el modelo pensaba, no se
-    // crea nada: la fila se guardaria igual y no quedaria nadie para avisar.
-    if (!mounted) return;
-    await widget.repositorio.crear(pedido.clase, pedido.datos);
-    if (!mounted) return;
-    setState(() => _filas = widget.repositorio.filas(widget.clase.nombre));
-    _avisar('Agregado a ${pedido.clase}.');
+    // Se escribe en la ficha y nada mas: lo dictado se ve, se puede corregir
+    // con el teclado, y no sale del telefono hasta que alguien toque
+    // «Agregar». Es el freno que faltaba.
+    setState(() {
+      for (final campo in dictado.campos) {
+        _controladores[campo.campo]?.text = campo.valor;
+      }
+    });
+    _avisar('Escrito en ${dictado.campos.map((c) => c.campo).join(', ')}. '
+        'Revisá y toca Agregar.');
+  }
+
+  Future<DictadoDeFormulario> _ubicarConElModelo(String frase) async {
+    // El valor se lee ACA y no se guarda en initState: si el modelo termino de
+    // cargar despues de abrir esta pantalla, este es el momento en que ya esta.
+    final ayuda = _asistente.value;
+    if (ayuda == null) return const DictadoDeFormulario.nada();
+
+    String? propuesta;
+    if (mounted) setState(() => _pensando = true);
+    try {
+      propuesta = await ayuda.fraseCanonica(
+        frase,
+        entidades: [widget.clase.nombre],
+      );
+    } finally {
+      // En el finally para que un modelo que explota tampoco deje el aviso
+      // prendido para siempre.
+      if (mounted) setState(() => _pensando = false);
+    }
+
+    if (propuesta == null) return const DictadoDeFormulario.nada();
+    return ubicarDictado(frase: propuesta, campos: _editables, valores: _valores);
+  }
+
+  /// El ejemplo se arma con los campos de ESTA clase: un ejemplo generico
+  /// -«agrega un paciente llamado Juan»- ensena a dictar lo que ya no se puede
+  /// dictar, y es lo que llevo a las frases enteras metidas en un solo campo.
+  String get _ejemploDeDictado {
+    final campos = _editables;
+    if (campos.isEmpty) return 'Toca el microfono y dicta.';
+    return 'Un dato por vez: "${campos.first.nombre} ..." o el valor solo. '
+        'Despues deci "agregar".';
   }
 
   void _avisar(String texto) {
@@ -305,9 +399,9 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
             ),
             Expanded(
               child: TextField(
+                controller: _controladores[atributo.nombre],
                 decoration: const InputDecoration(isDense: true),
                 keyboardType: _tecladoDe(atributo),
-                onChanged: (texto) => _valores[atributo.nombre] = texto,
               ),
             ),
           ],
@@ -416,9 +510,16 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
 
 /// Le muestra al usuario lo que el modelo propuso y espera un si.
 ///
-/// Es el freno de mano de todo este escalon: el modelo propone una frase, la
-/// gramatica la interpreta, y recien despues de este cartel se crea algo. Sin
-/// el, una traduccion desafortunada agregaria un registro en silencio.
+/// Es el freno de mano del dictado de un REGISTRO ENTERO -el camino que arma
+/// `resolverPedidoDictado`, en generado/dictado_de_registros.dart-: el modelo
+/// propone una frase, la gramatica la interpreta, y recien despues de este
+/// cartel se crea algo.
+///
+/// La ficha de alta de esta pantalla ya no pasa por aca, y el motivo es que
+/// ahora tiene un freno mejor: lo dictado se escribe en las cajas de texto, a
+/// la vista y editable, y no sale del telefono hasta que alguien toque
+/// «Agregar». Un cartel que se confirma de memoria frena menos que un
+/// formulario que se lee.
 Future<bool> confirmarPedidoDictado(
   BuildContext context,
   String fraseCanonica,
