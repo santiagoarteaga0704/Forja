@@ -6,7 +6,9 @@
 # evalua UML conviene que lleve diagramas hechos con una herramienta UML.
 #
 # Uso:  powershell -ExecutionPolicy Bypass -File herramientas/crear-diagramas.ps1
-# Requiere Enterprise Architect instalado (probado con la version 17.2 de prueba).
+# Requiere Enterprise Architect instalado. Lo que hay en este equipo, y con lo
+# que se generaron las figuras del documento, es la version de prueba 15.0
+# (build 1514), en C:\Program Files (x86)\Sparx Systems\EA Trial\EA.exe.
 
 $ErrorActionPreference = 'Stop'
 
@@ -228,14 +230,20 @@ foreach ($par in @(@('P2','P1'), @('P4','P3'), @('P6','P4'), @('P6','P3'),
 
 $diaPk = $paqPk.Diagrams.AddNew('Vista de Paquetes', 'Package')
 [void]$diaPk.Update(); $paqPk.Diagrams.Refresh()
-Ubicar $diaPk $p['P1'] 420   40 220 70
-Ubicar $diaPk $p['P2'] 420  180 220 70
-Ubicar $diaPk $p['P6']  60  340 220 70
-Ubicar $diaPk $p['P4'] 420  340 220 70
-Ubicar $diaPk $p['P8'] 780  340 220 70
-Ubicar $diaPk $p['P5'] 160  520 220 70
-Ubicar $diaPk $p['P3'] 420  520 220 70
-Ubicar $diaPk $p['P7'] 780  520 220 70
+# Tres columnas juntas, por el mismo limite de ancho que las demas figuras: el
+# PNG venia de 1384 puntos. Las cajas bajan de 220 a 175, que es lo que ocupa
+# el nombre mas largo -«P5 Colaboracion en Tiempo Real»-, y las dependencias
+# no llevan rotulo, asi que aqui no hay nada mas que acomodar.
+# P5 pasa a la columna de la izquierda en lugar de quedar a media calle: con
+# las columnas tan juntas, el desplazamiento de antes lo montaba sobre P3.
+Ubicar $diaPk $p['P1'] 230   40 175 70
+Ubicar $diaPk $p['P2'] 230  180 175 70
+Ubicar $diaPk $p['P6']  20  340 175 70
+Ubicar $diaPk $p['P4'] 230  340 175 70
+Ubicar $diaPk $p['P8'] 440  340 175 70
+Ubicar $diaPk $p['P5']  20  520 175 70
+Ubicar $diaPk $p['P3'] 230  520 175 70
+Ubicar $diaPk $p['P7'] 440  520 175 70
 $diaPk.DiagramObjects.Refresh()
 Exportar $diaPk 'paquetes.png'
 
@@ -250,8 +258,11 @@ Exportar $diaPk 'paquetes.png'
 # las cajas y no por el texto de los enlaces, de modo que una etiqueta larga
 # cerca del borde sale cortada. El detalle completo lo lleva la prosa.
 $paqM1 = NuevoPaquete $modelo 'Comunicacion CU10'
-$a    = NuevoElemento $paqM1 'a :ClienteWeb (persona A)' 'Object'
-$b    = NuevoElemento $paqM1 'b :ClienteWeb (persona B)' 'Object'
+# Los nombres de objeto van cortos por lo mismo que los rotulos: son ellos los
+# que fijan el ancho minimo de la caja, y la caja fija el ancho del dibujo.
+# Quien es A y quien es B lo dice el pie de la figura.
+$a    = NuevoElemento $paqM1 'a :ClienteWeb (A)' 'Object'
+$b    = NuevoElemento $paqM1 'b :ClienteWeb (B)' 'Object'
 $ctrl = NuevoElemento $paqM1 ':ControladorDiagramas' 'Object'
 $ops  = NuevoElemento $paqM1 ':ServicioOperaciones' 'Object'
 $blo  = NuevoElemento $paqM1 ':ServicioBloqueo' 'Object'
@@ -259,30 +270,45 @@ $apl  = NuevoElemento $paqM1 ':AplicadorComando' 'Object'
 $reg  = NuevoElemento $paqM1 ':RegistroDeSesiones' 'Object'
 $bd   = NuevoElemento $paqM1 ':PostgreSQL' 'Object'
 
-[void](Mensaje $a    $ctrl '1: aplicar(comando, sesionId, tokenCliente)')
-[void](Mensaje $ctrl $ops  '2: registrar(comando, sesionId, token)')
-[void](Mensaje $ops  $bd   '3: buscarParaActualizar   /   7: guardar la operacion')
-[void](Mensaje $ops  $blo  '4: adquirir(elemento, usuarioId, sesionId)')
-[void](Mensaje $blo  $bd   '5: INSERT ... ON CONFLICT DO NOTHING')
-[void](Mensaje $ops  $apl  '6: aplicar(diagrama, comando)')
-[void](Mensaje $ctrl $reg  '8: difundir(evento, sesionOrigen)')
+[void](Mensaje $a    $ctrl '1: aplicar(comando)')
+[void](Mensaje $ctrl $ops  '2: registrar(comando)')
+# «3: bloquear» es buscarParaActualizar, el SELECT ... FOR UPDATE que serializa
+# la secuencia. El nombre completo del metodo no entra: el rotulo se dibuja en
+# el medio del enlace y chocaba con el del mensaje 4, tapandole el numero.
+[void](Mensaje $ops  $bd   '3: bloquear / 7: guardar')
+[void](Mensaje $ops  $blo  '4: adquirir')
+[void](Mensaje $blo  $bd   '5: INSERT ON CONFLICT')
+[void](Mensaje $ops  $apl  '6: aplicar(comando)')
+[void](Mensaje $ctrl $reg  '8: difundir')
 [void](Mensaje $reg  $b    '9: evento de operacion')
-[void](Mensaje $b    $ctrl '10: aplicar(mismo elemento)   /   11: rechazo')
+[void](Mensaje $b    $ctrl '10: aplicar / 11: rechazo')
 
 $diaM1 = $paqM1.Diagrams.AddNew('CU10 Editar en forma concurrente', 'Collaboration')
 [void]$diaM1.Update(); $paqM1.Diagrams.Refresh()
-# Rejilla de tres por tres: el diagrama tenia mil ochocientos puntos de ancho y
-# la imagen, reducida al ancho de la pagina, dejaba la letra en dos puntos. Con
-# la mitad de ancho la escala se duplica. Cada objeto sale hacia un lado
-# distinto, de modo que ningun enlace cruza a otro ni pasa sobre una caja.
-Ubicar $diaM1 $a      40   40 220 70
-Ubicar $diaM1 $ctrl  460   40 220 70
-Ubicar $diaM1 $apl   880   40 220 70
-Ubicar $diaM1 $b      40  300 220 70
-Ubicar $diaM1 $reg   460  300 220 70
-Ubicar $diaM1 $ops   880  300 220 70
-Ubicar $diaM1 $bd    460  560 220 70
-Ubicar $diaM1 $blo   880  560 220 70
+# Rejilla de tres por tres: cada objeto sale hacia un lado distinto, de modo que
+# ningun enlace cruza a otro ni pasa sobre una caja.
+#
+# Las columnas van juntas. Con las cajas de 220 puntos separadas 420 el PNG
+# salia de 1700 de ancho y, reducido al ancho util de la hoja, quedaba al
+# treinta y tres por ciento: la letra era ilegible. Ahora el PNG esta por
+# debajo de 1050 y la misma letra sale al cincuenta y tres por ciento, o sea
+# un sesenta por ciento mas grande, SIN tocar la fuente: agrandarla ensancha
+# las cajas y el resultado en la hoja es el mismo.
+#
+# Lo que fijaba el ancho no eran las cajas -los nombres de objeto entran en
+# 150 puntos- sino los rotulos de los mensajes, que se dibujan en el medio del
+# enlace: cuatro firmas completas una al lado de la otra no entran en una hoja.
+# Por eso arriba quedan el numero y el nombre del mensaje, y la firma con sus
+# parametros vive en la tabla de mensajes que el documento pone debajo de la
+# figura, que es donde se lee de verdad.
+Ubicar $diaM1 $a      20   40 125 70
+Ubicar $diaM1 $ctrl  205   40 125 70
+Ubicar $diaM1 $apl   390   40 125 70
+Ubicar $diaM1 $b      20  300 125 70
+Ubicar $diaM1 $reg   205  300 125 70
+Ubicar $diaM1 $ops   390  300 125 70
+Ubicar $diaM1 $bd    205  560 125 70
+Ubicar $diaM1 $blo   390  560 125 70
 $diaM1.DiagramObjects.Refresh()
 Exportar $diaM1 'comunicacion-cu10.png'
 
@@ -295,35 +321,38 @@ $cped  = NuevoElemento $paqM2 ':ControladorPedido' 'Object'
 $sped  = NuevoElemento $paqM2 ':ServicioPedido' 'Object'
 $props = NuevoElemento $paqM2 ':PropuestasEnRevision' 'Object'
 $tra   = NuevoElemento $paqM2 ':TraductorOllama' 'Object'
-$gem   = NuevoElemento $paqM2 ':Gemma 3 4B (Ollama local)' 'Object'
+$gem   = NuevoElemento $paqM2 ':Gemma 3 4B (Ollama)' 'Object'
 $par   = NuevoElemento $paqM2 ':ParserVoz' 'Object'
 $ops2  = NuevoElemento $paqM2 ':ServicioOperaciones' 'Object'
 $alc   = NuevoElemento $paqM2 ':AlcanceDelPedido' 'Object'
 
-[void](Mensaje $per  $cped  '1: pedir(pedido)   /   8: la propuesta, a revisar   /   9: aplicar(token)')
-[void](Mensaje $cped $sped  '2: leer(pedido, tokenLectura)')
-[void](Mensaje $sped $tra   '3: aFrasesCanonicas(pedido, contexto)')
-[void](Mensaje $tra  $gem   '4: HTTP local  ->  frases del idioma controlado')
-[void](Mensaje $sped $par   '5: interpretar(frase)  ->  comando, o se descarta')
+[void](Mensaje $per  $cped  '1: pedir   /   8: propuesta   /   9: aplicar')
+[void](Mensaje $cped $sped  '2: leer(pedido)')
+[void](Mensaje $sped $tra   '3: aFrasesCanonicas()')
+[void](Mensaje $tra  $gem   '4: HTTP local  ->  frases')
+[void](Mensaje $sped $par   '5: interpretar(frase)')
 # Cortas a proposito: en la rejilla, estas dos etiquetas salen del mismo objeto
 # hacia abajo y con el texto largo se pisaban entre si. El detalle completo va en
 # la tabla de mensajes del documento, que es lo que se lee de verdad.
-[void](Mensaje $sped $alc   '6: recortar()  ->  UN elemento')
-[void](Mensaje $sped $props '7: guardar   /   10: recuperar')
-[void](Mensaje $sped $ops2  '11: registrar(cada comando)')
+[void](Mensaje $sped $alc   '6: recortar')
+[void](Mensaje $sped $props '7: guardar   /   10: leer')
+[void](Mensaje $sped $ops2  '11: registrar')
 
 $diaM2 = $paqM2.Diagrams.AddNew('CU13 Pedir un elemento en lenguaje libre', 'Collaboration')
 [void]$diaM2.Update(); $paqM2.Diagrams.Refresh()
-# Misma rejilla compacta que la figura anterior, y por el mismo motivo.
-Ubicar $diaM2 $per     40   40 220 70
-Ubicar $diaM2 $cped   460   40 220 70
-Ubicar $diaM2 $gem    880   40 220 70
-Ubicar $diaM2 $par     40  300 220 70
-Ubicar $diaM2 $sped   460  300 220 70
-Ubicar $diaM2 $tra    880  300 220 70
-Ubicar $diaM2 $ops2    40  560 220 70
-Ubicar $diaM2 $alc    460  560 220 70
-Ubicar $diaM2 $props  880  560 220 70
+# Misma rejilla compacta que la figura anterior, y por el mismo motivo: el PNG
+# venia de 1662 puntos de ancho y en la hoja no se leia. Las cajas van a 125 y
+# los rotulos quedan reducidos al numero y al nombre del mensaje; la firma
+# completa esta en la tabla de mensajes del documento.
+Ubicar $diaM2 $per     20   40 125 70
+Ubicar $diaM2 $cped   215   40 125 70
+Ubicar $diaM2 $gem    410   40 125 70
+Ubicar $diaM2 $par     20  300 125 70
+Ubicar $diaM2 $sped   215  300 125 70
+Ubicar $diaM2 $tra    410  300 125 70
+Ubicar $diaM2 $ops2    20  560 125 70
+Ubicar $diaM2 $alc    215  560 125 70
+Ubicar $diaM2 $props  410  560 125 70
 $diaM2.DiagramObjects.Refresh()
 Exportar $diaM2 'comunicacion-cu13.png'
 
@@ -349,15 +378,20 @@ $ollama = NuevoElemento $paqDep 'Ollama + Gemma 3 4B' 'Component'
 
 $diaDep = $paqDep.Diagrams.AddNew('Modelo de Despliegue', 'Deployment')
 [void]$diaDep.Update(); $paqDep.Diagrams.Refresh()
-Ubicar $diaDep $navegador  40   40 320 150
-Ubicar $diaDep $web        70   90 260  60
-Ubicar $diaDep $android   440   40 320 150
-Ubicar $diaDep $movil     470   90 260  60
-Ubicar $diaDep $servidor   40  280 480 230
-Ubicar $diaDep $api        80  330 400  60
-Ubicar $diaDep $bdDep      80  430 400  60
-Ubicar $diaDep $equipoIa  600  280 340 130
-Ubicar $diaDep $ollama    630  330 280  60
+# Por el mismo limite de ancho: el PNG venia de 1328 puntos. Los nodos bajan a
+# 290 y los componentes de adentro a 250, que es lo que necesita el nombre mas
+# largo -«forja-backend (Spring Boot 4.1.1 / Java 21)»-. El servidor deja de
+# ser un nodo ancho de 480: con los dos componentes apilados uno sobre otro no
+# hace falta mas ancho que el de ellos.
+Ubicar $diaDep $navegador  20   40 290 150
+Ubicar $diaDep $web        40   90 250  60
+Ubicar $diaDep $android   340   40 290 150
+Ubicar $diaDep $movil     360   90 250  60
+Ubicar $diaDep $servidor   20  280 290 230
+Ubicar $diaDep $api        40  330 250  60
+Ubicar $diaDep $bdDep      40  430 250  60
+Ubicar $diaDep $equipoIa  340  280 290 130
+Ubicar $diaDep $ollama    360  330 250  60
 $diaDep.DiagramObjects.Refresh()
 Exportar $diaDep 'despliegue.png'
 

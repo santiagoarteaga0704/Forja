@@ -14,7 +14,7 @@
 | 9 | Código QR del repositorio | Anexo A |
 | 10 | Código QR de la aplicación desplegada | Anexo B |
 
-Las ocho primeras figuras se construyeron en **Enterprise Architect 17.2**
+Las ocho primeras figuras se construyeron en **Enterprise Architect 15.0**
 mediante automatización COM; el guion que las genera queda en el repositorio.
 Las dos últimas son códigos QR generados por guion y verificados
 decodificándolos.
@@ -975,7 +975,7 @@ Es el caso de uso de mayor riesgo del sistema y el que define su arquitectura.
 
 ![Diagrama de comunicación de CU10](diagramas/comunicacion-cu10.png)
 
-*Figura 4. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11.*
+*Figura 4. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor; `a` y `b` son los clientes web de la persona A y de la persona B. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
@@ -1005,7 +1005,7 @@ pierde la disputa continúa normalmente informando que el elemento está tomado.
 
 ![Diagrama de comunicación de CU13](diagramas/comunicacion-cu13.png)
 
-*Figura 5. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo.*
+*Figura 5. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
