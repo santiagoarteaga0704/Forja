@@ -207,26 +207,33 @@ class _PantallaDiagramasState extends State<PantallaDiagramas> {
                             style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('version ${diagrama.version}',
                             style: const TextStyle(color: Colores.textoDebil, fontSize: 12)),
+                        // La fila entera abre el backend generado: es la
+                        // funcionalidad central que hay que demostrar, y el
+                        // lienzo -el diagrama- queda como accion secundaria en
+                        // el icono. Antes era al reves y la persona que abria
+                        // la app en el telefono tocaba la fila, veia el
+                        // lienzo y creia que el backend generado no estaba.
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              tooltip: 'Backend generado',
-                              onPressed: () => _abrirEntidades(diagrama),
-                              icon: const Icon(Icons.dns_outlined, color: Colores.textoDebil),
+                              tooltip: 'Diagrama',
+                              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => PantallaLienzo(
+                                  api: widget.api,
+                                  almacen: widget.almacen,
+                                  credencial: widget.credencial,
+                                  sesionId: widget.sesionId,
+                                  resumen: diagrama,
+                                ),
+                              )),
+                              icon: const Icon(Icons.account_tree_outlined,
+                                  color: Colores.textoDebil),
                             ),
                             const Icon(Icons.chevron_right, color: Colores.textoDebil),
                           ],
                         ),
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => PantallaLienzo(
-                            api: widget.api,
-                            almacen: widget.almacen,
-                            credencial: widget.credencial,
-                            sesionId: widget.sesionId,
-                            resumen: diagrama,
-                          ),
-                        )),
+                        onTap: () => _abrirEntidades(diagrama),
                       ),
                     ),
                 ],
