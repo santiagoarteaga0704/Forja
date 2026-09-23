@@ -1,0 +1,40 @@
+<!-- Sin un solo <br/>: al importar este HTML, Word convierte cada <br/> de la
+     portada en un salto de pagina, y la caratula termina ocupando una pagina
+     por renglon en lugar de una sola. Cada renglon va en su propio <p>, y el
+     aire entre bloques se pide con margin-top sobre el <p> -- sobre un <div>
+     Word lo descarta.
+
+     Los datos son los que estaban escritos a mano al comienzo de
+     docs/documento.md, que ahora arranca directo en el contenido. -->
+<div class="portada">
+  <p class="universidad">UNIVERSIDAD GABRIEL RENÉ MORENO</p>
+  <p class="facultad">FACULTAD DE CIENCIAS DE LA COMPUTACIÓN</p>
+
+  <p class="titulo">FORJA: HERRAMIENTA CASE COLABORATIVA</p>
+  <p class="titulo-cont">PARA LA FASE DE DISEÑO, CON DICTADO POR VOZ,</p>
+  <p class="titulo-cont">LECTURA DE PIZARRA, GENERACIÓN DE BACKEND</p>
+  <p class="titulo-cont">SPRING BOOT E INTERCAMBIO XMI</p>
+  <p class="titulo-cont">CON ENTERPRISE ARCHITECT</p>
+
+  <p class="subtitulo">PARCIAL - 1</p>
+
+  <!-- Una sola clase por renglon: Word toma solo la PRIMERA del atributo, asi
+       que datos-inicio y datos-bloque traen ya todo lo de datos. -->
+  <p class="datos-inicio"><b>ESTUDIANTE:</b></p>
+  <p class="datos">ARTEAGA SILVA GEIMBERT SANTIAGO &nbsp;&nbsp;&nbsp; 223041688</p>
+  <p class="datos-bloque"><b>DOCENTE:</b> M.Sc. MARTÍNEZ CANEDO ROLANDO ANTONIO</p>
+  <p class="datos"><b>MATERIA:</b> INGENIERÍA DE SOFTWARE 1</p>
+  <p class="datos-bloque"><b>SANTA CRUZ - BOLIVIA</b></p>
+  <p class="datos"><b>SEPTIEMBRE DE 2026</b></p>
+</div>
+
+<div class="indice">
+  <!-- El salto va en el <h2> y no en el <div>: Word honra
+       page-break-before sobre un encabezado, pero ignora el
+       page-break-after del <div> de la portada. -->
+  <h2 class="salto" style="text-align:center; border:none;">ÍNDICE</h2>
+  <!-- build-documento.ps1 reemplaza esta marca por la tabla de contenido real,
+       generada por Word a partir de los estilos Titulo 1 a 4. Si el texto de la
+       marca llegara a aparecer en el entregable, es que ese paso fallo. -->
+  <p>[[INDICE]]</p>
+</div>
