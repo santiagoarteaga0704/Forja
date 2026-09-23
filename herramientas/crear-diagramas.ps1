@@ -124,6 +124,62 @@ function Exportar($diagrama, $archivo) {
   else { "  !! no se genero $archivo" }
 }
 
+function QuitarFranjaDerecha($archivo, $margen = 40) {
+  # EA no recorta el PNG contra las cajas: a la derecha del extremo mas a la
+  # derecha de CUALQUIER conector reserva una franja fija de unas 320 unidades
+  # -unos 440 puntos- que sale en blanco. Se midio conector por conector: un
+  # enlace vertical dentro de la ultima columna del modelo de datos estiraba el
+  # lienzo de 1041 a 1343 puntos sin dibujar nada ahi.
+  #
+  # Es lo que obligaba a apretar el modelo de datos en una tira de tres
+  # columnas: cualquier caja con conectores mas alla de x=440 se pasaba del
+  # ancho util de la hoja por culpa del blanco, no del dibujo. En vez de
+  # deformar el diagrama se le quita la franja aqui.
+  #
+  # No es un recorte: se corta la franja VACIA del medio y se vuelve a pegar la
+  # columna del marco, de modo que el rectangulo que EA dibuja alrededor del
+  # diagrama sigue cerrado. Los demas PNG no pasan por aqui y conservan su
+  # tamano.
+  $ruta = Join-Path $salida $archivo
+  if (-not (Test-Path $ruta)) { return }
+  Add-Type -AssemblyName System.Drawing
+  $orig = New-Object System.Drawing.Bitmap $ruta
+  $w = $orig.Width; $h = $orig.Height
+  $rect = New-Object System.Drawing.Rectangle 0, 0, $w, $h
+  $d = $orig.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+  $s = $d.Stride; $buf = New-Object byte[] ($s * $h)
+  [System.Runtime.InteropServices.Marshal]::Copy($d.Scan0, $buf, 0, $buf.Length)
+  $orig.UnlockBits($d)
+  # Primero el marco: es lo unico que toca los cuatro bordes.
+  $minx = $w; $maxx = -1; $miny = $h; $maxy = -1
+  for ($y = 0; $y -lt $h; $y++) { $fila = $y * $s
+    for ($x = 0; $x -lt $w; $x++) { $i = $fila + $x * 4
+      if ($buf[$i] -lt 250 -or $buf[$i+1] -lt 250 -or $buf[$i+2] -lt 250) {
+        if ($x -lt $minx) { $minx = $x }; if ($x -gt $maxx) { $maxx = $x }
+        if ($y -lt $miny) { $miny = $y }; if ($y -gt $maxy) { $maxy = $y } } } }
+  # Y ahora lo dibujado DENTRO del marco, que es lo que hay que conservar.
+  $dentro = -1
+  for ($y = $miny + 3; $y -le $maxy - 3; $y++) { $fila = $y * $s
+    for ($x = $maxx - 3; $x -gt $dentro; $x--) { $i = $fila + $x * 4
+      if ($buf[$i] -lt 250 -or $buf[$i+1] -lt 250 -or $buf[$i+2] -lt 250) { $dentro = $x; break } } }
+  $corte = $dentro + $margen
+  if ($corte -ge $maxx - 4) { $orig.Dispose(); "  ($archivo no tenia franja vacia)"; return }
+  $nuevoAncho = $corte + 1 + ($w - $maxx)
+  $nueva = New-Object System.Drawing.Bitmap $nuevoAncho, $h
+  $g = [System.Drawing.Graphics]::FromImage($nueva)
+  $g.Clear([System.Drawing.Color]::White)
+  $g.DrawImage($orig, (New-Object System.Drawing.Rectangle 0, 0, ($corte + 1), $h),
+                      (New-Object System.Drawing.Rectangle 0, 0, ($corte + 1), $h), [System.Drawing.GraphicsUnit]::Pixel)
+  $g.DrawImage($orig, (New-Object System.Drawing.Rectangle ($corte + 1), 0, ($w - $maxx), $h),
+                      (New-Object System.Drawing.Rectangle $maxx, 0, ($w - $maxx), $h), [System.Drawing.GraphicsUnit]::Pixel)
+  $g.Dispose(); $orig.Dispose()
+  $temporal = "$ruta.tmp"
+  $nueva.Save($temporal, [System.Drawing.Imaging.ImageFormat]::Png)
+  $nueva.Dispose()
+  Move-Item -Force $temporal $ruta
+  "  -> $archivo sin la franja vacia de EA: $w x $h  ->  $nuevoAncho x $h"
+}
+
 function UbicarUC($diagrama, $elemento, $l, $t, $ancho, $alto) {
   # Igual que Ubicar, pero fijando las coordenadas UNA SEGUNDA VEZ sobre el
   # objeto ya creado. Un caso de uso colocado con un solo Update sale siempre
@@ -621,28 +677,48 @@ Atributo $uso 'herramienta' 'Herramienta'; Atributo $uso 'veces' 'int'
 
 $diaC = $paqC.Diagrams.AddNew('Modelo de Datos', 'Logical')
 [void]$diaC.Update(); $paqC.Diagrams.Refresh()
-# Misma rejilla de tres columnas que antes, pero angostada: la disposicion no
-# cambia, cambia el ancho. Las cajas eran de 220 a 240 puntos y la linea mas
-# larga -«multiplicidadDestino: String»- ocupa bastante menos, de modo que
-# sobraba casi un tercio de caja vacia y la tercera columna arrancaba en x=880.
-# El PNG salia de 1686 puntos y en la hoja, reducido al ancho util, la letra
-# quedaba diminuta. Los huecos entre columnas se dejan holgados a proposito:
-# ahi van los rotulos de multiplicidad, y pegando las columnas se montaban
-# sobre el borde de la caja vecina.
-Ubicar $diaC $usuario   20   40 140 130
-Ubicar $diaC $proy     200   40 140 120
-Ubicar $diaC $oper     380   40 150 150
-Ubicar $diaC $uso       20  260 140  90
-Ubicar $diaC $miembro  200  260 140  90
-Ubicar $diaC $bloq     380  260 150 130
-Ubicar $diaC $diag     200  450 140 120
-Ubicar $diaC $rel      380  450 150 130
-Ubicar $diaC $clase    200  660 140 160
-Ubicar $diaC $atr       20  900 140 160
-Ubicar $diaC $met      200  900 140 130
-Ubicar $diaC $parU     200 1110 140 100
+# Rejilla de cuatro columnas por cuatro filas. La fila del medio es la ESPINA
+# del dominio y se lee de izquierda a derecha, que es como se recorre el
+# modelo: Usuario -> Proyecto -> Diagrama -> ClaseUml. Lo que cuelga de cada
+# una queda pegado a ella: arriba lo que se apoya en el tramo Usuario-Diagrama
+# -Operacion, que toca a los dos, va justo en el medio- y abajo lo que cuelga
+# hacia las hojas. Asi ningun conector cruza por encima de una caja ajena.
+#
+# El orden de las filas no es cosmetico, sale de dibujar el grafo sin cruces:
+# Operacion cierra el ciclo Usuario-Proyecto-Diagrama-Operacion y por eso tiene
+# que ir del lado de AFUERA de ese tramo -arriba-, mientras ProyectoMiembro
+# cierra el triangulo Usuario-Proyecto-ProyectoMiembro y va del lado de
+# adentro -abajo-. Puestos al reves, las dos lineas se cruzan.
+#
+# Columnas cada 178 puntos con cajas de 145: los 33 de hueco son donde EA
+# escribe las multiplicidades y el rotulo «propietario»; con las columnas mas
+# juntas los rotulos se montan sobre el borde de la caja vecina. Y 145 de
+# ancho es lo que mide «+ multiplicidadDestino: String», la linea mas larga del
+# modelo, medida sobre el PNG anterior: con 140 quedaba al ras.
+#
+# Las alturas son 40 + 15 por atributo, que deja la caja ajustada al contenido
+# sin que ninguna linea toque el borde.
+#
+# NOTA: la primera columna arranca en 20, nunca en 0 (ver el comentario de
+# Ubicar). Son doce clases: si el PNG trae menos, es esto.
+# fila de arriba: lo que se apoya sobre el tramo Usuario - Diagrama
+Ubicar $diaC $oper     209  40 145 115
+Ubicar $diaC $bloq     387  40 145 100
+Ubicar $diaC $rel      565  40 145 100
+# espina del dominio
+Ubicar $diaC $usuario   20 230 145 115
+Ubicar $diaC $proy     209 230 145 100
+Ubicar $diaC $diag     387 230 145 100
+Ubicar $diaC $clase    565 230 145 130
+# lo que cuelga de la espina hacia las hojas
+Ubicar $diaC $uso       20 440 145  70
+Ubicar $diaC $miembro  209 440 145  70
+Ubicar $diaC $atr      387 440 145 130
+Ubicar $diaC $met      565 440 145 100
+Ubicar $diaC $parU     565 620 145  85
 $diaC.DiagramObjects.Refresh()
 Exportar $diaC 'modelo-de-datos.png'
+QuitarFranjaDerecha 'modelo-de-datos.png'
 
 # =====================================================================
 # Figura 27. Modelo fisico de datos

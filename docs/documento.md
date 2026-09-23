@@ -1265,7 +1265,7 @@ El esquema tiene doce tablas, agrupadas en cuatro conjuntos:
 
 ![Diagrama de clases del modelo de datos](diagramas/modelo-de-datos.png)
 
-*Figura 26. Modelo de datos. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
+*Figura 26. Modelo de datos. La fila del medio es el recorrido del dominio y se lee de izquierda a derecha —`Usuario` → `Proyecto` → `Diagrama` → `ClaseUml`—; arriba y abajo cuelga lo que se apoya en cada uno. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
 
 **Mapeo del modelo a la base de datos**
 
