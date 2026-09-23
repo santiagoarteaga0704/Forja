@@ -142,5 +142,27 @@ void main() {
 
       expect(find.byTooltip('Dictar un registro'), findsOneWidget);
     });
+
+    testWidgets('una clase sin atributos avisa y no ofrece Agregar', (tester) async {
+      // La clase del diagrama no tiene atributos propios -pasa con Cliente o
+      // Factura recien dibujadas-. Antes de esto solo quedaba un boton
+      // «Agregar» que creaba filas vacias.
+      final clase = Clase(id: 'c1', nombre: 'Factura');
+      await tester.runAsync(() async {
+        await tester.pumpWidget(MaterialApp(
+          home: PantallaRegistros(
+            clase: clase,
+            repositorio: Repositorio(almacen: AlmacenRegistros(carpeta)),
+            diagrama: Diagrama(id: 'd1', nombre: 'Ventas', version: 1, clases: [clase]),
+          ),
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+
+      expect(find.text('Factura no tiene atributos en el diagrama.'), findsOneWidget);
+      expect(find.text('Agregalos en FORJA y volve a bajar el diagrama.'), findsOneWidget);
+      expect(find.text('Agregar'), findsNothing);
+    });
   });
 }

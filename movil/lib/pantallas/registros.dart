@@ -182,6 +182,26 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
     );
   }
 
+  /// Sin campos que cargar, «Agregar» solo puede crear filas vacias: es el
+  /// boton que el usuario toco dos veces sin entender. En vez de eso se pide
+  /// arreglar el origen -el diagrama- y se saca el boton de en medio.
+  bool get _sinAtributos => _editables.isEmpty;
+
+  /// Pluralizacion casera, solo para la invitacion de la lista vacia: alcanza
+  /// con los sustantivos comunes de un diagrama de clases (Paciente, Cliente,
+  /// Factura) y no pretende cubrir el idioma entero.
+  static String _plural(String nombre) {
+    final minuscula = nombre.toLowerCase();
+    if (minuscula.endsWith('z')) return '${minuscula.substring(0, minuscula.length - 1)}ces';
+    if (RegExp(r'[aeiouáéíóú]$').hasMatch(minuscula)) return '${minuscula}s';
+    return '${minuscula}es';
+  }
+
+  static String _resumen(int total, int pendientes) {
+    final registros = total == 1 ? '1 registro' : '$total registros';
+    return pendientes > 0 ? '$registros, $pendientes sin enviar' : registros;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
@@ -210,41 +230,188 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
             ),
           ],
         ),
-        body: Column(children: [
-          for (final atributo in _editables)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _filas,
+          builder: (_, resultado) {
+            final filas = resultado.data ?? const <Map<String, dynamic>>[];
+            final pendientes = filas.where((f) => f.containsKey('_pendiente')).length;
+            return Column(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _resumen(filas.length, pendientes),
+                    style: const TextStyle(color: Colores.textoMedio, fontSize: 13),
+                  ),
+                ),
+              ),
+              if (_sinAtributos) _avisoSinAtributos() else _fichaDeAlta(),
+              Expanded(
+                child: filas.isEmpty
+                    ? (_sinAtributos ? const SizedBox.shrink() : _sinRegistros())
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        children: [for (final fila in filas) _tarjetaDeRegistro(fila)],
+                      ),
+              ),
+            ]);
+          },
+        ),
+      );
+
+  /// La ficha de alta: nombre de campo en monoespaciada, columna fija a la
+  /// izquierda, rimando a proposito con como el lienzo dibuja los atributos de
+  /// la clase -ver pintor.dart-. Quien dibujo la clase reconoce sus propios
+  /// atributos en el formulario.
+  Widget _fichaDeAlta() => Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colores.superficie,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colores.borde),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Nuevo',
+              style: TextStyle(color: Colores.textoDebil, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            for (final atributo in _editables) _campoDeAlta(atributo),
+            const SizedBox(height: 8),
+            FilledButton(onPressed: _guardar, child: const Text('Agregar')),
+          ],
+        ),
+      );
+
+  Widget _campoDeAlta(Atributo atributo) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 92,
+              child: Text(
+                atributo.nombre,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  color: Colores.textoMedio,
+                ),
+              ),
+            ),
+            Expanded(
               child: TextField(
-                decoration: InputDecoration(labelText: atributo.nombre),
+                decoration: const InputDecoration(isDense: true),
                 keyboardType: _tecladoDe(atributo),
                 onChanged: (texto) => _valores[atributo.nombre] = texto,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: FilledButton(onPressed: _guardar, child: const Text('Agregar')),
+          ],
+        ),
+      );
+
+  /// Una clase del diagrama sin atributos propios (mas alla del identificador
+  /// que pone el backend). Antes esto mostraba un «Agregar» solo, que el
+  /// usuario tocaba sin saber que iba a crear una fila vacia.
+  Widget _avisoSinAtributos() => Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colores.superficie,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colores.borde),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${widget.clase.nombre} no tiene atributos en el diagrama.',
+              style: const TextStyle(color: Colores.texto, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Agregalos en FORJA y volve a bajar el diagrama.',
+              style: TextStyle(color: Colores.textoMedio, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+
+  Widget _sinRegistros() => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Todavia no hay ${_plural(widget.clase.nombre)}. Carga el primero aca arriba.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colores.textoMedio, fontSize: 14),
           ),
+        ),
+      );
+
+  /// Un registro, campo por campo: se lee como una tabla, no como el parrafo
+  /// unido con «·» que mostraba antes.
+  Widget _tarjetaDeRegistro(Map<String, dynamic> fila) {
+    final pendiente = fila.containsKey('_pendiente');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colores.superficie,
+        borderRadius: BorderRadius.circular(8),
+        // Lo que todavia no llego al backend se marca con el borde: sin esto,
+        // sin senal no se distingue lo guardado de lo enviado.
+        border: Border.all(color: pendiente ? Colores.ambar : Colores.borde),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _filas,
-              builder: (_, resultado) => ListView(children: [
-                for (final fila in resultado.data ?? const <Map<String, dynamic>>[])
-                  ListTile(
-                    title: Text(_editables
-                        .map((a) => fila[a.nombre]?.toString() ?? '')
-                        .where((t) => t.isNotEmpty)
-                        .join(' · ')),
-                    // Lo que todavia no llego al backend se marca: sin esto,
-                    // sin senal no se distingue lo guardado de lo enviado.
-                    trailing: fila.containsKey('_pendiente')
-                        ? const Icon(Icons.schedule, size: 18)
-                        : null,
-                  ),
-              ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final atributo in _editables)
+                  if ((fila[atributo.nombre]?.toString() ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 92,
+                            child: Text(
+                              atributo.nombre,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 13,
+                                color: Colores.textoDebil,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              fila[atributo.nombre].toString(),
+                              style: const TextStyle(fontSize: 14, color: Colores.texto),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
             ),
           ),
-        ]),
-      );
+          if (pendiente)
+            const Padding(
+              padding: EdgeInsets.only(left: 8, top: 2),
+              child: Icon(Icons.schedule, size: 18, color: Colores.ambar),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Le muestra al usuario lo que el modelo propuso y espera un si.
