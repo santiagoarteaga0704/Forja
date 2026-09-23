@@ -25,21 +25,58 @@
 | 20 | Casos de uso del Ciclo #1 | 2.1.5 |
 | 21 | Casos de uso del Ciclo #2 | 2.1.5 |
 | 22 | Vista de paquetes | 2.2.3 |
-| 23 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
-| 24 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
-| 25 | Modelo de despliegue | 2.3.1.1 |
-| 26 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
-| 27 | Modelo físico de datos (tablas, tipos y claves) | 2.3.2.2 |
-| 28 | Código QR del repositorio | Anexo A |
-| 29 | Código QR de la aplicación desplegada | Anexo B |
+| 23 | Secuencia — CU1, registrar usuario | 2.2.4 |
+| 24 | Comunicación — CU1, registrar usuario | 2.2.4 |
+| 25 | Secuencia — CU2, iniciar sesión | 2.2.4 |
+| 26 | Comunicación — CU2, iniciar sesión | 2.2.4 |
+| 27 | Secuencia — CU3, cerrar sesión | 2.2.4 |
+| 28 | Comunicación — CU3, cerrar sesión | 2.2.4 |
+| 29 | Secuencia — CU4, administrar proyecto | 2.2.4 |
+| 30 | Comunicación — CU4, administrar proyecto | 2.2.4 |
+| 31 | Secuencia — CU5, invitar colaborador | 2.2.4 |
+| 32 | Comunicación — CU5, invitar colaborador | 2.2.4 |
+| 33 | Secuencia — CU6, administrar diagrama | 2.2.4 |
+| 34 | Comunicación — CU6, administrar diagrama | 2.2.4 |
+| 35 | Secuencia — CU7, modelar clases en el lienzo | 2.2.4 |
+| 36 | Comunicación — CU7, modelar clases en el lienzo | 2.2.4 |
+| 37 | Secuencia — CU8, trazar relaciones | 2.2.4 |
+| 38 | Comunicación — CU8, trazar relaciones | 2.2.4 |
+| 39 | Secuencia — CU9, editar atributos y operaciones | 2.2.4 |
+| 40 | Comunicación — CU9, editar atributos y operaciones | 2.2.4 |
+| 41 | Secuencia — CU10, editar en forma concurrente | 2.2.4 |
+| 42 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
+| 43 | Secuencia — CU11, dictar cambios por voz | 2.2.4 |
+| 44 | Comunicación — CU11, dictar cambios por voz | 2.2.4 |
+| 45 | Secuencia — CU12, leer el diagrama desde una fotografía de pizarra | 2.2.4 |
+| 46 | Comunicación — CU12, leer el diagrama desde una fotografía de pizarra | 2.2.4 |
+| 47 | Secuencia — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
+| 48 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
+| 49 | Secuencia — CU14, consultar al agente guía | 2.2.4 |
+| 50 | Comunicación — CU14, consultar al agente guía | 2.2.4 |
+| 51 | Secuencia — CU15, generar el backend Spring Boot | 2.2.4 |
+| 52 | Comunicación — CU15, generar el backend Spring Boot | 2.2.4 |
+| 53 | Secuencia — CU16, exportar el modelo a XMI | 2.2.4 |
+| 54 | Comunicación — CU16, exportar el modelo a XMI | 2.2.4 |
+| 55 | Secuencia — CU17, importar un modelo desde XMI | 2.2.4 |
+| 56 | Comunicación — CU17, importar un modelo desde XMI | 2.2.4 |
+| 57 | Secuencia — CU18, modelar sin conexión y sincronizar | 2.2.4 |
+| 58 | Comunicación — CU18, modelar sin conexión y sincronizar | 2.2.4 |
+| 59 | Secuencia — CU19, cargar registros en el backend generado desde el teléfono | 2.2.4 |
+| 60 | Comunicación — CU19, cargar registros en el backend generado desde el teléfono | 2.2.4 |
+| 61 | Modelo de despliegue | 2.3.1.1 |
+| 62 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
+| 63 | Modelo físico de datos (tablas, tipos y claves) | 2.3.2.2 |
+| 64 | Código QR del repositorio | Anexo A |
+| 65 | Código QR de la aplicación desplegada | Anexo B |
 
-Las veintisiete primeras figuras se construyeron en **Enterprise Architect 15.0**
-mediante automatización COM; el guion que las genera queda en el repositorio.
-Las dos últimas son códigos QR generados por guion y verificados
-decodificándolos.
+Las sesenta y tres primeras figuras se construyeron en **Enterprise Architect 15.0**
+mediante automatización COM; los dos guiones que las generan quedan en el
+repositorio —`herramientas/crear-diagramas.ps1` para las figuras de conjunto y
+`herramientas/crear-diagramas-interaccion.ps1` para las treinta y ocho de
+interacción de 2.2.4—. Las dos últimas son códigos QR generados por guion y
+verificados decodificándolos.
 
 ---
-
 # 1) Perfil
 
 ## 1.1 Introducción
@@ -1065,13 +1102,242 @@ lo tanto entra por la misma puerta que todo lo demás.
 
 ### 2.2.4 Análisis de casos de uso
 
-#### Diagrama de comunicación — CU10: Editar en forma concurrente
+Cada caso de uso se analiza con **dos diagramas y una tabla**. El diagrama de
+**secuencia** muestra el orden de los mensajes de arriba hacia abajo, que es lo
+que se lee mal en un diagrama de comunicación; el de **comunicación** muestra
+qué objeto habla con qué objeto, que es lo que se lee mal en uno de secuencia.
+Son la misma interacción vista de dos formas: los mismos participantes y los
+mismos mensajes, con la misma numeración. La tabla que cierra cada apartado
+lleva la firma completa de cada mensaje y la decisión de diseño que lo explica.
+
+Las interacciones no son un dibujo de lo que el sistema debería hacer: están
+**derivadas del código**, clase por clase y línea por línea. Donde la ficha del
+caso de uso y el código no coinciden, manda el código, y la diferencia se dice
+en el apartado correspondiente.
+
+Dos detalles de notación. Un mensaje numerado **`n.1`** no es un mensaje nuevo:
+es la continuación del mensaje `n` dentro del mismo paso, y aparece cuando un
+solo paso de la tabla recorre dos objetos —el 8.1 de CU7, el 4.1 de CU14, el
+6.1 de CU15 y de CU19, los 6.1 y 6.2 de CU18—. Y el **mensaje 0** de CU17 es una
+precondición, no un paso del caso: el documento XMI que se va a importar tiene
+que venir de alguna parte.
+
+#### CU1 — Registrar usuario
+
+![Diagrama de secuencia de CU1](diagramas/secuencia-cu01.png)
+
+*Figura 23. Secuencia — CU1, registrar usuario. La contraseña no se guarda: el paso 4 la reemplaza por su resumen, y el sujeto de la credencial del paso 6 es el identificador y no el correo.*
+
+![Diagrama de comunicación de CU1](diagramas/comunicacion-cu01.png)
+
+*Figura 24. Comunicación — CU1, registrar usuario. Los mensajes 3 y 5 comparten enlace porque viajan entre el mismo par de objetos, y lo mismo el 1 y el 7. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorAutenticacion | `registrar(SolicitudRegistro(email, nombre, password))` — `POST /api/auth/registro`; el record recorta espacios **al construirse**, antes de que corra la validación |
+| 2 | ControladorAutenticacion | ServicioAutenticacion | `registrar(email, nombre, password)` |
+| 3 | ServicioAutenticacion | UsuarioRepositorio | `existsByEmail(normalizar(email))` — si existe, `EmailYaRegistrado` y nada se escribe |
+| 4 | ServicioAutenticacion | PasswordEncoder | `encode(password)` — la contraseña nunca se guarda, se guarda su resumen |
+| 5 | ServicioAutenticacion | UsuarioRepositorio | `save(usuario)` |
+| 6 | ServicioAutenticacion | JwtEncoder | `encode(JwtEncoderParameters.from(JwsHeader HS256, declaraciones))` — el **sujeto es el id**, no el correo: el id es inmutable |
+| 7 | ControladorAutenticacion | Modelador | `201 CREATED` con `Credencial(token, expiraEn, usuarioId, nombre, email)` — la cuenta queda creada **y la sesión iniciada** |
+
+#### CU2 — Iniciar sesión
+
+![Diagrama de secuencia de CU2](diagramas/secuencia-cu02.png)
+
+*Figura 25. Secuencia — CU2, iniciar sesión. El paso 4 se ejecuta aun sobre una cuenta inactiva, para que el tiempo de respuesta no delate el estado de la cuenta.*
+
+![Diagrama de comunicación de CU2](diagramas/comunicacion-cu02.png)
+
+*Figura 26. Comunicación — CU2, iniciar sesión. El mensaje 7 es el único que un objeto se manda a sí mismo: guardar la credencial es trabajo del navegador. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorAutenticacion | `iniciarSesion(SolicitudSesion(email, password))` — `POST /api/auth/sesion` |
+| 2 | ControladorAutenticacion | ServicioAutenticacion | `iniciarSesion(email, password)` |
+| 3 | ServicioAutenticacion | UsuarioRepositorio | `findByEmail(normalizar(email))` — si no está, `CredencialesInvalidas` |
+| 4 | ServicioAutenticacion | PasswordEncoder | `matches(password, usuario.getPasswordHash())` — se comprueba **aun sobre una cuenta inactiva**, para que el tiempo de respuesta no delate el estado de la cuenta |
+| 5 | ServicioAutenticacion | JwtEncoder | `encode(...)` — credencial firmada, vigencia `forja.jwt.vigencia-horas` = 12 h |
+| 6 | ControladorAutenticacion | ClienteWeb (sesion.ts) | `Credencial(token, expiraEn, …)` |
+| 7 | ClienteWeb (sesion.ts) | ClienteWeb (sesion.ts) | `guardarCredencial(credencial)` — `localStorage['forja.credencial']` y `fijarToken(token)` |
+| 8 | ClienteWeb | ControladorProyectos | `GET /api/proyectos` — se accede a la pantalla de proyectos |
+
+#### CU3 — Cerrar sesión
+
+> **No hay endpoint de cierre de sesión.** El token no tiene estado en el servidor: cerrar sesión es tirarlo. Lo único que llega al servidor es el cierre del WebSocket, y es lo que devuelve los bloqueos.
+
+![Diagrama de secuencia de CU3](diagramas/secuencia-cu03.png)
+
+*Figura 27. Secuencia — CU3, cerrar sesión. No hay petición de cierre de sesión: el token no tiene estado en el servidor y cerrarla es tirarlo. Lo único que llega al servidor es el cierre del WebSocket, del paso 5 en adelante, que es lo que devuelve los bloqueos.*
+
+![Diagrama de comunicación de CU3](diagramas/comunicacion-cu03.png)
+
+*Figura 28. Comunicación — CU3, cerrar sesión. Se ven las dos mitades del caso, que no se comunican entre sí: la del navegador y la que dispara el cierre del canal. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (App.tsx) | `salir()` |
+| 2 | ClienteWeb (App.tsx) | ClienteWeb (sesion.ts) | `guardarCredencial(null)` → `localStorage.removeItem('forja.credencial')` |
+| 3 | ClienteWeb (sesion.ts) | ClienteWeb (api.ts) | `fijarToken(null)` — las peticiones dejan de llevar `Authorization` |
+| 4 | ClienteWeb (App.tsx) | ClienteWeb (App.tsx) | `setCredencial(null)`, `setAbierto(null)` — se desmonta el lienzo y se vuelve a `Entrar` |
+| 5 | ClienteWeb (canal.ts) | ManejadorLienzo | cierre del WebSocket → `afterConnectionClosed(sesion, estado)` |
+| 6 | ManejadorLienzo | RegistroDeSesiones | `quitar(diagramaId, sesion)` |
+| 7 | ManejadorLienzo | ServicioBloqueo | `liberarSesion(sesionId)` — devuelve de inmediato lo que esa sesión retenía, sin obligar al resto a esperar el vencimiento |
+| 8 | ManejadorLienzo | RegistroDeSesiones | `difundir(diagramaId, EventoLienzo.sesionCerrada(sesionId, liberados), sesionId)` — solo si había algo tomado |
+
+#### CU4 — Administrar proyecto
+
+![Diagrama de secuencia de CU4](diagramas/secuencia-cu04.png)
+
+*Figura 29. Secuencia — CU4, administrar proyecto. La membresía del paso 5 se crea explícitamente y no se deduce del propietario, para que todos los permisos consulten una sola tabla.*
+
+![Diagrama de comunicación de CU4](diagramas/comunicacion-cu04.png)
+
+*Figura 30. Comunicación — CU4, administrar proyecto. Los mensajes 1, 6 y 7 comparten el enlace con el modelador, y el 4 y el 8 el del repositorio de proyectos. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorProyectos | `crear(NuevoProyecto(nombre, descripcion))` — `POST /api/proyectos`; `@NotBlank @Size(max = 150)` corta el nombre vacío o largo |
+| 2 | ControladorProyectos | ServicioProyectos | `crear(UsuarioActual.id(token), nombre, descripcion)` |
+| 3 | ServicioProyectos | UsuarioRepositorio | `findById(autorId)` — `SesionSinDueno` si el token sobrevivió a la cuenta |
+| 4 | ServicioProyectos | ProyectoRepositorio | `save(proyecto)` con `propietario = autor` |
+| 5 | ServicioProyectos | ProyectoMiembroRepositorio | `save(ProyectoMiembro(proyecto, autor, RolMiembro.PROPIETARIO))` — la membresía se crea **explícitamente** y no se deduce de `propietario_id`, para que todos los permisos consulten una sola tabla |
+| 6 | ControladorProyectos | Modelador | `201 CREATED` con `Vistas.ProyectoVista` |
+| 7 | Modelador | ControladorProyectos | `mios()` — `GET /api/proyectos` |
+| 8 | ServicioProyectos | ProyectoRepositorio | `buscarPorParticipante(usuarioId)` — la lista, con su fecha de modificación |
+
+#### CU5 — Invitar colaborador
+
+![Diagrama de secuencia de CU5](diagramas/secuencia-cu05.png)
+
+*Figura 31. Secuencia — CU5, invitar colaborador. El paso 4 es el que decide: si el rol del solicitante no es propietario, la invitación se rechaza antes de tocar nada.*
+
+![Diagrama de comunicación de CU5](diagramas/comunicacion-cu05.png)
+
+*Figura 32. Comunicación — CU5, invitar colaborador. El mensaje 8 no es una notificación: el proyecto aparece en la consulta del colaborador porque la membresía ya está escrita. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorProyectos | `invitar(proyectoId, NuevoMiembro(email, rol))` — `POST /api/proyectos/{id}/miembros`; sin rol, `RolMiembro.EDITOR` |
+| 2 | ControladorProyectos | ServicioProyectos | `invitar(proyectoId, solicitanteId, email, rol)` |
+| 3 | ServicioProyectos | ProyectoRepositorio | `findById(proyectoId)` — `RecursoNoEncontrado` si no existe |
+| 4 | ServicioProyectos | ProyectoMiembroRepositorio | `findByProyectoIdAndUsuarioId(proyectoId, solicitanteId)` — si su rol no es `PROPIETARIO`, `AccesoDenegado` |
+| 5 | ServicioProyectos | UsuarioRepositorio | `findByEmail(email.trim().toLowerCase())` — `RecursoNoEncontrado` si ese correo no tiene cuenta |
+| 6 | ServicioProyectos | ProyectoMiembroRepositorio | `save(ProyectoMiembro(proyecto, invitado, EDITOR))`, o cambio de rol si ya era miembro |
+| 7 | ControladorProyectos | Modelador | `201 CREATED` |
+| 8 | ControladorProyectos | Colaborador | en su `GET /api/proyectos` (`buscarPorParticipante`) el proyecto ya aparece |
+
+#### CU6 — Administrar diagrama
+
+![Diagrama de secuencia de CU6](diagramas/secuencia-cu06.png)
+
+*Figura 33. Secuencia — CU6, administrar diagrama. Crear el diagrama y abrirlo son dos peticiones distintas; el paso 8 es la apertura del canal, que registra la sesión en el lienzo.*
+
+![Diagrama de comunicación de CU6](diagramas/comunicacion-cu06.png)
+
+*Figura 34. Comunicación — CU6, administrar diagrama. «puedeEditar» resume el mensaje 3, que es `findByProyectoIdAndUsuarioId(...)` seguido de `getRol().puedeEditar()`: el nombre completo no entra en el enlace. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorProyectos | `crearDiagrama(proyectoId, NuevoDiagrama(nombre, tipo))` — `POST /api/proyectos/{id}/diagramas` |
+| 2 | ControladorProyectos | ServicioProyectos | `crearDiagrama(proyectoId, autorId, nombre, tipo)` |
+| 3 | ServicioProyectos | ProyectoMiembroRepositorio | `findByProyectoIdAndUsuarioId(...)` + `getRol().puedeEditar()` — `AccesoDenegado` si no pertenece o solo lee |
+| 4 | ServicioProyectos | DiagramaRepositorio | `save(diagrama)` — nace en **versión 0**, `TipoDiagrama.CLASES` por defecto |
+| 5 | ControladorProyectos | ClienteWeb | `201 CREATED` con `Vistas.DiagramaResumen` |
+| 6 | ClienteWeb | ControladorDiagramas | `ver(diagramaId)` — `GET /api/diagramas/{id}` |
+| 7 | ControladorDiagramas | ConsultaDeDiagrama | `completo(diagramaId, usuarioId)` — fotografía completa: modelo **y bloqueos vigentes** |
+| 8 | ClienteWeb (canal.ts) | ManejadorLienzo | apertura del WebSocket → `afterConnectionEstablished` → `RegistroDeSesiones.registrar(diagramaId, sesion)` |
+
+#### CU7 — Modelar clases en el lienzo
+
+> Este es el **camino canónico**: CU11, CU12, CU13, CU17 y CU18 terminan todos en los mensajes 4 a 7 de esta tabla.
+
+![Diagrama de secuencia de CU7](diagramas/secuencia-cu07.png)
+
+*Figura 35. Secuencia — CU7, modelar clases en el lienzo. Es el camino canónico de la herramienta: los mensajes 4 a 7 son los que reutilizan CU11, CU12, CU13, CU17 y CU18. El 8.1 es la segunda mitad del mensaje 8, el evento que el registro de sesiones entrega al colaborador por WebSocket.*
+
+![Diagrama de comunicación de CU7](diagramas/comunicacion-cu07.png)
+
+*Figura 36. Comunicación — CU7, modelar clases en el lienzo. Al autor no le llega el evento del mensaje 8: ya conoce el resultado por la respuesta de su propia petición. «bloquear» y «guardar» son `buscarParaActualizar` y `save`, cuyos nombres completos no entran en el enlace. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (Lienzo.tsx) | botón «Clase» + nombre → `crearClase(nombre)` |
+| 2 | ClienteWeb (Lienzo.tsx) | ClienteWeb (Lienzo.tsx) | `sitioLibre(x, y)` — anillos concéntricos con el **mismo paso 380 × 260** que usa `Cuadricula` en el servidor; es el «buscar un lugar libre» de la ficha |
+| 3 | ClienteWeb (Lienzo.tsx) | ControladorDiagramas | `registrar(diagramaId, EnvioDeOperacion(CLASE_CREAR, comando, LIENZO, sesionId, tokenCliente))` — `POST /api/diagramas/{id}/operaciones`; el `tokenCliente` lo genera el cliente **antes** de enviar |
+| 4 | ControladorDiagramas | ServicioOperaciones | `registrar(diagramaId, autorId, sesionId, comando, OrigenOperacion.LIENZO, tokenCliente)` |
+| 5 | ServicioOperaciones | PostgreSQL | `buscarParaActualizar(diagramaId)` — bloqueo de fila pesimista que serializa la asignación del número de secuencia |
+| 6 | ServicioOperaciones | AplicadorComando | `aplicar(diagrama, CrearClase)` — `exigirNombreLibre(diagramaId, nombre, null)` rechaza el nombre repetido con `ComandoInvalido` |
+| 7 | ServicioOperaciones | PostgreSQL | `operaciones.save(registro)` con `secuencia = version + 1` y `origen = LIENZO`, y `diagramas.fijarVersion(diagramaId, secuencia, creadaEn)` |
+| 8 | ControladorDiagramas | RegistroDeSesiones | `difundir(diagramaId, EventoLienzo.operacion(aviso), sesionId)` → llega al `Colaborador` por WebSocket; **al autor no**, que ya lo sabe por la respuesta HTTP |
+
+#### CU8 — Trazar relaciones
+
+![Diagrama de secuencia de CU8](diagramas/secuencia-cu08.png)
+
+*Figura 37. Secuencia — CU8, trazar relaciones. El paso 6 rechaza la herencia y la realización reflexivas, y el 7 pone `"1"` como multiplicidad por defecto de cada extremo.*
+
+![Diagrama de comunicación de CU8](diagramas/comunicacion-cu08.png)
+
+*Figura 38. Comunicación — CU8, trazar relaciones. Mismo recorrido que CU7, con una diferencia: aquí es el aplicador, y no el servicio, quien escribe la relación. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (Lienzo.tsx) | elige el tipo y después los dos extremos → `elegirExtremo(claseId)` dos veces |
+| 2 | ClienteWeb (Lienzo.tsx) | ClienteWeb (Lienzo.tsx) | `trazarRelacion({tipo, origenId, destinoId}, multOrigen, multDestino)` — a `HERENCIA` y `REALIZACION` **no** se les pregunta multiplicidad: UML no la admite en esos extremos |
+| 3 | ClienteWeb (Lienzo.tsx) | ControladorDiagramas | `EnvioDeOperacion(RELACION_CREAR, CrearRelacion(relacionId, tipo, origenId, destinoId, multiplicidades, roles), LIENZO, sesionId, tokenCliente)` |
+| 4 | ControladorDiagramas | ServicioOperaciones | `registrar(...)` |
+| 5 | ServicioOperaciones | PostgreSQL | `buscarParaActualizar(diagramaId)` |
+| 6 | ServicioOperaciones | AplicadorComando | `aplicar(diagrama, CrearRelacion)` — exige que existan las dos clases y rechaza `HERENCIA`/`REALIZACION` **reflexiva**: «una clase no puede tener una relación de X consigo misma» |
+| 7 | AplicadorComando | PostgreSQL | `relaciones.save(relacion)`, con `"1"` como multiplicidad por defecto de cada extremo |
+| 8 | ControladorDiagramas | RegistroDeSesiones | `difundir(diagramaId, EventoLienzo.operacion(aviso), sesionId)` |
+
+#### CU9 — Editar atributos y operaciones
+
+> Es el caso donde **se ve la exclusión mutua en el camino normal**: el comando declara el elemento que toca y `ServicioOperaciones` compite por su bloqueo.
+
+![Diagrama de secuencia de CU9](diagramas/secuencia-cu09.png)
+
+*Figura 39. Secuencia — CU9, editar atributos y operaciones. Es donde se ve la exclusión mutua en el camino normal: el bloqueo del paso 4 se pide, no se comprueba, y el 7 solo lo libera si el 4 lo concedió.*
+
+![Diagrama de comunicación de CU9](diagramas/comunicacion-cu09.png)
+
+*Figura 40. Comunicación — CU9, editar atributos y operaciones. Los mensajes 4 y 7 comparten enlace: son la toma y la devolución del mismo bloqueo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (PanelClase.tsx) | selecciona la clase, completa nombre, tipo, visibilidad y las marcas clave/obligatorio/único → `agregarAtributo(evento)` |
+| 2 | ClienteWeb (PanelClase.tsx) | ControladorDiagramas | `EnvioDeOperacion(ATRIBUTO_AGREGAR, AgregarAtributo(claseId, atributoId, nombre, tipo, visibilidad, esIdentificador, esRequerido, esUnico, longitud), LIENZO, sesionId, tokenCliente)` |
+| 3 | ControladorDiagramas | ServicioOperaciones | `registrar(...)` |
+| 4 | ServicioOperaciones | ServicioBloqueo | `adquirir(diagramaId, CLASE, claseId, usuarioId, sesionId)` — el elemento sale de `comando.elementoAfectado()`; **se pide el bloqueo, no se verifica**: quien ya edita lo renueva, quien reproduce una cola lo toma ahora |
+| 5 | ServicioBloqueo | PostgreSQL | `intentarAdquirir(...)` → `INSERT ... ON CONFLICT DO NOTHING`; 0 filas ⇒ `ResultadoOperacion.rechazoPorBloqueo(bloqueo)` y no se aplica nada |
+| 6 | ServicioOperaciones | AplicadorComando | `aplicar(diagrama, AgregarAtributo)` — rechaza el atributo repetido: «la clase X ya tiene un atributo llamado Y» |
+| 7 | ServicioOperaciones | ServicioBloqueo | `liberar(tipo, id, usuarioId, sesionId)` — **solo si el bloqueo se tomó al paso** (`CONCEDIDO`, no `RENOVADO`): si era suyo, la persona sigue editando |
+| 8 | ControladorDiagramas | RegistroDeSesiones | `difundir(diagramaId, EventoLienzo.operacion(aviso), sesionId)` |
+
+**Una diferencia con la ficha.** La excepción «interfaz con atributos» que la ficha de CU9 lista junto a las otras dos **no la rechaza el código**: `AplicadorComando.agregarAtributo` solo rechaza el atributo repetido, y no mira el estereotipo. La regla vive en el agente guía (`agente/BaseDeConocimiento.java`), que advierte que al generar el backend esos atributos se pierden y sugiere marcar la clase abstracta. Es un aviso, no un rechazo: el modelo queda guardado igual.
+
+#### CU10 — Editar en forma concurrente
 
 Es el caso de uso de mayor riesgo del sistema y el que define su arquitectura.
 
+![Diagrama de secuencia de CU10](diagramas/secuencia-cu10.png)
+
+*Figura 41. Secuencia — CU10, editar en forma concurrente. La persona B intenta el mismo elemento que la persona A mientras esta lo retiene, y es rechazada en el paso 11.*
+
 ![Diagrama de comunicación de CU10](diagramas/comunicacion-cu10.png)
 
-*Figura 23. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor; `a` y `b` son los clientes web de la persona A y de la persona B. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+*Figura 42. Comunicación — CU10, editar en forma concurrente. Los objetos son las clases reales del servidor; `a` y `b` son los clientes web de la persona A y de la persona B. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
@@ -1097,11 +1363,63 @@ varias instancias del servidor. La variante `DO NOTHING` es deliberada: un
 conflicto no debe marcar la transacción para reversión, porque la petición que
 pierde la disputa continúa normalmente informando que el elemento está tomado.
 
-#### Diagrama de comunicación — CU13: Pedir un elemento en lenguaje libre
+#### CU11 — Dictar cambios por voz
+
+![Diagrama de secuencia de CU11](diagramas/secuencia-cu11.png)
+
+*Figura 43. Secuencia — CU11, dictar cambios por voz. El reconocimiento de voz ocurre en el navegador: lo que sube al servidor es texto. El paso 7 es el mismo punto de entrada de CU7, CU8 y CU9.*
+
+![Diagrama de comunicación de CU11](diagramas/comunicacion-cu11.png)
+
+*Figura 44. Comunicación — CU11, dictar cambios por voz. La gramática determinista va primero siempre; al modelo local solo se le pide que reescriba la frase cuando ella no entiende. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (Dictado.tsx) | dicta o escribe la frase; **el reconocimiento de voz ocurre en el navegador**, no en el servidor: lo que sube es texto |
+| 2 | ClienteWeb (Dictado.tsx) | ControladorVoz | `dictar(diagramaId, Dictado(frase, sesionId))` — `POST /api/diagramas/{id}/voz` |
+| 3 | ControladorVoz | ServicioVoz | `dictar(diagramaId, usuarioId, sesionId, frase)` |
+| 4 | ServicioVoz | ServicioProyectos | `diagramaAccesible(diagramaId, usuarioId)` |
+| 5 | ServicioVoz | DictadoConRespaldo | `interpretar(parser, traductor, frase, contexto)` — **la gramática `ParserVoz.interpretar` va primero SIEMPRE**; solo si ella no entiende, y solo si hay traductor, se le pide al modelo local que reescriba la frase |
+| 6 | ServicioVoz | Cuadricula | `ubicar(paso.comando(), siguienteCasilla)` — dictando no se dicen coordenadas; es la misma regla que usa la foto |
+| 7 | ServicioVoz | ServicioOperaciones | `registrar(diagramaId, usuarioId, sesionId, comando, OrigenOperacion.VOZ, token + "-" + i)` por cada paso — **aquí se incluye CU7/CU8/CU9**: mismo punto, mismos bloqueos, misma bitácora |
+| 8 | ControladorVoz | Modelador | `ResultadoDictado(entendida, explicacion, sugerencias, comandosLeidos, aplicadas, problemas, retenidoPor, versionDelDiagrama)` — si no se entendió, se ofrecen formas válidas y **no se toca el modelo** |
+
+#### CU12 — Leer el diagrama desde una fotografía de pizarra
+
+> Tiene **tres pasos**, no dos: transcribir (imagen → texto), leer (texto → comandos, sin aplicar) y aplicar. El de la ficha es el segundo en adelante.
+
+![Diagrama de secuencia de CU12](diagramas/secuencia-cu12.png)
+
+*Figura 45. Secuencia — CU12, leer el diagrama desde una fotografía de pizarra. Son tres pasos y no dos: transcribir, leer y aplicar. Entre el 5 y el 6 la persona revisa el texto, y hasta el 6 no se toca el modelo.*
+
+![Diagrama de comunicación de CU12](diagramas/comunicacion-cu12.png)
+
+*Figura 46. Comunicación — CU12, leer el diagrama desde una fotografía de pizarra. El modelo de visión corre en el servidor porque la clave de pago no puede quedar en el navegador. Los mensajes 5 y 6 comparten enlace. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteWeb (Foto.tsx) | elige la imagen |
+| 2 | ClienteWeb (Foto.tsx) | ControladorFoto | `transcribir(diagramaId, imagen)` — `POST .../foto/transcripcion`, multiparte (en base 64 crecería un tercio) |
+| 3 | ControladorFoto | ServicioFoto | `transcribir(diagramaId, usuarioId, imagen.getBytes(), tipoMime)` — comprueba el acceso **antes** de llamar: del otro lado hay una clave de pago |
+| 4 | ServicioFoto | LectorVisualGemini | `aNotacionDePizarra(imagen, tipoMime, PRESUPUESTO_DE_LECTURA)` — 60 s; el modelo de visión corre en el servidor porque la clave no puede quedar en el navegador |
+| 5 | ControladorFoto | Modelador | `Transcripcion(texto)` → la persona **revisa**; `POST .../foto/lectura` → `ServicioFoto.leer` → `ParserPizarra.interpretar(texto, contexto)`, sin tocar el modelo |
+| 6 | Modelador | ControladorFoto | `aplicar(diagramaId, TextoDePizarra(texto, sesionId, tokenLectura))` — al aceptar |
+| 7 | ServicioFoto | ParserPizarra | `interpretar(texto, contexto)` → `Lectura` con sus comandos; `Cuadricula.ubicar(...)` les da sitio |
+| 8 | ServicioFoto | ServicioOperaciones | `registrar(..., OrigenOperacion.FOTO, token + "-" + i + "-" + TipoOperacion.de(comando))` — **CU7/CU8/CU9**; el token lleva **tipo además de posición**, porque dos lecturas distintas de la misma pizarra dan listas de largo distinto y un comando legítimo se descartaba como reenvío |
+
+**Dos diferencias con la ficha.** La primera es el paso intermedio: entre transcribir y aplicar hay un endpoint propio, `POST .../foto/lectura` (`ServicioFoto.leer`), que interpreta el texto sin tocar el modelo, y por eso la interacción tiene tres pasos y no dos. La segunda es el error: `ControladorFoto.transcribir` responde **503** cuando la lectura por IA no está configurada (`LecturaPorIaNoDisponible`), que es distinto de «no entendí nada» y se muestra en otra pantalla. El caso es además solo web: el teléfono no lleva reconocedor de pizarra.
+
+#### CU13 — Pedir un elemento en lenguaje libre
+
+![Diagrama de secuencia de CU13](diagramas/secuencia-cu13.png)
+
+*Figura 47. Secuencia — CU13, pedir un elemento en lenguaje libre. El paso 10 recupera la propuesta guardada en vez de volver a consultar al modelo: es lo que hace que lo aplicado sea lo revisado.*
 
 ![Diagrama de comunicación de CU13](diagramas/comunicacion-cu13.png)
 
-*Figura 24. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+*Figura 48. Comunicación — CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
@@ -1135,6 +1453,144 @@ termina entrando, y el paso de revisión volvería a no garantizar nada. Está
 implementado como una función del servidor y no como una instrucción al modelo
 porque se midió que el modelo desobedece sus instrucciones en la mayoría de las
 ejecuciones.
+
+**Una precisión sobre la bitácora.** Un pedido escrito queda anotado con `OrigenOperacion.VOZ` y no con un origen propio. Es deliberado —un pedido escrito es lenguaje, igual que el dictado— y está documentado en `pedido/ServicioPedido.java`. No existe un origen `PEDIDO`.
+
+#### CU14 — Consultar al agente guía
+
+> El único caso que llega al modelo de lenguaje **y no incluye a CU7/CU8/CU9**: el agente informa, no modifica el diagrama.
+
+![Diagrama de secuencia de CU14](diagramas/secuencia-cu14.png)
+
+*Figura 49. Secuencia — CU14, consultar al agente guía. Único caso que llega al modelo de lenguaje sin incluir a CU7, CU8 ni CU9: el agente informa, no modifica el diagrama. El 4.1 es la segunda evaluación del mensaje 4, la que solo ocurre cuando hay un diagrama abierto.*
+
+![Diagrama de comunicación de CU14](diagramas/comunicacion-cu14.png)
+
+*Figura 50. Comunicación — CU14, consultar al agente guía. El modelo del mensaje 8 es el último recurso: solo se le pregunta cuando el catálogo determinista del 7 no engancha. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorGuia | `guia(diagramaId, descartados)` — `GET /api/guia`; el diagrama es **opcional**: sin él, el agente habla de la herramienta |
+| 2 | ControladorGuia | ServicioAgente | `guia(usuarioId, diagramaId, descartados)` |
+| 3 | ServicioAgente | ServicioAgente | `mirarLaAplicacion(usuarioId, enUnDiagrama)` → `Panorama` (proyectos, diagramas, operaciones por origen, registro de uso) |
+| 4 | ServicioAgente | BaseDeLaHerramienta / BaseDeConocimiento | `reglas().evaluar(panorama)` y, con diagrama, `evaluar(observar(diagramaId, usuarioId))` limitado a `POR_REGLA = 2`; se ordenan por prioridad y se cortan en `CUANTOS_A_LA_VEZ = 6` → `Guia(consejos, Recorrido.de(panorama))` |
+| 5 | Modelador | ControladorGuia | `preguntar(Pregunta(texto, sobre))` — `POST /api/guia/pregunta`; **no valida la entrada a propósito**: un 400 delante de un aula dejaría al agente mudo |
+| 6 | ServicioAgente | ServicioUso | `anotar(usuarioId, Herramienta.AGENTE_CONSULTADO)` |
+| 7 | ServicioAgente | Preguntas | `responder(texto, sobre)` — catálogo determinista; «¿y ahora qué hago?» se contesta **mirando**, con el primer paso pendiente de `Recorrido` |
+| 8 | ServicioAgente | RespondedorOllama | `responder(texto, baseComoTexto() + contextoDelEstado(panorama), 25 s)` — **solo si el catálogo no enganchó**; si el modelo dice `NO_SABE`, gana la respuesta escrita |
+
+#### CU15 — Generar el backend Spring Boot
+
+![Diagrama de secuencia de CU15](diagramas/secuencia-cu15.png)
+
+*Figura 51. Secuencia — CU15, generar el backend Spring Boot. El paso 4 arma un plan intermedio y los pasos 5, 6 y 6.1 escriben desde ese plan; el 6.1 es la parte del mensaje 6 que produce las otras tres capas.*
+
+![Diagrama de comunicación de CU15](diagramas/comunicacion-cu15.png)
+
+*Figura 52. Comunicación — CU15, generar el backend Spring Boot. Generar no cambia el modelo, así que no entra en la bitácora de operaciones: lo único que queda anotado es el uso, en el mensaje 7. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorGeneracion | `resumen(diagramaId, paquete?)` — `GET .../generacion` |
+| 2 | ControladorGeneracion | ServicioGeneracion | `archivos(diagramaId, usuarioId, paqueteBase)` |
+| 3 | ServicioGeneracion | ServicioModelo | `clasesCompletas(diagramaId)` y `relacionesDe(diagramaId)` (previa `proyectos.diagramaAccesible(...)`) |
+| 4 | ServicioGeneracion | PlanificadorGeneracion | `planificar(paquete, artefacto, nombreAplicacion, clases, relaciones)` → `Plan.Proyecto` — **el plan intermedio**: de dónde sale la clave primaria, qué anotación JPA toca a cada asociación, cuál extremo guarda la clave ajena, qué hace la herencia |
+| 5 | ServicioGeneracion | EscritorAndamiaje | `pom(plan)`, `readme(plan)`, `compose(plan)`, `configuracion(plan)`, `cors(plan)`, `aplicacion(plan)`, más el wrapper de Maven tal cual |
+| 6 | ServicioGeneracion | EscritorEntidad / EscritorCapas | `escribir(plan, clase)` para cada `plan.clases()`, y `repositorio/servicio/controlador(plan, clase)` para cada `plan.generables()` — **cuatro capas por clase**; interfaces y abstractas quedan solo como tipo de dominio |
+| 7 | ControladorGeneracion | ServicioUso | `anotar(usuarioId, Herramienta.BACKEND_GENERADO)` — generar no cambia el modelo, así que no entra en la bitácora |
+| 8 | Modelador | ControladorGeneracion | `zip(diagramaId, paquete?)` → `ServicioGeneracion.comprimir(archivos, carpeta)` + `anotar(PROYECTO_DESCARGADO)` → descarga |
+
+#### CU16 — Exportar el modelo a XMI
+
+![Diagrama de secuencia de CU16](diagramas/secuencia-cu16.png)
+
+*Figura 53. Secuencia — CU16, exportar el modelo a XMI. La disposición de cada clase viaja en el bloque de extensión de Enterprise Architect, y el documento se importa en EA, no se abre.*
+
+![Diagrama de comunicación de CU16](diagramas/comunicacion-cu16.png)
+
+*Figura 54. Comunicación — CU16, exportar el modelo a XMI. Enterprise Architect es el destinatario del documento y el único participante que no es parte de FORJA. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorXmi | `exportar(diagramaId)` — `GET /api/diagramas/{id}/xmi` |
+| 2 | ControladorXmi | ServicioXmi | `exportar(diagramaId, usuarioId)` |
+| 3 | ServicioXmi | ServicioProyectos | `diagramaAccesible(diagramaId, usuarioId)` |
+| 4 | ServicioXmi | ServicioModelo | `clasesCompletas(diagramaId)` y `relacionesDe(diagramaId)` |
+| 5 | ServicioXmi | ExportadorXmi | `exportar(diagrama, clases, relaciones)` → XMI 2.5.1, con la **disposición de cada clase en el bloque de extensión** de Enterprise Architect |
+| 6 | ControladorXmi | ServicioUso | `anotar(usuarioId, Herramienta.XMI_EXPORTADO)` — sin esto el agente no puede distinguir a quien nunca descubrió el intercambio |
+| 7 | ControladorXmi | Modelador | `200` con `Content-Disposition: attachment; filename="modelo-{diagramaId}.xmi"`, `application/xml` |
+| 8 | Modelador | EnterpriseArchitect | el documento se **importa** en EA (Ctrl+Alt+I con un paquete seleccionado), no se «abre» |
+
+#### CU17 — Importar un modelo desde XMI
+
+![Diagrama de secuencia de CU17](diagramas/secuencia-cu17.png)
+
+*Figura 55. Secuencia — CU17, importar un modelo desde XMI. El mensaje 0 es la precondición: el documento viene de Enterprise Architect. Cada comando se registra en su propia transacción, de modo que uno inválido se anota en los problemas y el resto se importa igual.*
+
+![Diagrama de comunicación de CU17](diagramas/comunicacion-cu17.png)
+
+*Figura 56. Comunicación — CU17, importar un modelo desde XMI. Importar sobre un diagrama abierto no atropella a quien lo está editando: el bloqueo del mensaje 6 devuelve esos comandos como rechazados. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ControladorXmi | `importarArchivo(diagramaId, sesionId, tokenImportacion, archivo)` (multiparte, desde el navegador) o `importar(..., documento)` con el XML como cuerpo (desde el móvil) |
+| 2 | ControladorXmi | ServicioXmi | `importar(diagramaId, usuarioId, sesionId, documento, tokenImportacion)` |
+| 3 | ServicioXmi | ServicioProyectos | `diagramaAccesible(diagramaId, usuarioId)` — antes de gastar tiempo interpretando el archivo |
+| 4 | ServicioXmi | ImportadorXmi | `interpretar(xmi)` → `List<ComandoOperacion>`; lee clases, atributos, operaciones, relaciones **y la disposición** del bloque de extensión de EA. `XmiInvalido` si no es XML, no tiene clases, o es XMI 1.x |
+| 5 | ServicioXmi | ServicioOperaciones | `registrar(..., OrigenOperacion.IMPORTACION, token + "-" + i)` **uno por comando y cada uno en su propia transacción** — **aquí se incluye CU7/CU8/CU9** |
+| 6 | ServicioOperaciones | ServicioBloqueo | `adquirir(...)` por cada comando — importar sobre un diagrama abierto **no atropella** a quien lo está editando; esos comandos vuelven como `RECHAZADA_POR_BLOQUEO` |
+| 7 | ServicioOperaciones | AplicadorComando | `aplicar(diagrama, comando)`; un `ComandoInvalido` se anota en `problemas` y **el resto se importa igual** |
+| 8 | ControladorXmi | Modelador | `ResumenImportacion(comandosLeidos, aplicadas, duplicadas, rechazadasPorBloqueo, problemas, versionDelDiagrama)` |
+
+#### CU18 — Modelar sin conexión y sincronizar
+
+![Diagrama de secuencia de CU18](diagramas/secuencia-cu18.png)
+
+*Figura 57. Secuencia — CU18, modelar sin conexión y sincronizar. La pantalla nunca espera al servidor: el paso 2 aplica sobre la copia local. Los mensajes 6.1 y 6.2 son la continuación del 6 dentro del servidor, y el 6.2 es el que evita que un reenvío duplique nada.*
+
+![Diagrama de comunicación de CU18](diagramas/comunicacion-cu18.png)
+
+*Figura 58. Comunicación — CU18, modelar sin conexión y sincronizar. El delta del mensaje 8 se pide solo después de vaciar la cola: al revés traería un estado que todavía no incluye lo propio. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | Modelador | ClienteMovil (lienzo.dart) | crea, mueve, renombra → `_ejecutar(Comando.crearClase(...))` |
+| 2 | ClienteMovil | Sincronizador | `ejecutar(comando)` → `aplicar(diagrama, comando)` **sobre la copia local primero**; la pantalla nunca espera al servidor |
+| 3 | Sincronizador | Almacen | `guardarDiagrama(diagrama)` + `guardarCola(diagrama.id, _pendientes)` — archivos en el teléfono |
+| 4 | Sincronizador | Api (móvil) | `enviar(diagramaId, comando, sesionId)` → `SinConexion` ⇒ `estado = sinConexion` y la operación **queda encolada** |
+| 5 | Sincronizador | Api (móvil) | al volver la red, `_vaciarCola(id)`: se envían **en orden estricto** y se detiene en el primer tropiezo (los comandos dependen unos de otros) |
+| 6 | Api (móvil) | ControladorDiagramas | `POST .../operaciones` con el `tokenCliente` propio de cada comando → `ServicioOperaciones.registrar(...)` → `operaciones.findByDiagramaIdAndTokenCliente(...)` devuelve `DUPLICADA` sin volver a aplicar. **Así el reenvío no duplica nada**, y es el mismo punto de CU7/CU8/CU9 |
+| 7 | ServicioOperaciones | Sincronizador | `RECHAZADA_POR_BLOQUEO` ⇒ `comando.intentos++`; a los `maximosIntentos` = 5 se descarta, se nombra en `rechazados` y se marca `_hayQuePedirTodo` |
+| 8 | Sincronizador | Api (móvil) | `delta(diagramaId, diagrama.version)` → `reproducir(diagrama, nuevas)` — **solo después** de vaciar la cola: al revés, el delta traería un estado que todavía no incluye lo propio |
+
+#### CU19 — Cargar registros en el backend generado desde el teléfono
+
+> Único caso que no toca FORJA: el cliente móvil habla con el **backend que FORJA generó**, que es otro sistema y **no tiene autenticación** (no es un olvido del cliente).
+
+![Diagrama de secuencia de CU19](diagramas/secuencia-cu19.png)
+
+*Figura 59. Secuencia — CU19, cargar registros en el backend generado desde el teléfono. Único caso que no toca FORJA: el cliente habla con el backend que la propia herramienta escribió, que es otro sistema y no tiene autenticación. El 6.1 es la petición que la capa de red hace contra él.*
+
+![Diagrama de comunicación de CU19](diagramas/comunicacion-cu19.png)
+
+*Figura 60. Comunicación — CU19, cargar registros en el backend generado desde el teléfono. Se ve primero y se manda después: el mensaje 5 guarda la fila marcada como pendiente antes de que el 6 la envíe. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+
+
+| # | Desde | Hacia | Mensaje |
+|---|---|---|---|
+| 1 | OperadorDeDatos | PantallaEntidades | elige el diagrama bajado; la pantalla **deriva del modelo** una entidad por clase con su ruta `/api/{rutaDe(clase.nombre)}` — sin recompilarse |
+| 2 | OperadorDeDatos | PantallaEntidades | escribe la dirección del backend → `almacen.guardarDireccionBackend(limpia)` y se reconstruye `Repositorio(almacen, api: ApiGenerada(base: limpia))` |
+| 3 | OperadorDeDatos | PantallaRegistros | elige la entidad y completa el formulario, cuyos campos son los atributos de la clase; con el teclado o dictando campo por campo (`ubicarDictado(frase, campos, valores)`) |
+| 4 | PantallaRegistros | Repositorio | `crear(clase.nombre, valores)` — se exigen **todos** los campos editables: el backend generado no acepta el registro con campos vacíos |
+| 5 | Repositorio | AlmacenRegistros | `guardarFilas(clase, [...filas, {...datos, '_pendiente': operacion.id}])` + `encolar(OperacionPendiente)` — **se ve primero y se manda después**: al revés, sin señal la pantalla quedaría vacía |
+| 6 | Repositorio | ApiGenerada | `sincronizar()` → `crear(clase, datos)` → `POST {base}/api/{ruta}` contra el `BackendGenerado` |
+| 7 | ApiGenerada | Repositorio | `ErrorDelBackendGenerado`: si `esDefinitivo`, la operación **sale de la cola** y se informa nombrándola; si es 500/401/429 o no contesta, se conserva y se corta la pasada, con el resto en orden |
+| 8 | Repositorio | ApiGenerada | `listar(clase)` para cada clase que quedó **sin pendientes** → `almacen.guardarFilas(clase, filas)`; la lista pasa a mostrar lo que el servidor guardó, con identificadores de verdad y sin la marca `_pendiente` |
 
 ### 2.2.5 Análisis de paquetes
 
@@ -1194,7 +1650,7 @@ backend.
 
 ![Modelo de despliegue](diagramas/despliegue.png)
 
-*Figura 25. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
+*Figura 61. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
 
 
 **Lo que está desplegado.** FORJA corre en una instancia EC2 `t3.micro` de AWS,
@@ -1228,7 +1684,7 @@ bajar la definición del diagrama. Al backend generado llega por red local,
 típicamente por el punto de acceso del propio teléfono, que no depende de la red
 del lugar ni necesita internet.
 
-**Nota sobre la Figura 25.** El diagrama representa la topología anterior a este
+**Nota sobre la Figura 61.** El diagrama representa la topología anterior a este
 despliegue: el navegador, el dispositivo Android, la instancia con la aplicación
 y su base, y el equipo de demostración con el modelo local. No incorpora todavía
 la distribución de CloudFront, ni el backend generado con su base en el equipo de
@@ -1265,7 +1721,7 @@ El esquema tiene doce tablas, agrupadas en cuatro conjuntos:
 
 ![Diagrama de clases del modelo de datos](diagramas/modelo-de-datos.png)
 
-*Figura 26. Modelo de datos. La fila del medio es el recorrido del dominio y se lee de izquierda a derecha —`Usuario` → `Proyecto` → `Diagrama` → `ClaseUml`—; arriba y abajo cuelga lo que se apoya en cada uno. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
+*Figura 62. Modelo de datos. La fila del medio es el recorrido del dominio y se lee de izquierda a derecha —`Usuario` → `Proyecto` → `Diagrama` → `ClaseUml`—; arriba y abajo cuelga lo que se apoya en cada uno. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
 
 **Mapeo del modelo a la base de datos**
 
@@ -1310,7 +1766,7 @@ y los tipos están copiados de ahí.
 
 ![Modelo físico de datos](diagramas/modelo-fisico.png)
 
-*Figura 27. Modelo físico de datos. Cada caja es una tabla con sus columnas y el tipo de PostgreSQL; `PK` marca la clave primaria —compuesta en `proyecto_miembro` y en `uso_herramienta`— y `FK` la clave ajena. Las flechas son las restricciones referenciales. `relacion_uml` referencia dos veces a `clase_uml`, por `origen_id` y por `destino_id`, y se dibuja con un solo conector porque ambos van entre las mismas dos cajas.*
+*Figura 63. Modelo físico de datos. Cada caja es una tabla con sus columnas y el tipo de PostgreSQL; `PK` marca la clave primaria —compuesta en `proyecto_miembro` y en `uso_herramienta`— y `FK` la clave ajena. Las flechas son las restricciones referenciales. `relacion_uml` referencia dos veces a `clase_uml`, por `origen_id` y por `destino_id`, y se dibuja con un solo conector porque ambos van entre las mismas dos cajas.*
 
 **Tabla de volumen**
 
@@ -1836,7 +2292,7 @@ proceso, está disponible en:
 
 ![Código QR del repositorio](diagramas/qr-repositorio.png)
 
-*Figura 28. Código QR del repositorio. Lleva a
+*Figura 64. Código QR del repositorio. Lleva a
 `https://github.com/santiagoarteaga0704/Forja`, donde están el código fuente de
 los tres módulos, la historia de confirmaciones fechadas y esta misma
 documentación con sus figuras.*
@@ -1849,7 +2305,7 @@ FORJA está publicada y es alcanzable desde cualquier red, sin instalar nada, en
 
 ![Código QR de la aplicación desplegada](diagramas/qr-servidor.png)
 
-*Figura 29. Código QR de la aplicación desplegada. Lleva a
+*Figura 65. Código QR de la aplicación desplegada. Lleva a
 `https://d2x41sl49sltgo.cloudfront.net`, la instancia EC2 servida por HTTPS a
 través de CloudFront. Es también la dirección con la que el cliente móvil entra a
 bajar la definición del diagrama.*
