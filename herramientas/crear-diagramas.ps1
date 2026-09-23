@@ -1,5 +1,7 @@
-# Genera en Enterprise Architect las ocho figuras del documento y las exporta
-# como PNG a docs/diagramas.
+# Genera en Enterprise Architect las veintisiete figuras del documento -un
+# diagrama por cada uno de los diecinueve casos de uso, mas las ocho figuras de
+# conjunto- y las exporta como PNG a docs/diagramas. Las dos restantes son los
+# codigos QR, que los hace herramientas/crear-qr.mjs.
 #
 # Se hace con EA y no con una herramienta de dibujo por dos razones: la notacion
 # sale correcta sin tener que cuidarla a mano, y un documento de una materia que
@@ -122,8 +124,160 @@ function Exportar($diagrama, $archivo) {
   else { "  !! no se genero $archivo" }
 }
 
+function UbicarUC($diagrama, $elemento, $l, $t, $ancho, $alto) {
+  # Igual que Ubicar, pero fijando las coordenadas UNA SEGUNDA VEZ sobre el
+  # objeto ya creado. Un caso de uso colocado con un solo Update sale siempre
+  # del tamano por defecto -unas 91x52 unidades- por mas ancho que se le pida,
+  # y los nombres largos se desbordan del ovalo. Con la segunda pasada EA
+  # respeta el tamano. Se deja como funcion aparte para no tocar Ubicar, que es
+  # la que usan las ocho figuras que ya estaban y que no conviene mover.
+  $o = $diagrama.DiagramObjects.AddNew("l=$l;r=$($l+$ancho);t=$(-$t);b=$(-($t+$alto));", '')
+  $o.ElementID = $elemento.ElementID
+  [void]$o.Update()
+  $o.left = $l; $o.right = $l + $ancho; $o.top = -$t; $o.bottom = -($t + $alto)
+  [void]$o.Update()
+}
+
+function Incluir($base, $incluido) {
+  # La relacion «include» va del caso de uso BASE hacia el INCLUIDO, y la punta
+  # de la flecha tiene que quedar sobre el incluido. Dos trampas de EA aqui:
+  #
+  #   1. Connector.Direction no se respeta si se fija antes del primer
+  #      Update(): el conector nace sin identidad y el valor se pierde.
+  #   2. Con el estereotipo «include» el valor que deja la punta sobre el
+  #      DESTINO es 'Source -> Destination'. En un Dependency sin estereotipo
+  #      EA lo dibuja al reves, asi que no se puede copiar el criterio de otro
+  #      conector: hay que mirar el PNG.
+  $c = $base.Connectors.AddNew('', 'Dependency')
+  $c.SupplierID = $incluido.ElementID
+  [void]$c.Update()
+  $c.Stereotype = 'include'
+  $c.Direction  = 'Source -> Destination'
+  [void]$c.Update()
+  return $c
+}
+
 # =====================================================================
-# Figura 1. Casos de uso, Ciclo #1
+# Figuras 1 a 19. Un diagrama por caso de uso
+# =====================================================================
+# Ademas de las dos figuras de conjunto -que muestran como se reparten los
+# diecinueve casos entre los dos ciclos-, cada caso de uso lleva su propio
+# diagrama al lado de su ficha en 2.1.4. No es redundancia: en el diagrama de
+# conjunto un caso de uso es un ovalo mas entre diez, y lo que se lee es el
+# reparto; en el diagrama individual se lee QUIEN lo inicia, QUIEN participa
+# ademas y QUE otros casos quedan incluidos.
+#
+# Aqui SI se dibujan las relaciones «include». En las figuras de conjunto no se
+# dibujan porque cinco casos apuntando a los mismos tres destinos tapaban los
+# ovalos; en un diagrama por caso de uso cada uno muestra solo las tres suyas y
+# el dibujo se lee sin esfuerzo. Es el lugar donde corresponden.
+#
+# Cada caso de uso va en su PROPIO paquete, con COPIAS propias de sus actores y
+# de los casos que incluye, en vez de reutilizar los elementos de los paquetes
+# «Ciclo 1» y «Ciclo 2». El motivo es que EA dibuja todo conector cuyos dos
+# extremos esten en el diagrama: con elementos compartidos, poner «Modelador» y
+# CU7 en el diagrama de CU11 habria arrastrado tambien la asociacion
+# Modelador-CU7, que en ese diagrama no viene al caso. Con copias, cada
+# diagrama solo contiene las relaciones que se le pidieron.
+#
+# Los nombres van sin acentos, igual que en las figuras 20 y 21: el guion se
+# documenta para correrse con Windows PowerShell 5.1, que lee este archivo
+# -UTF-8 sin BOM- como ANSI y mandaria a EA los acentos rotos. La prosa del
+# documento si los lleva.
+
+# Iniciador, actores secundarios e inclusiones salen de las fichas de 2.1.4 del
+# documento: la fila «Actor Iniciador» y la fila «Actores» menos el iniciador.
+# CU10 es el unico cuyo iniciador no es el Modelador -lo inicia el Colaborador
+# que ya esta editando-, y CU19 el unico que no involucra al Modelador.
+$incluidos = @(
+  'CU7 Modelar clases en el lienzo',
+  'CU8 Trazar relaciones',
+  'CU9 Editar atributos y operaciones')
+
+$fichas = @(
+  @{ id = 1;  nombre = 'CU1 Registrar usuario';                                    ini = 'Modelador';         sec = @();                           incluye = $false },
+  @{ id = 2;  nombre = 'CU2 Iniciar sesion';                                       ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 3;  nombre = 'CU3 Cerrar sesion';                                        ini = 'Modelador';         sec = @();                           incluye = $false },
+  @{ id = 4;  nombre = 'CU4 Administrar proyecto';                                 ini = 'Modelador';         sec = @();                           incluye = $false },
+  @{ id = 5;  nombre = 'CU5 Invitar colaborador';                                  ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 6;  nombre = 'CU6 Administrar diagrama';                                 ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 7;  nombre = 'CU7 Modelar clases en el lienzo';                          ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 8;  nombre = 'CU8 Trazar relaciones';                                    ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 9;  nombre = 'CU9 Editar atributos y operaciones';                       ini = 'Modelador';         sec = @('Colaborador');              incluye = $false },
+  @{ id = 10; nombre = 'CU10 Editar en forma concurrente';                         ini = 'Colaborador';       sec = @('Modelador');                incluye = $false },
+  @{ id = 11; nombre = 'CU11 Dictar cambios por voz';                              ini = 'Modelador';         sec = @();                           incluye = $true  },
+  @{ id = 12; nombre = 'CU12 Leer el diagrama desde una fotografia de pizarra';    ini = 'Modelador';         sec = @();                           incluye = $true  },
+  @{ id = 13; nombre = 'CU13 Pedir un elemento en lenguaje libre';                 ini = 'Modelador';         sec = @('Modelo de lenguaje local'); incluye = $true  },
+  @{ id = 14; nombre = 'CU14 Consultar al agente guia';                            ini = 'Modelador';         sec = @('Modelo de lenguaje local'); incluye = $false },
+  @{ id = 15; nombre = 'CU15 Generar el backend Spring Boot';                      ini = 'Modelador';         sec = @();                           incluye = $false },
+  @{ id = 16; nombre = 'CU16 Exportar el modelo a XMI';                            ini = 'Modelador';         sec = @('Enterprise Architect');     incluye = $false },
+  @{ id = 17; nombre = 'CU17 Importar un modelo desde XMI';                        ini = 'Modelador';         sec = @('Enterprise Architect');     incluye = $true  },
+  @{ id = 18; nombre = 'CU18 Modelar sin conexion y sincronizar';                  ini = 'Modelador';         sec = @();                           incluye = $true  },
+  @{ id = 19; nombre = 'CU19 Cargar registros en el backend generado desde el telefono'; ini = 'Operador de datos'; sec = @('Backend generado');    incluye = $false }
+)
+
+foreach ($f in $fichas) {
+  $nn  = '{0:d2}' -f $f.id
+  $paq = NuevoPaquete $modelo "Caso de Uso $nn"
+
+  $actorIni = NuevoElemento $paq $f.ini 'Actor'
+  $caso     = NuevoElemento $paq $f.nombre 'UseCase'
+  [void](Conectar $actorIni $caso 'Association')
+
+  $dia = $paq.Diagrams.AddNew("CU$nn", 'Use Case')
+  [void]$dia.Update(); $paq.Diagrams.Refresh()
+
+  # Las tres columnas -iniciador, caso de uso, actores secundarios- van
+  # apretadas por el mismo limite de ancho que el resto de las figuras: Word
+  # reduce la imagen al ancho util de la pagina, asi que cuanto mas ancho el
+  # PNG, mas chica la letra.
+  #
+  # El tamano que se pide aqui es apenas orientativo: EA autodimensiona casos
+  # de uso y actores a unas 91x52 unidades y los ancla en (l, t) ignorando el
+  # ancho y el alto pedidos. Lo que de verdad fija el ancho del PNG es la
+  # POSICION de la columna mas a la derecha, por eso los anclajes se espacian
+  # a mano.
+  #
+  # Ninguna columna arranca en 0: con «l=0;...» EA descarta la ubicacion
+  # entera y NO dibuja el elemento, sin error y sin aviso.
+  Ubicar $dia $actorIni  20 160  90 100
+  UbicarUC $dia $caso   220 170 170 100
+
+  # Los actores secundarios van a la derecha del caso de uso, a su misma
+  # altura. Ninguna ficha de 2.1.4 tiene mas de uno, pero el bucle soporta
+  # varios y los apila hacia abajo por si alguna ficha crece.
+  $ys = 160
+  foreach ($s in $f.sec) {
+    $actorSec = NuevoElemento $paq $s 'Actor'
+    [void](Conectar $caso $actorSec 'Association')
+    Ubicar $dia $actorSec 440 $ys 110 100
+    $ys += 180
+  }
+
+  # Los tres casos incluidos van en FILA debajo del principal, abiertos en
+  # abanico, y no apilados en una columna. Apilados, el primer intento salio
+  # mal de dos maneras a la vez: las tres flechas se superponian sobre el mismo
+  # eje vertical y el dibujo terminaba pareciendo decir que CU7 incluye a CU8 y
+  # CU8 a CU9 -una cadena que no existe-, y ademas el rotulo «include» del
+  # segundo conector caia justo encima del texto del primer ovalo. En abanico
+  # cada flecha sale del caso base con su propia pendiente y los tres rotulos
+  # quedan separados unas 95 unidades, mas que lo que mide el rotulo.
+  if ($f.incluye) {
+    $xi = 40
+    foreach ($nombreInc in $incluidos) {
+      $casoInc = NuevoElemento $paq $nombreInc 'UseCase'
+      [void](Incluir $caso $casoInc)
+      UbicarUC $dia $casoInc $xi 420 145 90
+      $xi += 175
+    }
+  }
+
+  $dia.DiagramObjects.Refresh()
+  Exportar $dia "cu-$nn.png"
+}
+
+# =====================================================================
+# Figura 20. Casos de uso, Ciclo #1
 # =====================================================================
 # Los casos de uso van en DOS diagramas y no en uno: con los dieciocho juntos el
 # actor Modelador se conecta con diecisiete y las lineas se cruzan hasta volver
@@ -161,13 +315,14 @@ $dia1.DiagramObjects.Refresh()
 Exportar $dia1 'casos-de-uso-ciclo1.png'
 
 # =====================================================================
-# Figura 2. Casos de uso, Ciclo #2
+# Figura 21. Casos de uso, Ciclo #2
 # =====================================================================
 # El modelo de lenguaje atiende los dos casos de arriba y Enterprise Architect
 # los dos de abajo: ubicados asi, ningun par de lineas se cruza. Las relaciones
 # «include» hacia CU7-CU9 no se dibujan aqui —cinco lineas hacia un mismo
-# destino pasaban por encima de los ovalos—; el documento las enuncia y los
-# diagramas de comunicacion las muestran realizadas.
+# destino pasaban por encima de los ovalos—; el documento las enuncia, cada
+# diagrama por caso de uso las dibuja para el suyo y los diagramas de
+# comunicacion las muestran realizadas.
 $paq2 = NuevoPaquete $modelo 'Ciclo 2'
 $mod2 = NuevoElemento $paq2 'Modelador' 'Actor'
 $ea2  = NuevoElemento $paq2 'Enterprise Architect' 'Actor'
@@ -211,7 +366,7 @@ $dia2.DiagramObjects.Refresh()
 Exportar $dia2 'casos-de-uso-ciclo2.png'
 
 # =====================================================================
-# Figura 3. Vista de paquetes
+# Figura 22. Vista de paquetes
 # =====================================================================
 $paqPk = NuevoPaquete $modelo 'Vista de Paquetes'
 $p = @{}
@@ -248,7 +403,7 @@ $diaPk.DiagramObjects.Refresh()
 Exportar $diaPk 'paquetes.png'
 
 # =====================================================================
-# Figura 4. Comunicacion, CU10: editar en forma concurrente
+# Figura 23. Comunicacion, CU10: editar en forma concurrente
 # =====================================================================
 # Los objetos son las clases reales de src/main/java. Cuando dos mensajes viajan
 # entre el mismo par de objetos comparten el enlace, porque dos conectores entre
@@ -313,7 +468,7 @@ $diaM1.DiagramObjects.Refresh()
 Exportar $diaM1 'comunicacion-cu10.png'
 
 # =====================================================================
-# Figura 5. Comunicacion, CU13: pedir un elemento en lenguaje libre
+# Figura 24. Comunicacion, CU13: pedir un elemento en lenguaje libre
 # =====================================================================
 $paqM2 = NuevoPaquete $modelo 'Comunicacion CU13'
 $per   = NuevoElemento $paqM2 ':Modelador' 'Object'
@@ -357,7 +512,7 @@ $diaM2.DiagramObjects.Refresh()
 Exportar $diaM2 'comunicacion-cu13.png'
 
 # =====================================================================
-# Figura 6. Modelo de despliegue
+# Figura 25. Modelo de despliegue
 # =====================================================================
 $paqDep = NuevoPaquete $modelo 'Despliegue'
 $navegador = NuevoElemento $paqDep 'Navegador' 'Node'
@@ -396,7 +551,7 @@ $diaDep.DiagramObjects.Refresh()
 Exportar $diaDep 'despliegue.png'
 
 # =====================================================================
-# Figura 7. Modelo de datos
+# Figura 26. Modelo de datos
 # =====================================================================
 $paqC = NuevoPaquete $modelo 'Modelo de Datos'
 
@@ -490,7 +645,7 @@ $diaC.DiagramObjects.Refresh()
 Exportar $diaC 'modelo-de-datos.png'
 
 # =====================================================================
-# Figura 8. Modelo fisico de datos
+# Figura 27. Modelo fisico de datos
 # =====================================================================
 # La figura anterior es el modelo LOGICO: clases con atributos de dominio. Esta
 # es el esquema tal como existe en PostgreSQL, y por eso no se copia de las

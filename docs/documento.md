@@ -3,18 +3,37 @@
 
 | # | Figura | Sección |
 |---|---|---|
-| 1 | Casos de uso del Ciclo #1 | 2.1.5 |
-| 2 | Casos de uso del Ciclo #2 | 2.1.5 |
-| 3 | Vista de paquetes | 2.2.3 |
-| 4 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
-| 5 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
-| 6 | Modelo de despliegue | 2.3.1.1 |
-| 7 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
-| 8 | Modelo físico de datos (tablas, tipos y claves) | 2.3.2.2 |
-| 9 | Código QR del repositorio | Anexo A |
-| 10 | Código QR de la aplicación desplegada | Anexo B |
+| 1 | CU1 Registrar usuario | 2.1.4 |
+| 2 | CU2 Iniciar sesión | 2.1.4 |
+| 3 | CU3 Cerrar sesión | 2.1.4 |
+| 4 | CU4 Administrar proyecto | 2.1.4 |
+| 5 | CU5 Invitar colaborador | 2.1.4 |
+| 6 | CU6 Administrar diagrama | 2.1.4 |
+| 7 | CU7 Modelar clases en el lienzo | 2.1.4 |
+| 8 | CU8 Trazar relaciones | 2.1.4 |
+| 9 | CU9 Editar atributos y operaciones | 2.1.4 |
+| 10 | CU10 Editar en forma concurrente | 2.1.4 |
+| 11 | CU11 Dictar cambios por voz | 2.1.4 |
+| 12 | CU12 Leer el diagrama desde una fotografía de pizarra | 2.1.4 |
+| 13 | CU13 Pedir un elemento en lenguaje libre | 2.1.4 |
+| 14 | CU14 Consultar al agente guía | 2.1.4 |
+| 15 | CU15 Generar el backend Spring Boot | 2.1.4 |
+| 16 | CU16 Exportar el modelo a XMI | 2.1.4 |
+| 17 | CU17 Importar un modelo desde XMI | 2.1.4 |
+| 18 | CU18 Modelar sin conexión y sincronizar | 2.1.4 |
+| 19 | CU19 Cargar registros en el backend generado desde el teléfono | 2.1.4 |
+| 20 | Casos de uso del Ciclo #1 | 2.1.5 |
+| 21 | Casos de uso del Ciclo #2 | 2.1.5 |
+| 22 | Vista de paquetes | 2.2.3 |
+| 23 | Comunicación — CU10, editar en forma concurrente | 2.2.4 |
+| 24 | Comunicación — CU13, pedir un elemento en lenguaje libre | 2.2.4 |
+| 25 | Modelo de despliegue | 2.3.1.1 |
+| 26 | Modelo de datos (diagrama de clases) | 2.3.2.1 |
+| 27 | Modelo físico de datos (tablas, tipos y claves) | 2.3.2.2 |
+| 28 | Código QR del repositorio | Anexo A |
+| 29 | Código QR de la aplicación desplegada | Anexo B |
 
-Las ocho primeras figuras se construyeron en **Enterprise Architect 15.0**
+Las veintisiete primeras figuras se construyeron en **Enterprise Architect 15.0**
 mediante automatización COM; el guion que las genera queda en el repositorio.
 Las dos últimas son códigos QR generados por guion y verificados
 decodificándolos.
@@ -614,6 +633,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | La cuenta queda creada y la sesión iniciada. |
 | **Excepción** | Correo ya registrado; contraseña menor a 8 caracteres. |
 
+![CU1 Registrar usuario](diagramas/cu-01.png)
+
+*Figura 1. CU1 Registrar usuario. El Modelador es el único actor y también el iniciador.*
+
 **CU2. Iniciar sesión**
 
 | | |
@@ -626,6 +649,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Ingresar correo y contraseña. 2. El sistema verifica la contraseña contra su resumen cifrado. 3. Se emite una credencial firmada con vigencia de 12 horas. 4. Se accede a la pantalla de proyectos. |
 | **Post Condición** | La credencial queda almacenada en el cliente. |
 | **Excepción** | Credenciales inválidas. |
+
+![CU2 Iniciar sesión](diagramas/cu-02.png)
+
+*Figura 2. CU2 Iniciar sesión. Lo inicia el Modelador; el Colaborador participa como actor secundario, porque entra al sistema por la misma puerta.*
 
 **CU3. Cerrar sesión**
 
@@ -640,6 +667,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | No queda credencial almacenada en el cliente. |
 | **Excepción** | Ninguna. |
 
+![CU3 Cerrar sesión](diagramas/cu-03.png)
+
+*Figura 3. CU3 Cerrar sesión. El Modelador es el único actor y también el iniciador.*
+
 **CU4. Administrar proyecto**
 
 | | |
@@ -652,6 +683,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Escribir el nombre del proyecto. 2. Confirmar la creación. 3. El sistema crea el proyecto y registra al creador como propietario. 4. El proyecto aparece en la lista con su fecha de modificación. |
 | **Post Condición** | El proyecto queda creado con su propietario. |
 | **Excepción** | Nombre vacío o mayor a 150 caracteres. |
+
+![CU4 Administrar proyecto](diagramas/cu-04.png)
+
+*Figura 4. CU4 Administrar proyecto. El Modelador es el único actor y también el iniciador.*
 
 **CU5. Invitar colaborador**
 
@@ -666,6 +701,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | La persona puede abrir y editar los diagramas del proyecto. |
 | **Excepción** | Correo sin cuenta asociada; quien invita no es el propietario. |
 
+![CU5 Invitar colaborador](diagramas/cu-05.png)
+
+*Figura 5. CU5 Invitar colaborador. Lo inicia el Modelador, que es el propietario del proyecto; el Colaborador es el actor secundario, el invitado.*
+
 **CU6. Administrar diagrama**
 
 | | |
@@ -678,6 +717,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Elegir el proyecto. 2. Escribir el nombre del diagrama. 3. Confirmar. 4. El sistema crea el diagrama en versión 0 y abre el lienzo. |
 | **Post Condición** | El diagrama queda creado y abierto. |
 | **Excepción** | No pertenecer al proyecto. |
+
+![CU6 Administrar diagrama](diagramas/cu-06.png)
+
+*Figura 6. CU6 Administrar diagrama. Lo inicia el Modelador; el Colaborador es actor secundario porque abre los diagramas del proyecto al que fue invitado.*
 
 **CU7. Modelar clases en el lienzo**
 
@@ -692,6 +735,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | La clase existe en el modelo y todos la ven. |
 | **Excepción** | Nombre repetido dentro del mismo diagrama. |
 
+![CU7 Modelar clases en el lienzo](diagramas/cu-07.png)
+
+*Figura 7. CU7 Modelar clases en el lienzo. Lo inicia el Modelador; el Colaborador es actor secundario. Es uno de los tres casos que incluyen todas las vías alternativas de entrada.*
+
 **CU8. Trazar relaciones**
 
 | | |
@@ -704,6 +751,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Elegir el tipo de relación. 2. Seleccionar la clase de origen y la de destino. 3. Indicar las multiplicidades de cada extremo. 4. El sistema valida y registra la relación. |
 | **Post Condición** | La relación queda trazada y dibujada con su notación. |
 | **Excepción** | Herencia o realización de una clase consigo misma. |
+
+![CU8 Trazar relaciones](diagramas/cu-08.png)
+
+*Figura 8. CU8 Trazar relaciones. Lo inicia el Modelador; el Colaborador es actor secundario. Es uno de los tres casos que incluyen todas las vías alternativas de entrada.*
 
 **CU9. Editar atributos y operaciones**
 
@@ -718,6 +769,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El atributo existe y participará del código generado. |
 | **Excepción** | Atributo repetido; interfaz con atributos; clase tomada por otra persona. |
 
+![CU9 Editar atributos y operaciones](diagramas/cu-09.png)
+
+*Figura 9. CU9 Editar atributos y operaciones. Lo inicia el Modelador; el Colaborador es actor secundario. Es uno de los tres casos que incluyen todas las vías alternativas de entrada.*
+
 **CU10. Editar en forma concurrente**
 
 | | |
@@ -730,6 +785,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Una persona comienza a editar un elemento. 2. El sistema le otorga el bloqueo, arbitrado por la base de datos. 3. La otra persona ve el elemento como tomado y no puede modificarlo. 4. Al terminar, el bloqueo se libera y el elemento queda disponible. |
 | **Post Condición** | El cambio queda aplicado una sola vez y ambas partes lo ven. |
 | **Excepción** | Desconexión abrupta: el bloqueo vence por sí solo y se libera. |
+
+![CU10 Editar en forma concurrente](diagramas/cu-10.png)
+
+*Figura 10. CU10 Editar en forma concurrente. Único caso del Ciclo #1 que no inicia el Modelador: lo dispara el Colaborador que ya está editando, y el Modelador queda del lado que ve el elemento tomado.*
 
 #### CICLO #2
 
@@ -746,6 +805,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El modelo refleja la frase dictada. |
 | **Excepción** | Frase no reconocida: se ofrecen formas válidas sin modificar el modelo. |
 
+![CU11 Dictar cambios por voz](diagramas/cu-11.png)
+
+*Figura 11. CU11 Dictar cambios por voz. Lo inicia el Modelador. Las tres relaciones «include» hacia CU7, CU8 y CU9 dicen que dictar no es un camino paralelo: termina produciendo las mismas operaciones que el lienzo.*
+
 **CU12. Leer el diagrama desde una fotografía de pizarra**
 
 | | |
@@ -758,6 +821,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Elegir la imagen. 2. El servidor la transcribe con un modelo de visión. 3. Se muestra lo que se entendió, para revisión. 4. Al aceptar, el sistema aplica las operaciones con origen FOTO. |
 | **Post Condición** | Las clases reconocidas se incorporan al modelo. |
 | **Excepción** | Imagen ilegible: no se aplica nada y se informa. |
+
+![CU12 Leer el diagrama desde una fotografía de pizarra](diagramas/cu-12.png)
+
+*Figura 12. CU12 Leer el diagrama desde una fotografía de pizarra. Lo inicia el Modelador. Incluye a CU7, CU8 y CU9 por la misma razón que CU11: lo reconocido en la imagen se aplica como operaciones del lienzo.*
 
 **CU13. Pedir un elemento en lenguaje libre**
 
@@ -772,6 +839,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El modelo contiene un elemento más: el que la persona aprobó, y no una segunda opinión del modelo. |
 | **Excepción** | Modelo no disponible o sin respuesta: se informa sin modificar nada. Pedido de varios elementos a la vez: se resuelve el primero y se informa cuántos quedaron afuera. |
 
+![CU13 Pedir un elemento en lenguaje libre](diagramas/cu-13.png)
+
+*Figura 13. CU13 Pedir un elemento en lenguaje libre. Lo inicia el Modelador; el modelo de lenguaje local es el actor secundario. Incluye a CU7, CU8 y CU9: lo que el modelo propone se aplica por la misma vía que lo dibujado a mano.*
+
 **CU14. Consultar al agente guía**
 
 | | |
@@ -784,6 +855,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Abrir el panel del agente. 2. El agente evalúa sus reglas sobre el estado real y muestra los consejos pertinentes. 3. La persona escribe una pregunta. 4. Si el catálogo la cubre, se responde de inmediato. 5. Si no la cubre, se consulta al modelo pasándole la documentación y el estado. |
 | **Post Condición** | La persona recibe una respuesta, siempre. |
 | **Excepción** | Ninguna: ante cualquier entrada el agente responde. |
+
+![CU14 Consultar al agente guía](diagramas/cu-14.png)
+
+*Figura 14. CU14 Consultar al agente guía. Lo inicia el Modelador; el modelo de lenguaje local es el actor secundario. Es el único caso que consulta al modelo y no incluye a CU7, CU8 ni CU9: el agente informa, no modifica el diagrama.*
 
 **CU15. Generar el backend Spring Boot**
 
@@ -798,6 +873,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | Se obtiene un proyecto Spring Boot que compila. |
 | **Excepción** | Diagrama sin clases. |
 
+![CU15 Generar el backend Spring Boot](diagramas/cu-15.png)
+
+*Figura 15. CU15 Generar el backend Spring Boot. El Modelador es el único actor y también el iniciador.*
+
 **CU16. Exportar el modelo a XMI**
 
 | | |
@@ -810,6 +889,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Usar «XMI → Exportar». 2. El sistema serializa el modelo en XMI 2.5.1. 3. Incluye la disposición de cada clase en el bloque de extensión. 4. Se descarga el documento. |
 | **Post Condición** | El documento abre en Enterprise Architect con el diagrama dibujado. |
 | **Excepción** | Ninguna. |
+
+![CU16 Exportar el modelo a XMI](diagramas/cu-16.png)
+
+*Figura 16. CU16 Exportar el modelo a XMI. Lo inicia el Modelador; Enterprise Architect es el actor secundario, el destinatario del documento.*
 
 **CU17. Importar un modelo desde XMI**
 
@@ -824,6 +907,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El modelo queda incorporado con su disposición original. |
 | **Excepción** | Documento que no es XML; documento sin clases; documento en XMI 1.x, en cuyo caso se indica exportarlo nuevamente como XMI 2.1. |
 
+![CU17 Importar un modelo desde XMI](diagramas/cu-17.png)
+
+*Figura 17. CU17 Importar un modelo desde XMI. Lo inicia el Modelador; Enterprise Architect es el actor secundario, esta vez como origen del documento. Incluye a CU7, CU8 y CU9: lo importado entra al modelo como operaciones, no como un volcado aparte.*
+
 **CU18. Modelar sin conexión y sincronizar**
 
 | | |
@@ -836,6 +923,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Flujo Principal** | 1. Se pierde la conexión. 2. La persona sigue modelando y las operaciones se encolan en el dispositivo. 3. Al recuperar la red, la cola se envía con el identificador propio de cada operación. 4. El servidor reconoce los reenvíos y no duplica nada. |
 | **Post Condición** | El modelo del servidor incorpora lo hecho sin conexión, una sola vez. |
 | **Excepción** | Elemento tomado por otra persona: esa operación se rechaza y se informa. |
+
+![CU18 Modelar sin conexión y sincronizar](diagramas/cu-18.png)
+
+*Figura 18. CU18 Modelar sin conexión y sincronizar. Lo inicia el Modelador. Incluye a CU7, CU8 y CU9: lo encolado sin red se aplica al reconectar por la misma vía que el lienzo, y por eso no se duplica.*
 
 **CU19. Cargar registros en el backend generado desde el teléfono**
 
@@ -850,6 +941,10 @@ allí no se corrige localmente, obliga a rediseñar.
 | **Post Condición** | El registro queda guardado en la base del backend generado, y la lista del teléfono muestra lo que el servidor guardó. |
 | **Excepción** | Sin alcance del backend, la operación queda encolada y se reintenta. Un rechazo definitivo del servidor saca la operación de la cola y se informa nombrándola. Una entidad con clave ajena obligatoria no puede crearse desde el formulario (2.4.6). |
 
+![CU19 Cargar registros en el backend generado desde el teléfono](diagramas/cu-19.png)
+
+*Figura 19. CU19 Cargar registros en el backend generado desde el teléfono. Único caso que no involucra al Modelador: lo inicia el Operador de datos y su actor secundario es el backend generado, un sistema que la propia herramienta escribió.*
+
 ### 2.1.5 Estructura del modelo de casos de uso
 
 El modelo se organiza en dos ciclos: el Ciclo #1 agrupa los casos que construyen
@@ -858,20 +953,20 @@ vías alternativas de entrada al modelo y las salidas hacia la implementación.
 
 ![Casos de uso del Ciclo #1](diagramas/casos-de-uso-ciclo1.png)
 
-*Figura 1. Casos de uso del Ciclo #1: la arquitectura ejecutable.*
+*Figura 20. Casos de uso del Ciclo #1: la arquitectura ejecutable.*
 
 ![Casos de uso del Ciclo #2](diagramas/casos-de-uso-ciclo2.png)
 
-*Figura 2. Casos de uso del Ciclo #2: las vías alternativas de entrada y las salidas hacia la implementación. Enterprise Architect y el modelo de lenguaje local participan como actores secundarios.*
+*Figura 21. Casos de uso del Ciclo #2: las vías alternativas de entrada y las salidas hacia la implementación. Enterprise Architect y el modelo de lenguaje local participan como actores secundarios.*
 
 Los dos diagramas se construyeron en Enterprise Architect. Se presentan
 separados y no en uno solo porque, con los dieciocho casos juntos, el actor
 Modelador se conecta con diecisiete de ellos y el dibujo deja de poder leerse;
 la separación coincide además con la priorización en ciclos.
 
-**CU19 no aparece en las figuras.** Se incorporó después de que los diagramas se
-generaran, cuando el cliente móvil pasó de ser un segundo modelador a ser el
-frontend del backend generado. Pertenece al Ciclo #2, junto a las demás salidas
+**CU19 no aparece en estas dos figuras de conjunto.** Se incorporó después de
+que se generaran, cuando el cliente móvil pasó de ser un segundo modelador a
+ser el frontend del backend generado. Pertenece al Ciclo #2, junto a las demás salidas
 hacia la implementación, y su ficha está en 2.1.4; es también el único caso de
 uso cuyo actor iniciador no modela y cuyo actor secundario es un sistema que la
 propia herramienta escribió.
@@ -882,10 +977,11 @@ importar y sincronizar no son caminos paralelos, sino formas distintas de
 producir las mismas operaciones sobre el modelo. Esa inclusión no es un detalle
 de notación: es la decisión arquitectónica central del sistema, y explica por qué
 existe un único punto donde se valida, se aplica y se registra todo cambio. Esa
-inclusión no está dibujada en las figuras 1 y 2 —trazar cinco líneas hacia un
-mismo destino volvía ilegible el diagrama—, pero se ve realizada en los dos
-diagramas de comunicación de 2.2.4, donde toda vía termina en
-`ServicioOperaciones`.
+inclusión no está dibujada en las figuras 20 y 21 —trazar cinco líneas hacia un
+mismo destino volvía ilegible el diagrama—, pero sí en los diagramas
+individuales de 2.1.4, donde cada caso muestra solo las tres suyas, y se ve
+realizada en los dos diagramas de comunicación de 2.2.4, donde toda vía termina
+en `ServicioOperaciones`.
 
 ## 2.2) Flujo de Trabajo: Análisis
 
@@ -954,7 +1050,7 @@ Las dependencias entre paquetes forman un grafo dirigido sin ciclos:
 
 ![Vista de paquetes](diagramas/paquetes.png)
 
-*Figura 3. Vista de paquetes. Las dependencias forman un grafo dirigido sin ciclos.*
+*Figura 22. Vista de paquetes. Las dependencias forman un grafo dirigido sin ciclos.*
 
 
 Dos propiedades de esta vista merecen señalarse:
@@ -975,7 +1071,7 @@ Es el caso de uso de mayor riesgo del sistema y el que define su arquitectura.
 
 ![Diagrama de comunicación de CU10](diagramas/comunicacion-cu10.png)
 
-*Figura 4. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor; `a` y `b` son los clientes web de la persona A y de la persona B. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+*Figura 23. CU10, editar en forma concurrente. Los objetos son las clases reales del servidor; `a` y `b` son los clientes web de la persona A y de la persona B. La persona B intenta el mismo elemento que la persona A y es rechazada en el paso 11. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
@@ -1005,7 +1101,7 @@ pierde la disputa continúa normalmente informando que el elemento está tomado.
 
 ![Diagrama de comunicación de CU13](diagramas/comunicacion-cu13.png)
 
-*Figura 5. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
+*Figura 24. CU13, pedir un elemento en lenguaje libre. Lo que devuelve el modelo pasa siempre por la gramática determinista antes de convertirse en comando, y el alcance lo recorta a un solo elemento antes de mostrarlo. Los rótulos llevan el número y el nombre del mensaje; la firma completa de cada uno está en la tabla que sigue.*
 
 
 | # | De | A | Mensaje |
@@ -1098,7 +1194,7 @@ backend.
 
 ![Modelo de despliegue](diagramas/despliegue.png)
 
-*Figura 6. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
+*Figura 25. Modelo de despliegue. El equipo de demostración aparece separado porque el modelo de lenguaje no se despliega junto al servidor.*
 
 
 **Lo que está desplegado.** FORJA corre en una instancia EC2 `t3.micro` de AWS,
@@ -1132,7 +1228,7 @@ bajar la definición del diagrama. Al backend generado llega por red local,
 típicamente por el punto de acceso del propio teléfono, que no depende de la red
 del lugar ni necesita internet.
 
-**Nota sobre la Figura 6.** El diagrama representa la topología anterior a este
+**Nota sobre la Figura 25.** El diagrama representa la topología anterior a este
 despliegue: el navegador, el dispositivo Android, la instancia con la aplicación
 y su base, y el equipo de demostración con el modelo local. No incorpora todavía
 la distribución de CloudFront, ni el backend generado con su base en el equipo de
@@ -1169,7 +1265,7 @@ El esquema tiene doce tablas, agrupadas en cuatro conjuntos:
 
 ![Diagrama de clases del modelo de datos](diagramas/modelo-de-datos.png)
 
-*Figura 7. Modelo de datos. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
+*Figura 26. Modelo de datos. Los rombos rellenos son composiciones: la parte no existe sin el todo, y el esquema lo impone con borrado en cascada.*
 
 **Mapeo del modelo a la base de datos**
 
@@ -1214,7 +1310,7 @@ y los tipos están copiados de ahí.
 
 ![Modelo físico de datos](diagramas/modelo-fisico.png)
 
-*Figura 8. Modelo físico de datos. Cada caja es una tabla con sus columnas y el tipo de PostgreSQL; `PK` marca la clave primaria —compuesta en `proyecto_miembro` y en `uso_herramienta`— y `FK` la clave ajena. Las flechas son las restricciones referenciales. `relacion_uml` referencia dos veces a `clase_uml`, por `origen_id` y por `destino_id`, y se dibuja con un solo conector porque ambos van entre las mismas dos cajas.*
+*Figura 27. Modelo físico de datos. Cada caja es una tabla con sus columnas y el tipo de PostgreSQL; `PK` marca la clave primaria —compuesta en `proyecto_miembro` y en `uso_herramienta`— y `FK` la clave ajena. Las flechas son las restricciones referenciales. `relacion_uml` referencia dos veces a `clase_uml`, por `origen_id` y por `destino_id`, y se dibuja con un solo conector porque ambos van entre las mismas dos cajas.*
 
 **Tabla de volumen**
 
@@ -1740,7 +1836,7 @@ proceso, está disponible en:
 
 ![Código QR del repositorio](diagramas/qr-repositorio.png)
 
-*Figura 9. Código QR del repositorio. Lleva a
+*Figura 28. Código QR del repositorio. Lleva a
 `https://github.com/santiagoarteaga0704/Forja`, donde están el código fuente de
 los tres módulos, la historia de confirmaciones fechadas y esta misma
 documentación con sus figuras.*
@@ -1753,7 +1849,7 @@ FORJA está publicada y es alcanzable desde cualquier red, sin instalar nada, en
 
 ![Código QR de la aplicación desplegada](diagramas/qr-servidor.png)
 
-*Figura 10. Código QR de la aplicación desplegada. Lleva a
+*Figura 29. Código QR de la aplicación desplegada. Lleva a
 `https://d2x41sl49sltgo.cloudfront.net`, la instancia EC2 servida por HTTPS a
 través de CloudFront. Es también la dirección con la que el cliente móvil entra a
 bajar la definición del diagrama.*
