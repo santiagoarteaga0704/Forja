@@ -53,9 +53,20 @@ registros contra el.
 
 ### 2.2 Descargar el paquete de espanol para reconocimiento sin conexion
 
-El dictado usa `onDevice: true`, que obliga al reconocedor de voz de Android a
-procesar el audio en el aparato, sin mandar nada a la red. Para que funcione
-hace falta el paquete de idioma instalado **de antemano**:
+**Estado actual: `onDevice: true` esta SACADO del codigo.** Se probo en un
+telefono real y el dictado se quedaba en "Escuchando..." sin transcribir
+nada. La causa: ese telefono no tiene el paquete de espanol para
+reconocimiento sin conexion instalado (se reviso la lista de idiomas
+descargables y espanol no aparece). Sin ese paquete, `onDevice: true` deja al
+reconocedor sin motor. Por eso, **en ese telefono, el dictado necesita
+conexion** (WiFi o datos): el resto de la app -diagrama, registros a mano,
+sincronizacion- sigue andando sin red.
+
+Si el telefono que se va a usar SI tiene el paquete instalado, se puede volver
+a activar el reconocimiento sin conexion: agregar `onDevice: true` de nuevo
+a `listenOptions` en `movil/lib/voz/hoja_de_dictado.dart` (esta comentado ahi
+mismo, con la explicacion). Para comprobar si un telefono tiene el paquete
+antes de intentarlo:
 
 1. En el telefono, abrir **Ajustes**
 2. Entrar en **Sistema** -> **Idiomas y entrada**
@@ -64,7 +75,7 @@ hace falta el paquete de idioma instalado **de antemano**:
 4. Entrar en **Reconocimiento sin conexion** (u "Offline recognition")
 5. En la lista de idiomas, buscar **Espanol**
 6. Tocar sobre Espanol. Debe decir "Instalado" o "Downloaded"; si no lo esta,
-   descargarlo y esperar a que termine
+   descargarlo, esperar a que termine, y recien ahi agregar `onDevice: true`
 
 ## 3. El modelo (tercer escalon del dictado, opcional)
 
@@ -107,25 +118,39 @@ adb shell ls -lh /sdcard/Android/data/bo.forja.forja_movil/files/
 
 ## 4. Probar sin conexion (modo avion)
 
+**Con `onDevice: true` sacado (ver 2.2), el dictado NO funciona en modo avion
+en un telefono sin el paquete de espanol.** Este paso prueba lo que SI sigue
+andando sin red: el diagrama descargado y la carga manual de registros.
+
 1. Activar el **modo avion** en el telefono (WiFi y datos moviles apagados)
 2. Abrir la app FORJA
 3. Entrar a una entidad del diagrama (la pantalla de registros de esa clase)
-4. Cargar dos registros a mano
-5. Dictar uno: tocar el boton de microfono ("Toca para dictar") y decir una
-   frase en espanol, por ejemplo "un Paciente tiene muchas Consultas" o, para
-   probar el flujo de registro, algo del estilo "agrega un paciente llamado
-   Juan"
+4. Cargar dos o tres registros a mano
 
 **Que tiene que pasar:**
 
-- El texto dictado aparece en tiempo real mientras se habla (eso confirma que
-  el reconocimiento de voz esta corriendo en el dispositivo, sin red)
-- Los tres registros (dos a mano, uno dictado) quedan con la **marca de
-  pendiente**
+- Los registros quedan con la **marca de pendiente**
 - Si se vuelve a la pantalla anterior y despues se entra de nuevo, el contador
-  de pendientes tiene que reflejar los tres, no quedarse en 0
+  de pendientes tiene que reflejar los que se cargaron, no quedarse en 0
 
 Al terminar, desactivar el modo avion.
+
+### 4.1 Probar el dictado (necesita conexion en este telefono)
+
+Con WiFi o datos moviles activos (no en modo avion):
+
+1. Entrar a una entidad del diagrama (la pantalla de registros de esa clase)
+2. Tocar el boton de microfono ("Toca para dictar") y decir una frase en
+   espanol, por ejemplo "un Paciente tiene muchas Consultas" en el lienzo o
+   "agrega un paciente llamado Juan" en registros
+
+**Que tiene que pasar:** el texto dictado aparece en tiempo real mientras se
+habla y, al aplicarlo, el registro queda con la **marca de pendiente** igual
+que uno cargado a mano.
+
+Si el telefono usado en la defensa SI tiene el paquete de espanol sin
+conexion instalado, y se volvio a poner `onDevice: true` (ver 2.2), este paso
+se puede repetir en modo avion, como el resto.
 
 ## 5. Probar la sincronizacion
 
@@ -150,9 +175,12 @@ registros, y esos registros quedan en la base de datos del backend generado
 - El formulario **todavia no convierte tipos**: una fecha se tipea
   `2026-03-12`, un booleano `true`/`false`, un decimal con punto. Otra cosa la
   rechaza el backend con 400.
-- Si el dictado no reconoce nada en modo avion, es que falta el paquete de
-  espanol: **no improvisar**, quitar `onDevice: true` de
-  `movil/lib/voz/hoja_de_dictado.dart` y anotarlo.
+- El dictado en modo avion se probo en un telefono real y no reconocia nada
+  porque faltaba el paquete de espanol: se saco `onDevice: true` de
+  `movil/lib/voz/hoja_de_dictado.dart` y quedo anotado (ver 2.2 y 4.1). Si en
+  OTRO telefono pasa lo mismo -se queda en "Escuchando..." sin transcribir-,
+  es la misma causa: revisar el paquete de espanol antes de sospechar de otra
+  cosa.
 - Sobre el punto de acceso: la laptop recibe una IP del DHCP del telefono
   (algo como `192.168.43.x`), distinta de la de cualquier red de casa. Hay
   que mirarla en la laptop y escribirla en la app.

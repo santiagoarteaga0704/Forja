@@ -14,12 +14,22 @@ import '../main.dart';
 /// extrajo tal cual para que las dos pantallas compartan un solo lugar donde
 /// arreglar el dictado, en vez de tener dos copias que se van separando.
 class HojaDeDictado extends StatefulWidget {
-  const HojaDeDictado({super.key, required this.voz, required this.idioma});
+  const HojaDeDictado({
+    super.key,
+    required this.voz,
+    required this.idioma,
+    this.ejemplo = 'Por ejemplo: "un Paciente tiene muchas Consultas"',
+  });
 
   final SpeechToText voz;
 
   /// Nulo significa "no fijes ninguno": el aparato usa el suyo.
   final String? idioma;
+
+  /// El ejemplo que se muestra bajo el cuadro. Cada pantalla pasa el suyo
+  /// -lienzo habla de clases y relaciones, registros habla de filas- porque
+  /// el mismo cuadro compartido no puede adivinar en que dominio se dicta.
+  final String ejemplo;
 
   @override
   State<HojaDeDictado> createState() => _HojaDeDictadoState();
@@ -47,10 +57,13 @@ class _HojaDeDictadoState extends State<HojaDeDictado> {
         localeId: widget.idioma,
         partialResults: true,
         cancelOnError: true,
-        // Sin esto el reconocedor de Android puede salir a la red. El requisito
-        // central del proyecto es que el dictado funcione sin senal, con el
-        // paquete de idioma descargado en el aparato. Esto lo garantiza.
-        onDevice: true,
+        // Se probo `onDevice: true` en un telefono real y el dictado se quedo
+        // en "Escuchando..." sin transcribir nada: ese aparato no tiene
+        // descargado el paquete de espanol para reconocimiento sin conexion,
+        // asi que onDevice deja al reconocedor sin motor. No es un olvido:
+        // en ESTE telefono el dictado necesita conexion. En uno que si tenga
+        // el paquete instalado, onDevice: true funcionaria y valdria la pena
+        // volver a ponerlo (detalle en docs/como-probarlo-en-el-telefono.md).
       ),
     );
   }
@@ -74,9 +87,9 @@ class _HojaDeDictadoState extends State<HojaDeDictado> {
             style: const TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 6),
-          const Text('Por ejemplo: "un Paciente tiene muchas Consultas"',
+          Text(widget.ejemplo,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colores.textoDebil, fontSize: 11.5)),
+              style: const TextStyle(color: Colores.textoDebil, fontSize: 11.5)),
           const SizedBox(height: 16),
           Row(children: [
             Expanded(

@@ -126,7 +126,11 @@ class _PantallaRegistrosState extends State<PantallaRegistros> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colores.superficie,
-      builder: (_) => HojaDeDictado(voz: _voz, idioma: idioma),
+      builder: (_) => HojaDeDictado(
+        voz: _voz,
+        idioma: idioma,
+        ejemplo: 'Por ejemplo: "agrega un paciente llamado Juan"',
+      ),
     );
     await _voz.stop();
     if (frase == null || frase.trim().isEmpty) return;
