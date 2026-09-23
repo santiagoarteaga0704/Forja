@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../generado/api_generada.dart';
 import '../generado/asistente.dart';
 import '../generado/nombres.dart';
+import '../generado/almacen_registros.dart';
 import '../generado/repositorio.dart';
+import '../main.dart';
 import '../tipos.dart';
 import 'registros.dart';
 
@@ -145,6 +147,102 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
     }
   }
 
+  /// La salida de emergencia de la cola.
+  ///
+  /// Sin esto, una sola operacion que el backend generado conteste con 500 -un
+  /// campo obligatorio vacio, por ejemplo- deja la app trabada para siempre: el
+  /// 500 se trata como error temporal, asi que la operacion se conserva, la
+  /// pasada se corta ahi, y todo lo que viene detras no sale nunca. No habia
+  /// ninguna forma de sacarla desde el telefono.
+  ///
+  /// Se confirma antes de borrar porque esto es perdida de datos de verdad, y
+  /// se dice cuantas son y cuales: tirar a ciegas es peor que quedarse trabado.
+  Future<void> _descartarPendientes() async {
+    final cola = await _repositorio.almacen.leerCola();
+    if (!mounted) return;
+    if (cola.isEmpty) {
+      await _actualizarPendientes();
+      return;
+    }
+
+    final confirmado = await showDialog<bool>(
+          context: context,
+          builder: (dialogo) => AlertDialog(
+            title: Text(cola.length == 1
+                ? 'Descartar 1 operación'
+                : 'Descartar ${cola.length} operaciones'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Se borran del teléfono y no llegan nunca al backend generado. '
+                  'No se puede deshacer.',
+                ),
+                const SizedBox(height: 12),
+                for (final operacion in cola.take(_aLoSumo))
+                  Text('• ${_describir(operacion)}',
+                      style: const TextStyle(color: Colores.textoMedio, fontSize: 13)),
+                if (cola.length > _aLoSumo)
+                  Text('y ${cola.length - _aLoSumo} más.',
+                      style: const TextStyle(color: Colores.textoMedio, fontSize: 13)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogo).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogo).pop(true),
+                child: const Text('Descartar'),
+              ),
+            ],
+          ),
+        ) ??
+        // Cerrar el cartel tocando afuera es no confirmar.
+        false;
+    if (!confirmado) return;
+
+    // Las filas locales de esas operaciones se van con ellas: quedaron
+    // guardadas con la marca '_pendiente' y sin la operacion detras no las
+    // puede confirmar nadie. Dejarlas seria mostrar en ambar, para siempre,
+    // filas que ya nadie va a enviar.
+    //
+    // Primero las filas y despues la cola: si algo falla a mitad de camino,
+    // la cola intacta sigue siendo la verdad y se puede volver a intentar.
+    final descartadas = cola.map((o) => o.id).toSet();
+    for (final clase in cola.map((o) => o.clase).toSet()) {
+      final filas = await _repositorio.almacen.leerFilas(clase);
+      final quedan = filas.where((f) => !descartadas.contains(f['_pendiente'])).toList();
+      if (quedan.length != filas.length) {
+        await _repositorio.almacen.guardarFilas(clase, quedan);
+      }
+    }
+    await _repositorio.almacen.reemplazarCola([]);
+
+    await _actualizarPendientes();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(cola.length == 1
+          ? 'Se descartó 1 operación pendiente.'
+          : 'Se descartaron ${cola.length} operaciones pendientes.'),
+    ));
+  }
+
+  /// Cuantas operaciones se nombran en el cartel antes de resumir el resto.
+  static const _aLoSumo = 5;
+
+  /// Como se nombra una operacion para que se entienda cual es. Mismo criterio
+  /// que `Repositorio._describir`: el verbo, la clase y, si lo hay, el nombre,
+  /// que es el campo por el que una persona reconoce su fila.
+  static String _describir(OperacionPendiente operacion) {
+    final nombre = operacion.datos['nombre'];
+    return nombre is String && nombre.isNotEmpty
+        ? '${operacion.verbo} ${operacion.clase} ($nombre)'
+        : '${operacion.verbo} ${operacion.clase}';
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text(widget.diagrama.nombre)),
@@ -176,6 +274,14 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
                           : '$_pendientes operacion(es) esperando',
                     ),
                   ),
+                  // Solo aparece si hay algo que descartar: es una salida de
+                  // emergencia, no un boton de todos los dias.
+                  if (_pendientes > 0)
+                    IconButton(
+                      tooltip: 'Descartar lo pendiente',
+                      onPressed: _sincronizando ? null : _descartarPendientes,
+                      icon: const Icon(Icons.delete_outline, color: Colores.peligro),
+                    ),
                   TextButton.icon(
                     onPressed: _sincronizando ? null : _sincronizar,
                     icon: _sincronizando

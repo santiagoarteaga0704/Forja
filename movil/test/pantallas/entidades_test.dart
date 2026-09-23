@@ -327,6 +327,69 @@ void main() {
     expect(find.text('Sin operaciones pendientes'), findsNothing);
   });
 
+  testWidgets('se pueden descartar las operaciones trabadas, con confirmacion',
+      (tester) async {
+    // La salida de emergencia. Un 500 del backend generado -un campo
+    // obligatorio vacio- se trata como error temporal: la operacion se
+    // conserva, la pasada se corta ahi, y todo lo que viene detras no sale
+    // nunca. Sin esta puerta, un solo alta a medio llenar deja la app trabada
+    // para siempre y no habia forma de sacarla desde el telefono.
+    final almacen = AlmacenRegistros(carpeta);
+    await tester.runAsync(() async {
+      await almacen.encolar(const OperacionPendiente(
+          id: 'op-1', clase: 'Paciente', verbo: 'crear', datos: {'nombre': 'Ana'}));
+      await almacen.encolar(const OperacionPendiente(
+          id: 'op-2', clase: 'Paciente', verbo: 'crear', datos: {'ci': 'Juan'}));
+      await almacen.guardarFilas('Paciente', [
+        {'nombre': 'Ana', '_pendiente': 'op-1'},
+        {'ci': 'Juan', '_pendiente': 'op-2'},
+      ]);
+    });
+
+    await _abrir(
+      tester,
+      PantallaEntidades(diagrama: unaClase(), repositorio: Repositorio(almacen: almacen)),
+    );
+    await _esperar(tester, find.text('2 operacion(es) esperando'));
+
+    await tester.tap(find.byTooltip('Descartar lo pendiente'));
+    await _esperar(tester, find.text('Descartar 2 operaciones'));
+
+    // Se dice cuantas son y cuales: esto es perdida de datos, y tirar a
+    // ciegas es peor que quedarse trabado.
+    expect(find.textContaining('crear Paciente (Ana)'), findsOneWidget);
+
+    // Cancelar no toca nada.
+    await tester.tap(find.text('Cancelar'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('2 operacion(es) esperando'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Descartar lo pendiente'));
+    await _esperar(tester, find.text('Descartar 2 operaciones'));
+    await tester.tap(find.text('Descartar'));
+    await _esperar(tester, find.text('Sin operaciones pendientes'));
+
+    expect(find.text('Sin operaciones pendientes'), findsOneWidget);
+    expect(await tester.runAsync(() => almacen.leerCola()), isEmpty);
+    // Y las filas locales se van con sus operaciones: dejarlas seria mostrar
+    // en ambar, para siempre, filas que ya nadie va a enviar.
+    expect(await tester.runAsync(() => almacen.leerFilas('Paciente')), isEmpty);
+  });
+
+  testWidgets('sin nada pendiente no se ofrece descartar', (tester) async {
+    // Es una salida de emergencia, no un boton de todos los dias.
+    await _abrir(
+      tester,
+      PantallaEntidades(
+        diagrama: unaClase(),
+        repositorio: Repositorio(almacen: AlmacenRegistros(carpeta)),
+      ),
+    );
+
+    expect(find.byTooltip('Descartar lo pendiente'), findsNothing);
+  });
+
   testWidgets('un rechazo del backend se cuenta como rechazo, no como falta de red',
       (tester) async {
     // El otro lado del mismo problema: `Repositorio.sincronizar()` tenia un
