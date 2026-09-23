@@ -156,7 +156,7 @@ class _PantallaEntidadesState extends State<PantallaEntidades> {
                 controller: _direccionControlador,
                 decoration: const InputDecoration(
                   labelText: 'Direccion del backend generado',
-                  hintText: 'http://192.168.43.1:8080',
+                  hintText: 'http://192.168.43.1:8081',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.url,
